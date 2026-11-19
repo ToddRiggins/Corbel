@@ -197,3 +197,66 @@ describe("scenes", () => {
     expect(copy.owner).toBe(again);
   });
 });
+
+describe("script errors and pause", () => {
+  class Bad extends Node {
+    override _process(_delta: number): void {
+      throw new Error("process boom");
+    }
+  }
+
+  class Good extends Node {
+    hits = 0;
+    override _process(_delta: number): void {
+      this.hits += 1;
+    }
+  }
+
+  it("reports a failing _process and keeps the frame running", () => {
+    const tree = new SceneTree();
+    const seen: string[] = [];
+    tree.on_node_error = (node, error, where) => {
+      seen.push(`${node.name}:${where}:${(error as Error).message}`);
+    };
+    const good = new Good();
+    tree.get_root().add_child(new Bad());
+    tree.get_root().add_child(good);
+    good.name = "Good";
+
+    tree.tick(0.1);
+    tree.tick(0.1);
+
+    expect(seen).toEqual(["Bad:process:process boom", "Bad:process:process boom"]);
+    expect(good.hits).toBe(2);
+  });
+
+  it("reports a failing _ready once and never calls it again", () => {
+    const tree = new SceneTree();
+    const seen: string[] = [];
+    tree.on_node_error = (node, error, where) => {
+      seen.push(`${node.name}:${where}:${(error as Error).message}`);
+    };
+    class ReadyBroke extends Node {
+      override _ready(): void {
+        throw new Error("ready boom");
+      }
+    }
+    tree.get_root().add_child(new ReadyBroke());
+
+    expect(seen).toEqual(["ReadyBroke:ready:ready boom"]);
+  });
+
+  it("paused skips _process but the frame still runs", () => {
+    const tree = new SceneTree();
+    const good = new Good();
+    tree.get_root().add_child(good);
+
+    tree.paused = true;
+    tree.tick(0.1);
+    expect(good.hits).toBe(0);
+
+    tree.paused = false;
+    tree.tick(0.1);
+    expect(good.hits).toBe(1);
+  });
+});

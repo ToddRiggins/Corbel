@@ -298,7 +298,7 @@
             <tr><td><code id="doc-Node-is_inside_tree" data-doc="is_inside_tree" data-owner="Node">is_inside_tree()</code></td><td>True after it has entered a scene tree</td></tr>
             <tr><td><code id="doc-Node-is_queued_for_deletion" data-doc="is_queued_for_deletion" data-owner="Node">is_queued_for_deletion()</code></td><td>True after <code>queue_free</code></td></tr>
           </table>
-          <p>Override <code id="doc-Node-_enter_tree" data-doc="_enter_tree" data-owner="Node">_enter_tree</code>, <code id="doc-Node-_ready" data-doc="_ready" data-owner="Node">_ready</code>, <code id="doc-Node-_process" data-doc="_process" data-owner="Node">_process</code>, and <code id="doc-Node-_exit_tree" data-doc="_exit_tree" data-owner="Node">_exit_tree</code>. Leave them empty when a node has nothing to do.</p>
+          <p>Override <code id="doc-Node-_enter_tree" data-doc="_enter_tree" data-owner="Node">_enter_tree</code>, <code id="doc-Node-_ready" data-doc="_ready" data-owner="Node">_ready</code>, <code id="doc-Node-_process" data-doc="_process" data-owner="Node">_process</code>, and <code id="doc-Node-_exit_tree" data-doc="_exit_tree" data-owner="Node">_exit_tree</code>. Leave them empty when a node has nothing to do. A throw in <code>_ready</code> or <code>_process</code> does not stop the tree; <code>SceneTree.on_node_error</code> receives the node and the error.</p>
         </div>
       </section>
 
@@ -351,6 +351,8 @@
             <tr><td><code id="doc-SceneTree-init" data-doc="init" data-owner="SceneTree">init({ canvas, preference })</code></td><td>Pick the renderer and start the frame loop</td></tr>
             <tr><td><code id="doc-SceneTree-renderer_name" data-doc="renderer_name" data-owner="SceneTree">renderer_name</code></td><td><code>webgpu</code>, <code>webgl2</code>, or null before <code>init</code></td></tr>
             <tr><td><code id="doc-SceneTree-close" data-doc="close" data-owner="SceneTree">close()</code></td><td>Stop the loop and release the renderer</td></tr>
+            <tr><td><code id="doc-SceneTree-paused" data-doc="paused" data-owner="SceneTree">paused</code></td><td>Skip <code>_process</code> while it is true; the draw still happens</td></tr>
+            <tr><td><code id="doc-SceneTree-on_node_error" data-doc="on_node_error" data-owner="SceneTree">on_node_error</code></td><td>Set a callback to receive <code>_ready</code> and <code>_process</code> errors with the node</td></tr>
           </table>
           <p>A <code id="doc-Signal" data-doc="Signal">Signal</code> is a list of callbacks. <code id="doc-Signal-connect" data-doc="connect" data-owner="Signal">connect</code> adds one. <code id="doc-Signal-disconnect" data-doc="disconnect" data-owner="Signal">disconnect</code> removes it. <code id="doc-Signal-is_connected" data-doc="is_connected" data-owner="Signal">is_connected</code> checks. <code id="doc-Signal-emit" data-doc="emit" data-owner="Signal">emit(...args)</code> calls them in the order they were connected.</p>
 <pre><span class="kw">const</span> <span class="vr">hit</span> <span class="op">=</span> <span class="kw">new</span> <span class="call">Signal</span><span class="op">&lt;[</span><span class="ty">number</span><span class="op">]&gt;();</span>

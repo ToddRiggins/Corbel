@@ -39,6 +39,10 @@ async function handle(req: Connect.IncomingMessage, res: Connect.ServerResponse)
     send(res, 200, { projects: names });
     return;
   }
+  if (req.method === "GET" && pathname === "/root") {
+    send(res, 200, { root: corbelRoot });
+    return;
+  }
   if (req.method === "GET" && pathname === "/files") {
     send(res, 200, { files: listFiles(required(url, "project")) });
     return;

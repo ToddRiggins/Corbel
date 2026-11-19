@@ -8,6 +8,9 @@ export interface TreeInit {
   preference?: BackendPreference;
 }
 
+/** Called when a node's `_process` or `_ready` throws. */
+export type NodeErrorHook = (node: Node, error: unknown, where: "process" | "ready") => void;
+
 /** Owns the hidden root, calls `_process` in tree order, and draws to a canvas after `init`. */
 export class SceneTree implements TreeHost {
   private readonly _root = new Node();
@@ -15,6 +18,12 @@ export class SceneTree implements TreeHost {
   private _renderer: Renderer | null = null;
   private _raf = 0;
   private _last_time = 0;
+
+  /** Godot 4 `paused`: a paused tree skips `_process` but keeps drawing. */
+  paused = false;
+
+  /** Receives script errors from `_process` and `_ready`. */
+  on_node_error: NodeErrorHook | null = null;
 
   constructor() {
     this._root.set_name("root");
@@ -35,8 +44,7 @@ export class SceneTree implements TreeHost {
       // Clamped so a background tab does not feed a giant delta at return.
       const delta = Math.min((now - this._last_time) / 1000, 0.1);
       this._last_time = now;
-      this._process(delta);
-      this._renderer?.render_tree(this);
+      this.tick(delta);
       this._raf = requestAnimationFrame(tick);
     };
     this._raf = requestAnimationFrame(tick);
@@ -55,6 +63,19 @@ export class SceneTree implements TreeHost {
     }
     this._renderer?.dispose();
     this._renderer = null;
+  }
+
+  /** One frame. `_process` is skipped while `paused`; the draw still happens. */
+  tick(delta: number): void {
+    if (!this.paused) {
+      this._process(delta);
+    }
+    this._renderer?.render_tree(this);
+  }
+
+  /** @internal */
+  _report_node_error(node: Node, error: unknown, where: "process" | "ready"): void {
+    this.on_node_error?.(node, error, where);
   }
 
   get_root(): Node {

@@ -208,12 +208,20 @@ export class Node {
     this._tree = tree;
     this._enter_tree();
     this._ready_called = true;
-    this._ready();
+    try {
+      this._ready();
+    } catch (error) {
+      tree._report_node_error?.(this, error, "ready");
+    }
   }
 
   /** @internal */
   _process_branch(delta: number): void {
-    this._process(delta);
+    try {
+      this._process(delta);
+    } catch (error) {
+      this._tree?._report_node_error?.(this, error, "process");
+    }
     for (const child of [...this._children]) {
       if (child._tree) {
         child._process_branch(delta);
@@ -250,7 +258,11 @@ export class Node {
     }
     if (!this._ready_called) {
       this._ready_called = true;
-      this._ready();
+      try {
+        this._ready();
+      } catch (error) {
+        this._tree?._report_node_error?.(this, error, "ready");
+      }
     }
   }
 

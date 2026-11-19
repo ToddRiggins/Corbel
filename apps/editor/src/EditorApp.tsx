@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ScriptEditor, type ScriptEditorHandle } from "./script/ScriptEditor";
 import { scriptRoles } from "./script/roles";
+import { Player } from "./play";
 import {
   Node,
   Node3D,
@@ -32,6 +33,12 @@ export function EditorApp() {
   if (!treeRef.current) {
     treeRef.current = new SceneTree();
   }
+  const playerRef = useRef<Player | null>(null);
+  if (!playerRef.current) {
+    playerRef.current = new Player();
+  }
+  const runCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const player = playerRef.current;
   const sceneRef = useRef<Node | null>(null);
   const scriptRef = useRef<ScriptEditorHandle | null>(null);
 
@@ -42,6 +49,9 @@ export function EditorApp() {
   const [selected, setSelected] = useState<Node | null>(null);
   const [tick, setTick] = useState(0);
   const [workspace, setWorkspace] = useState<"3d" | "script">("3d");
+  const [playState, setPlayState] = useState<"off" | "starting" | "on" | "paused">("off");
+  const [pendingPlay, setPendingPlay] = useState(false);
+  const [runRenderer, setRunRenderer] = useState<string | null>(null);
   const [scriptPath, setScriptPath] = useState<string | null>(null);
   const [scriptText, setScriptText] = useState("");
   const [diags, setDiags] = useState<Diagnostic[]>([]);
@@ -66,8 +76,8 @@ export function EditorApp() {
   const scene = sceneRef.current;
   void tick;
 
-  function log(line: string): void {
-    setOutput((prev) => [...prev, line].slice(-200));
+  function log(line: string, kind: "info" | "error" = "info"): void {
+    setOutput((prev) => [...prev, kind === "error" ? `ERROR: ${line}` : line].slice(-200));
   }
 
   function bump(): void {
@@ -332,6 +342,69 @@ export function EditorApp() {
     scriptRef.current?.jump(line);
   }
 
+  /** Play runs the open scene on the canvas. Pressing Play again restarts. */
+  function playClicked(): void {
+    if (!sceneRef.current) {
+      log("Open a .cscene to play.");
+      return;
+    }
+    if (player.running) {
+      player.stop();
+    }
+    setRunRenderer(null);
+    setWorkspace("3d");
+    setPendingPlay(true);
+  }
+
+  function pauseClicked(): void {
+    if (!player.running) {
+      return;
+    }
+    player.toggle_pause();
+    setPlayState(player.paused ? "paused" : "on");
+  }
+
+  function stopClicked(): void {
+    player.stop();
+    setPlayState("off");
+  }
+
+  // Starts the run once the canvas is really on the page.
+  useEffect(() => {
+    if (!pendingPlay || workspace !== "3d") {
+      return;
+    }
+    const canvas = runCanvasRef.current;
+    const scene = sceneRef.current;
+    if (!canvas || !scene) {
+      return;
+    }
+    setPendingPlay(false);
+    setPlayState("starting");
+    void (async () => {
+      try {
+        await player.start(scene, project, canvas, log);
+        setRunRenderer(player.renderer_name);
+        setPlayState("on");
+      } catch (error) {
+        log(error instanceof Error ? error.message : String(error), "error");
+        setPlayState("off");
+      }
+    })();
+    // The run holds the tree that start built; nothing else joins it here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlay, workspace, project]);
+
+  // The canvas only lives in the 3D workspace; leaving it stops the run.
+  useEffect(() => {
+    if (workspace !== "3d" && player.running) {
+      player.stop();
+      setPlayState("off");
+      log("Stopped: the 3D view closed.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace]);
+
   useEffect(() => {
     localStorage.setItem("corbel.scriptFont", String(fontSize));
   }, [fontSize]);
@@ -474,9 +547,18 @@ export function EditorApp() {
           <button className={workspace === "script" ? "on" : ""} onClick={() => setWorkspace("script")}>Script</button>
         </div>
         <div className="play-group">
-          <button className="play" disabled title="Play opens the main scene in a new window after the canvas slice. Scenes can be edited now.">Play</button>
-          <button disabled title="Pause arrives with Play.">Pause</button>
-          <button className="stop" disabled title="Stop closes the game window. Play is not available yet.">Stop</button>
+          <button
+            className="play"
+            disabled={playState === "starting"}
+            title={playState === "off" ? "Play runs the open scene on the 3D canvas." : "Play restarts the scene."}
+            onClick={playClicked}
+          >Play</button>
+          <button
+            disabled={playState === "off" || playState === "starting"}
+            title="Pause skips _process but keeps the last frame on the canvas."
+            onClick={pauseClicked}
+          >{playState === "paused" ? "Resume" : "Pause"}</button>
+          <button className="stop" disabled={playState === "off"} title="Stop ends the run." onClick={stopClicked}>Stop</button>
         </div>
       </header>
 
@@ -562,18 +644,31 @@ export function EditorApp() {
         <div className="center">
           {workspace === "3d" ? (
             <div className="viewport">
-              {scene ? (
-                <>
-                  <h3>{scene.name}</h3>
-                  <p>{countNodes(scene)} nodes. The scene dock is the tree.</p>
-                  <p>The 3D view draws when the canvas slice lands. Play stays off until then.</p>
-                </>
-              ) : (
-                <>
-                  <h3>No scene open</h3>
-                  <button onClick={newScene}>3D Scene</button>
-                </>
-              )}
+              <canvas
+                ref={runCanvasRef}
+                className={playState === "off" ? "run-canvas idle" : "run-canvas"}
+              />
+              <div className="run-bar">
+                {scene ? (
+                  playState === "off" ? (
+                    <>
+                      <h3>{scene.name}</h3>
+                      <p>{countNodes(scene)} nodes. Press Play to run this scene here. Script errors print in Output.</p>
+                    </>
+                  ) : (
+                    <p>
+                      {playState === "starting"
+                        ? "Building the run..."
+                        : `Playing ${scene.name}${playState === "paused" ? " · paused" : ""} · ${runRenderer ?? "starting renderer"}`}
+                    </p>
+                  )
+                ) : (
+                  <>
+                    <h3>No scene open</h3>
+                    <button onClick={newScene}>3D Scene</button>
+                  </>
+                )}
+              </div>
             </div>
           ) : (
             <div className="script-view">

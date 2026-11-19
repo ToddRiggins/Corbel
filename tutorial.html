@@ -66,7 +66,7 @@ Vector3.FORWARD is 0 0 -1</pre>
       <p>Double-click <code>start_editor.bat</code> in the Corbel folder. It starts the editor and opens <code>http://127.0.0.1:5177/</code>. The same server is <code>npm run editor</code>. The page is dark, with rounded flat docks: Scene and FileSystem on the left, the 3D workspace and Output in the middle, and the Inspector on the right.</p>
       <p>The demo project is <code>projects/demo</code>. A scene is a <code>.cscene</code> file. <code>main.cscene</code> is the one that opens. <code>player.ts</code> is the script. The Script workspace colors keywords, types, functions, members, variables, strings, and numbers separately. <code>A−</code> and <code>A+</code> change the code font. A typo such as <code>Vector3.FORWRD</code> shows under the script, with the file, the line, and “Did you mean FORWARD?”. Help → Documentation opens the reference in a new window. Right-click a documented name in a script and choose Look up. That name sits at the top of the reference.</p>
       <p>The Scene dock lists each node by name. The arrow folds its children. The eye hides a 3D node. Right-click a node to add a child, attach a <code>.ts</code> script, rename it, or delete it. A new node is named after its type. A second one under the same parent is <code>Name2</code>. The inspector is where the type, position, rotation, visible flag, and script path are edited. Drop a node onto another to parent it. Save writes a <code>.cscene</code> file.</p>
-      <p>Another project is a folder under <code>projects</code>. The Project menu switches to it. Play, Pause, and Stop stay off until the canvas can draw. The 3D view names the open scene and does not draw it yet.</p>
+      <p>Another project is a folder under <code>projects</code>. The Project menu switches to it. The 3D view now draws: it holds a canvas, and <strong>Play</strong> runs the open scene on it. Play rebuilds the scene and swaps every node that has a script for a live instance of that script's default export class, using the saved type, position, rotation, and visibility. <strong>Pause</strong> skips <code>_process</code> but keeps the last frame. <strong>Stop</strong> ends the run. Pressing Play again restarts. Switching to the Script workspace stops a running scene, because the canvas lives in the 3D view.</p>
     </div>
   </section>
 
@@ -155,7 +155,7 @@ box.has_point(box.get_center());</pre>
         <li>A canvas. WebGPU, then WebGL2 if WebGPU is missing. Done. <code>npm run sandbox</code> turns a box, and the panel names the renderer.</li>
         <li>Voxel picking. The solid cell, and the empty cell in front of the face.</li>
         <li>Editing a cell and seeing the mesh change.</li>
-        <li>Play, which runs the main scene in a new window.</li>
+        <li>Play runs the open scene in the 3D view today. Still missing: a second window for the game, and the runtime input nodes a game would need.</li>
       </ol>
     </div>
   </section>
