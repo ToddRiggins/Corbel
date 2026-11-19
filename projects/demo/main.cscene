@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "type": "Node3D",
+  "name": "Main",
+  "position": [0, 0, 0],
+  "rotation_degrees": [0, 0, 0],
+  "children": [
+    {
+      "type": "Camera3D",
+      "name": "Camera",
+      "position": [0, 1.5, 4],
+      "rotation_degrees": [0, 0, 0]
+    },
+    {
+      "type": "Node3D",
+      "name": "Player",
+      "position": [0, 0, 0],
+      "rotation_degrees": [0, 0, 0],
+      "script": "res://player.ts",
+      "children": [
+        {
+          "type": "MeshInstance3D",
+          "name": "Body",
+          "position": [0, 0.5, 0],
+          "rotation_degrees": [0, 0, 0]
+        }
+      ]
+    }
+  ]
+}

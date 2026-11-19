@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Corbel — documentation</title>
+  <style>
+    :root {
+      --bg: #141414;
+      --dock: #1c1c1c;
+      --line: #2e2e2e;
+      --text: #e7e5e4;
+      --muted: #a8a29e;
+      --amber: #d97706;
+      --code: #121110;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    .toc {
+      height: 100vh;
+      overflow: auto;
+      background: var(--dock);
+      border-right: 1px solid var(--line);
+      padding: 1rem 0.85rem 2rem;
+    }
+    .toc h1 { font-size: 1.25rem; margin: 0 0 0.15rem; font-weight: 650; }
+    .toc .mark { color: var(--amber); }
+    .toc p { color: var(--muted); font-size: 0.82rem; margin: 0 0 0.8rem; }
+    .toc input {
+      width: 100%;
+      background: #161616;
+      color: #f5f5f4;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      padding: 0.4rem 0.55rem;
+      margin-bottom: 0.85rem;
+      font: inherit;
+    }
+    .toc h2 {
+      margin: 0.85rem 0 0.25rem;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fdba74;
+    }
+    .toc a {
+      display: block;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 6px;
+      padding: 0.18rem 0.45rem;
+      font-size: 0.92rem;
+    }
+    .toc a:hover { background: #3a2a16; }
+    .toc a[hidden] { display: none; }
+    main { height: 100vh; overflow: auto; padding: 1.4rem 1.6rem 4rem; }
+    article { max-width: 46rem; }
+    section {
+      background: var(--dock);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin: 0 0 1rem;
+      overflow: hidden;
+    }
+    section > h2 { margin: 0; padding: 0.55rem 1rem; color: #fff; font-size: 1.05rem; font-weight: 600; }
+    .body { padding: 0.2rem 1rem 1rem; }
+    .amber > h2 { background: #b45309; }
+    .red > h2 { background: #b91c1c; }
+    .blue > h2 { background: #1d4ed8; }
+    .green > h2 { background: #047857; }
+    .violet > h2 { background: #6d28d9; }
+    .rose > h2 { background: #be123c; }
+    .stone > h2 { background: #44403c; }
+    .zinc > h2 { background: #3f3f46; }
+    .teal > h2 { background: #0f766e; }
+    h3 { margin: 1rem 0 0.35rem; font-size: 1rem; }
+    a { color: #fdba74; }
+    code, pre, .sig { font-family: Consolas, "Cascadia Mono", monospace; }
+    p code, li code, td code {
+      background: #2a2a2a;
+      color: #fde68a;
+      padding: 0.05rem 0.3rem;
+      border-radius: 4px;
+    }
+    pre {
+      background: var(--code);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      overflow: auto;
+      line-height: 1.55;
+      margin: 0.7rem 0;
+    }
+    .kw { color: #ff7085; }
+    .flow { color: #ff8ccc; }
+    .ty { color: #42ffc2; }
+    .fn { color: #66e6ff; }
+    .call { color: #57b3ff; }
+    .mem { color: #b7d4ef; }
+    .vr { color: #f4efe6; }
+    .st { color: #ffeda1; }
+    .num { color: #a1ffe0; }
+    .cm { color: #8d8680; }
+    .op { color: #abc9ff; }
+    table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 0.2rem; }
+    th, td { text-align: left; vertical-align: top; padding: 0.35rem 0.45rem; border-top: 1px solid var(--line); }
+    th { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; }
+    .note { color: var(--muted); }
+    main :target { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+    @media (max-width: 800px) {
+      body { display: block; }
+      .toc { height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      main { height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc">
+    <h1><span class="mark">Corbel</span> docs</h1>
+    <p>What the engine can do today. This page grows with the code.</p>
+    <input id="find" type="search" placeholder="Search" aria-label="Search the contents">
+    <h2>Start</h2>
+    <a href="#start">What this is</a>
+    <a href="#pages">These pages</a>
+    <h2>Editor</h2>
+    <a href="#editor">Layout</a>
+    <a href="#scene-dock">Scene dock</a>
+    <a href="#script-editor">Script editor</a>
+    <a href="#cscene">Scene file</a>
+    <h2>Scene</h2>
+    <a href="#script">A script</a>
+    <a href="#node">Node</a>
+    <a href="#node3d">Node3D</a>
+    <a href="#camera">Camera3D and MeshInstance3D</a>
+    <a href="#tree">SceneTree and Signal</a>
+    <h2>Math</h2>
+    <a href="#vectors">Vectors</a>
+    <a href="#rotation">Rotation</a>
+    <a href="#shape">Plane, box, and color</a>
+    <h2>Later</h2>
+    <a href="#ahead">Not built yet</a>
+  </nav>
+  <main>
+    <article>
+      <section class="amber" id="start">
+        <h2>What this is</h2>
+        <div class="body">
+          <p>Corbel is an HTML5 creation engine. Games will run on it, and the VoxiTect editor will run on it. You write TypeScript. Method names follow Godot 4, so a script can move toward GDScript with small edits.</p>
+          <p>The world is Y-up and right-handed. <code>Vector3.FORWARD</code> is <code>(0, 0, -1)</code>. A camera looks down −Z. A character that faces the camera looks toward +Z.</p>
+          <p>TypeScript has no <code>+</code> for these types. Call a method: <code>a.add(b)</code>, <code>a.mul(2)</code>, <code>a.lerp(b, 0.5)</code>. In 2D, Y points down the screen, so <code>Vector2.UP</code> is <code>(0, -1)</code>. In 3D, <code>Vector3.UP</code> is <code>(0, 1, 0)</code>.</p>
+          <p class="note">The package is <code>@corbel/core</code>. Import from that name. React draws the editor. It does not own the scene.</p>
+        </div>
+      </section>
+
+      <section class="zinc" id="pages">
+        <h2>These pages</h2>
+        <div class="body">
+          <p><a href="documentation.html">documentation.html</a> is this reference. <a href="tutorial.html">tutorial.html</a> is the short how-to. <a href="history.html">history.html</a> is the log of what changed. Keep all three current when the engine gains a feature.</p>
+          <p>In the editor, Help opens each page in a new window. On disk they sit next to each other in the Corbel folder, so a double-click opens one too.</p>
+        </div>
+      </section>
+
+      <section class="blue" id="editor">
+        <h2>Layout</h2>
+        <div class="body">
+          <p>Double-click <code>start_editor.bat</code>, or run <code>npm run editor</code> from the Corbel folder. The page is <code>http://127.0.0.1:5177/</code>.</p>
+          <p>Scene and FileSystem are on the left. The 3D workspace and Output sit in the middle. The Inspector is on the right. Output is only as wide as the middle. Drag a splitter to resize a dock.</p>
+          <p>The top bar has Scene, Project, and Help, then 3D and Script, then Play, Pause, and Stop. Play stays off until a canvas can draw the scene. Scene → New 3D Scene makes a <code>Node3D</code> named Main. Scene → Save writes the open <code>.cscene</code>. Ctrl+S saves the scene, or the open script when Script is showing.</p>
+          <p>Projects are folders under <code>projects</code>. The demo is <code>projects/demo</code>. <code>res://</code> means a file inside the open project. The Project menu switches projects.</p>
+        </div>
+      </section>
+
+      <section class="green" id="scene-dock">
+        <h2>Scene dock</h2>
+        <div class="body">
+          <p>Each row is the node’s name. The type is in the Inspector, not on the row. The arrow folds the children. A node with no children has no arrow. The eye on a 3D node hides and shows it. A blue <code>TS</code> means a script is attached.</p>
+          <p>Add names the new node after its type. A second node of that name under the same parent becomes <code>Name2</code>, then <code>Name3</code>. A different parent may use the same name. Rename from the right-click menu or from the Inspector. Drop a row onto another row to parent it.</p>
+          <p>Right-click a row. The browser menu stays closed. The menu today is:</p>
+          <ul>
+            <li>Add Child Node</li>
+            <li>Attach Script, and Detach Script when one is attached</li>
+            <li>Expand Branch and Collapse Branch when the node has children</li>
+            <li>Rename</li>
+            <li>Copy Node Path</li>
+            <li>Delete</li>
+          </ul>
+          <p class="note">Later, if we need them: sub-resources, instancing a scene, cut, copy, duplicate, extend script, change type, move up and down, reparent dialogs, make scene root, save branch as scene, unique name, and class documentation from the row.</p>
+        </div>
+      </section>
+
+      <section class="violet" id="script-editor">
+        <h2>Script editor</h2>
+        <div class="body">
+          <p>Script replaces the plain text box. The colors follow the same split Godot uses for GDScript. Each kind of code has its own color, listed under the editor:</p>
+          <table>
+            <tr><th>Kind</th><th>Color</th><th>Examples</th></tr>
+            <tr><td>keyword</td><td style="color:#ff7085">keyword</td><td><code>import</code>, <code>export</code>, <code>class</code>, <code>const</code></td></tr>
+            <tr><td>flow</td><td style="color:#ff8ccc">flow</td><td><code>if</code>, <code>return</code>, <code>await</code>, <code>this</code></td></tr>
+            <tr><td>type</td><td style="color:#42ffc2">type</td><td><code>Vector3</code>, <code>Node3D</code>, <code>number</code></td></tr>
+            <tr><td>function</td><td style="color:#66e6ff">function</td><td>the name in <code>override _process</code></td></tr>
+            <tr><td>call</td><td style="color:#57b3ff">call</td><td><code>add</code> in <code>position.add(...)</code></td></tr>
+            <tr><td>member</td><td style="color:#b7d4ef">member</td><td><code>position</code>, <code>speed</code> after a dot</td></tr>
+            <tr><td>variable</td><td style="color:#f4efe6">variable</td><td>a local name such as <code>delta</code></td></tr>
+            <tr><td>string</td><td style="color:#ffeda1">string</td><td><code>"@corbel/core"</code></td></tr>
+            <tr><td>number</td><td style="color:#a1ffe0">number</td><td><code>2</code>, <code>0.5</code></td></tr>
+            <tr><td>comment</td><td style="color:#8d8680">comment</td><td><code>// note</code></td></tr>
+          </table>
+          <p>The colors live in <code>apps/editor/src/script/roles.ts</code>. The parser tags live in <code>highlight.ts</code>. Change a role there when a kind of code should look different.</p>
+          <p><code>A−</code> and <code>A+</code> change the code font from 12 to 32. The size is remembered on this computer. Line numbers, the current line, matching brackets, and folding are on. Ctrl+F finds text in the file. A red underline is a TypeScript error. Click the line under the editor to jump there. The message includes the file, the line, the column, and “Did you mean” when TypeScript knows a close name.</p>
+          <p>Right-click a documented name, such as <code>Node3D</code> or <code>_process</code>, and choose Look up. The reference opens in its own window with that name at the top. A name with no entry keeps the browser menu.</p>
+        </div>
+      </section>
+
+      <section class="rose" id="cscene">
+        <h2>Scene file</h2>
+        <div class="body">
+          <p>A scene is JSON, format 1, in a <code>.cscene</code> file. The demo opens <code>res://main.cscene</code> because <code>project.corbel.json</code> sets <code>main_scene</code>.</p>
+<pre><span class="op">{</span>
+  <span class="st">"format"</span><span class="op">:</span> <span class="num">1</span><span class="op">,</span>
+  <span class="st">"type"</span><span class="op">:</span> <span class="st">"Node3D"</span><span class="op">,</span>
+  <span class="st">"name"</span><span class="op">:</span> <span class="st">"Main"</span><span class="op">,</span>
+  <span class="st">"position"</span><span class="op">:</span> <span class="op">[</span><span class="num">0</span><span class="op">,</span> <span class="num">0</span><span class="op">,</span> <span class="num">0</span><span class="op">],</span>
+  <span class="st">"children"</span><span class="op">:</span> <span class="op">[</span>
+    <span class="op">{</span> <span class="st">"type"</span><span class="op">:</span> <span class="st">"Camera3D"</span><span class="op">,</span> <span class="st">"name"</span><span class="op">:</span> <span class="st">"Camera"</span><span class="op">,</span> <span class="st">"position"</span><span class="op">:</span> <span class="op">[</span><span class="num">0</span><span class="op">,</span> <span class="num">1.5</span><span class="op">,</span> <span class="num">4</span><span class="op">]</span> <span class="op">}</span>
+  <span class="op">]</span>
+<span class="op">}</span></pre>
+          <table>
+            <tr><th>Field</th><th>Meaning</th></tr>
+            <tr><td><code>type</code></td><td><code>Node</code>, <code>Node3D</code>, <code>Camera3D</code>, or <code>MeshInstance3D</code></td></tr>
+            <tr><td><code>name</code></td><td>The name shown in the scene dock</td></tr>
+            <tr><td><code>position</code></td><td><code>[x, y, z]</code> on a 3D node</td></tr>
+            <tr><td><code>rotation_degrees</code></td><td><code>[x, y, z]</code> in degrees</td></tr>
+            <tr><td><code>visible</code></td><td>Write <code>false</code> to hide a 3D node. Omitted means visible</td></tr>
+            <tr><td><code>script</code></td><td>A <code>res://</code> path to a <code>.ts</code> file</td></tr>
+            <tr><td><code>children</code></td><td>The same kind of object, nested</td></tr>
+          </table>
+          <p><code id="doc-pack_scene" data-doc="pack_scene">pack_scene</code> writes a node. <code id="doc-unpack_scene" data-doc="unpack_scene">unpack_scene</code> builds one. The caller adds that node to a <code>SceneTree</code>.</p>
+        </div>
+      </section>
+
+      <section class="teal" id="script">
+        <h2>A script</h2>
+        <div class="body">
+          <p>Attach Script on a node. The path starts as <code>res://Name.ts</code>. If that file is missing, the editor writes a class that extends the node’s type and opens it. If the file is already there, it attaches and opens it and does not replace the text.</p>
+<pre><span class="kw">import</span> <span class="op">{</span> <span class="ty">Node3D</span> <span class="op">}</span> <span class="kw">from</span> <span class="st">"@corbel/core"</span><span class="op">;</span>
+
+<span class="kw">export default class</span> <span class="ty">Player</span> <span class="kw">extends</span> <span class="ty">Node3D</span> <span class="op">{</span>
+  <span class="vr">speed</span> <span class="op">=</span> <span class="num">2</span><span class="op">;</span>
+
+  <span class="kw">override</span> <span class="fn">_process</span><span class="op">(</span><span class="vr">delta</span><span class="op">:</span> <span class="ty">number</span><span class="op">):</span> <span class="ty">void</span> <span class="op">{</span>
+    <span class="flow">this</span><span class="op">.</span><span class="mem">position</span><span class="op">.</span><span class="mem">x</span> <span class="op">+=</span> <span class="flow">this</span><span class="op">.</span><span class="mem">speed</span> <span class="op">*</span> <span class="vr">delta</span><span class="op">;</span>
+  <span class="op">}</span>
+<span class="op">}</span></pre>
+          <p>The checks that run on a node, in order:</p>
+          <ul>
+            <li><code>_enter_tree</code> on the parent, then on each child.</li>
+            <li><code>_ready</code> on the children, then on the parent. <code>_ready</code> runs once, even if the node is removed and added again.</li>
+            <li><code>_process(delta)</code> on the parent, then the children, each frame.</li>
+            <li><code>_exit_tree</code> on the children, then the parent.</li>
+          </ul>
+          <p class="note">The editor typechecks the file. Play does not run the scene yet, so an attached script is not called from the editor until the canvas slice exists. <code>npm run try</code> still runs <code>packages/try/src/main.ts</code> from the terminal.</p>
+        </div>
+      </section>
+
+      <section class="stone" id="node">
+        <h2 id="doc-Node" data-doc="Node">Node</h2>
+        <div class="body">
+          <p>Every object in the tree is a <code>Node</code>. The name cannot contain <code>.</code> <code>/</code> <code>:</code> <code>@</code> or <code>%</code>. <code>add_child</code> renames a duplicate sibling to <code>Name2</code>.</p>
+          <table>
+            <tr><th>Method</th><th>Job</th></tr>
+            <tr><td><code id="doc-Node-get_class" data-doc="get_class" data-owner="Node">get_class()</code></td><td>The class name, such as <code>Node3D</code></td></tr>
+            <tr><td><code id="doc-Node-set_name" data-doc="set_name" data-owner="Node">set_name(name)</code></td><td>Rename. Throws if a sibling already has it</td></tr>
+            <tr><td><code id="doc-Node-add_child" data-doc="add_child" data-owner="Node">add_child(node)</code></td><td>Parent the node under this one</td></tr>
+            <tr><td><code id="doc-Node-remove_child" data-doc="remove_child" data-owner="Node">remove_child(node)</code></td><td>Detach a direct child</td></tr>
+            <tr><td><code id="doc-Node-reparent" data-doc="reparent" data-owner="Node">reparent(new_parent)</code></td><td>Move this node under another parent</td></tr>
+            <tr><td><code id="doc-Node-get_child" data-doc="get_child" data-owner="Node">get_child(index)</code></td><td>One child, by position</td></tr>
+            <tr><td><code id="doc-Node-get_children" data-doc="get_children" data-owner="Node">get_children()</code></td><td>A copy of the child list</td></tr>
+            <tr><td><code id="doc-Node-get_child_count" data-doc="get_child_count" data-owner="Node">get_child_count()</code></td><td>How many children</td></tr>
+            <tr><td><code id="doc-Node-get_parent" data-doc="get_parent" data-owner="Node">get_parent()</code></td><td>The parent, or null</td></tr>
+            <tr><td><code id="doc-Node-get_node" data-doc="get_node" data-owner="Node">get_node(path)</code></td><td>A child by name, <code>Body/Hand</code>, <code>..</code>, or <code>/root/...</code>. Throws if missing</td></tr>
+            <tr><td><code id="doc-Node-get_node_or_null" data-doc="get_node_or_null" data-owner="Node">get_node_or_null(path)</code></td><td>The same lookup, or null</td></tr>
+            <tr><td><code id="doc-Node-find_child" data-doc="find_child" data-owner="Node">find_child(pattern)</code></td><td>First matching descendant. <code>*</code> is a wildcard</td></tr>
+            <tr><td><code id="doc-Node-add_to_group" data-doc="add_to_group" data-owner="Node">add_to_group(group)</code></td><td>Put this node in a named group</td></tr>
+            <tr><td><code id="doc-Node-remove_from_group" data-doc="remove_from_group" data-owner="Node">remove_from_group(group)</code></td><td>Take it out</td></tr>
+            <tr><td><code id="doc-Node-is_in_group" data-doc="is_in_group" data-owner="Node">is_in_group(group)</code></td><td>True when it is in that group</td></tr>
+            <tr><td><code id="doc-Node-get_groups" data-doc="get_groups" data-owner="Node">get_groups()</code></td><td>The group names</td></tr>
+            <tr><td><code id="doc-Node-set_meta" data-doc="set_meta" data-owner="Node">set_meta(key, value)</code></td><td>Store an extra value. The editor uses <code>script_path</code></td></tr>
+            <tr><td><code id="doc-Node-get_meta" data-doc="get_meta" data-owner="Node">get_meta(key)</code></td><td>Read that value</td></tr>
+            <tr><td><code id="doc-Node-has_meta" data-doc="has_meta" data-owner="Node">has_meta(key)</code></td><td>True when the key was set</td></tr>
+            <tr><td><code id="doc-Node-queue_free" data-doc="queue_free" data-owner="Node">queue_free()</code></td><td>Remove the node at the end of the frame</td></tr>
+            <tr><td><code id="doc-Node-is_inside_tree" data-doc="is_inside_tree" data-owner="Node">is_inside_tree()</code></td><td>True after it has entered a scene tree</td></tr>
+            <tr><td><code id="doc-Node-is_queued_for_deletion" data-doc="is_queued_for_deletion" data-owner="Node">is_queued_for_deletion()</code></td><td>True after <code>queue_free</code></td></tr>
+          </table>
+          <p>Override <code id="doc-Node-_enter_tree" data-doc="_enter_tree" data-owner="Node">_enter_tree</code>, <code id="doc-Node-_ready" data-doc="_ready" data-owner="Node">_ready</code>, <code id="doc-Node-_process" data-doc="_process" data-owner="Node">_process</code>, and <code id="doc-Node-_exit_tree" data-doc="_exit_tree" data-owner="Node">_exit_tree</code>. Leave them empty when a node has nothing to do.</p>
+        </div>
+      </section>
+
+      <section class="blue" id="node3d">
+        <h2 id="doc-Node3D" data-doc="Node3D" data-extends="Node">Node3D</h2>
+        <div class="body">
+          <p><code>Node3D</code> adds a place in 3D space. <code>position</code> is a <code>Vector3</code>. <code>basis</code> is the rotation. <code>visible</code> hides the node. The eye in the scene dock and the Inspector checkbox write the same flag.</p>
+          <table>
+            <tr><th>Property</th><th>Job</th></tr>
+            <tr><td><code id="doc-Node3D-position" data-doc="position" data-owner="Node3D" data-type="Vector3">position</code></td><td>Local translation</td></tr>
+            <tr><td><code id="doc-Node3D-rotation" data-doc="rotation" data-owner="Node3D" data-type="Vector3">rotation</code></td><td>Euler radians. Setting it replaces the basis</td></tr>
+            <tr><td><code id="doc-Node3D-rotation_degrees" data-doc="rotation_degrees" data-owner="Node3D" data-type="Vector3">rotation_degrees</code></td><td>The same rotation in degrees</td></tr>
+            <tr><td><code id="doc-Node3D-basis" data-doc="basis" data-owner="Node3D" data-type="Basis">basis</code></td><td>The rotation, stored as a <code>Basis</code></td></tr>
+            <tr><td><code id="doc-Node3D-transform" data-doc="transform" data-owner="Node3D" data-type="Transform3D">transform</code></td><td>Basis plus position as a <code>Transform3D</code></td></tr>
+            <tr><td><code id="doc-Node3D-visible" data-doc="visible" data-owner="Node3D">visible</code></td><td><code>true</code> until something hides it</td></tr>
+          </table>
+          <p>Copy a basis or a vector before you keep it. The constants on <code>Basis</code> and <code>Vector3</code> are shared.</p>
+        </div>
+      </section>
+
+      <section class="green" id="camera">
+        <h2>Camera3D and MeshInstance3D</h2>
+        <div class="body">
+          <p><code id="doc-Camera3D" data-doc="Camera3D" data-extends="Node3D">Camera3D</code> is a <code>Node3D</code> that will be the view. <code id="doc-MeshInstance3D" data-doc="MeshInstance3D" data-extends="Node3D">MeshInstance3D</code> is a <code>Node3D</code> that will draw a mesh. Both can be added, moved, hidden, and saved. Neither draws yet. The 3D workspace names the open scene and waits for the canvas.</p>
+          <p><code id="doc-create_node" data-doc="create_node">create_node(type)</code> builds one of <code>Node</code>, <code>Node3D</code>, <code>Camera3D</code>, or <code>MeshInstance3D</code>. <code id="doc-node_label" data-doc="node_label">node_label(node)</code> is the type the Inspector shows.</p>
+        </div>
+      </section>
+
+      <section class="violet" id="tree">
+        <h2>SceneTree and Signal</h2>
+        <div class="body">
+          <p><code id="doc-SceneTree" data-doc="SceneTree">new SceneTree()</code> makes a hidden root named <code>root</code>. Add the scene’s top node with <code>get_root().add_child(scene)</code>. Call <code>_process(delta)</code> once per frame. That walks the tree, then removes anything that called <code>queue_free</code>.</p>
+          <table>
+            <tr><th>Method</th><th>Job</th></tr>
+            <tr><td><code id="doc-SceneTree-get_root" data-doc="get_root" data-owner="SceneTree">get_root()</code></td><td>The hidden root</td></tr>
+            <tr><td><code id="doc-SceneTree-get_nodes_in_group" data-doc="get_nodes_in_group" data-owner="SceneTree">get_nodes_in_group(group)</code></td><td>Every node that joined that group</td></tr>
+            <tr><td><code id="doc-SceneTree-_process" data-doc="_process" data-owner="SceneTree">_process(delta)</code></td><td>One frame. Parent first, then children, then queued frees</td></tr>
+          </table>
+          <p>A <code id="doc-Signal" data-doc="Signal">Signal</code> is a list of callbacks. <code id="doc-Signal-connect" data-doc="connect" data-owner="Signal">connect</code> adds one. <code id="doc-Signal-disconnect" data-doc="disconnect" data-owner="Signal">disconnect</code> removes it. <code id="doc-Signal-is_connected" data-doc="is_connected" data-owner="Signal">is_connected</code> checks. <code id="doc-Signal-emit" data-doc="emit" data-owner="Signal">emit(...args)</code> calls them in the order they were connected.</p>
+<pre><span class="kw">const</span> <span class="vr">hit</span> <span class="op">=</span> <span class="kw">new</span> <span class="call">Signal</span><span class="op">&lt;[</span><span class="ty">number</span><span class="op">]&gt;();</span>
+<span class="vr">hit</span><span class="op">.</span><span class="call">connect</span><span class="op">((</span><span class="vr">amount</span><span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="cm">/* use amount */</span> <span class="op">});</span>
+<span class="vr">hit</span><span class="op">.</span><span class="call">emit</span><span class="op">(</span><span class="num">3</span><span class="op">);</span></pre>
+        </div>
+      </section>
+
+      <section class="amber" id="vectors">
+        <h2>Vectors</h2>
+        <div class="body">
+          <p><code id="doc-Vector3" data-doc="Vector3">Vector3</code> is <code>x, y, z</code>. <code id="doc-Vector2" data-doc="Vector2">Vector2</code> is <code>x, y</code>. <code id="doc-Vector3i" data-doc="Vector3i">Vector3i</code> is the integer form used for a cell. Methods return a new value unless the name says the vector changes itself. <code>normalize()</code> changes this vector. <code>normalized()</code> returns another.</p>
+          <p>Shared directions: <code id="doc-ZERO" data-doc="ZERO" data-owner="Vector2 Vector3 Vector3i">ZERO</code>, <code id="doc-ONE" data-doc="ONE" data-owner="Vector2 Vector3 Vector3i">ONE</code>, <code id="doc-LEFT" data-doc="LEFT" data-owner="Vector2 Vector3">LEFT</code>, <code id="doc-RIGHT" data-doc="RIGHT" data-owner="Vector2 Vector3">RIGHT</code>, <code id="doc-UP" data-doc="UP" data-owner="Vector2 Vector3">UP</code>, <code id="doc-DOWN" data-doc="DOWN" data-owner="Vector2 Vector3">DOWN</code>. <code>Vector3</code> and <code>Vector3i</code> also have <code id="doc-FORWARD" data-doc="FORWARD" data-owner="Vector3 Vector3i">FORWARD</code> <code>(0, 0, -1)</code> and <code id="doc-BACK" data-doc="BACK" data-owner="Vector3 Vector3i">BACK</code> <code>(0, 0, 1)</code>.</p>
+          <table>
+            <tr><th>Vector3</th><th>Job</th></tr>
+            <tr><td><code id="doc-Vector3-length" data-doc="length" data-owner="Vector3">length()</code> <code id="doc-Vector3-length_squared" data-doc="length_squared" data-owner="Vector3">length_squared()</code></td><td>How long it is</td></tr>
+            <tr><td><code id="doc-Vector3-normalize" data-doc="normalize" data-owner="Vector3">normalize()</code> <code id="doc-Vector3-normalized" data-doc="normalized" data-owner="Vector3">normalized()</code> <code id="doc-Vector3-is_normalized" data-doc="is_normalized" data-owner="Vector3">is_normalized()</code></td><td>Make the length 1</td></tr>
+            <tr><td><code id="doc-Vector3-dot" data-doc="dot" data-owner="Vector3">dot(v)</code> <code id="doc-Vector3-cross" data-doc="cross" data-owner="Vector3">cross(v)</code></td><td>Dot product, and a perpendicular vector</td></tr>
+            <tr><td><code id="doc-Vector3-add" data-doc="add" data-owner="Vector3">add</code> <code id="doc-Vector3-sub" data-doc="sub" data-owner="Vector3">sub</code> <code id="doc-Vector3-mul" data-doc="mul" data-owner="Vector3">mul</code> <code id="doc-Vector3-div" data-doc="div" data-owner="Vector3">div</code> <code id="doc-Vector3-neg" data-doc="neg" data-owner="Vector3">neg</code></td><td>Arithmetic. <code>mul</code> and <code>div</code> take a number or a vector</td></tr>
+            <tr><td><code id="doc-Vector3-lerp" data-doc="lerp" data-owner="Vector3">lerp(to, weight)</code></td><td>Blend. Weight 0 is this vector. Weight 1 is <code>to</code></td></tr>
+            <tr><td><code id="doc-Vector3-distance_to" data-doc="distance_to" data-owner="Vector3">distance_to</code> <code id="doc-Vector3-distance_squared_to" data-doc="distance_squared_to" data-owner="Vector3">distance_squared_to</code> <code id="doc-Vector3-direction_to" data-doc="direction_to" data-owner="Vector3">direction_to</code> <code id="doc-Vector3-angle_to" data-doc="angle_to" data-owner="Vector3">angle_to</code></td><td>Measures toward another vector</td></tr>
+            <tr><td><code id="doc-Vector3-abs" data-doc="abs" data-owner="Vector3">abs()</code> <code id="doc-Vector3-inverse" data-doc="inverse" data-owner="Vector3">inverse()</code></td><td>Per component</td></tr>
+            <tr><td><code id="doc-Vector3-get_any_perpendicular" data-doc="get_any_perpendicular" data-owner="Vector3">get_any_perpendicular()</code></td><td>Some vector at a right angle</td></tr>
+            <tr><td><code id="doc-Vector3-is_equal_approx" data-doc="is_equal_approx" data-owner="Vector3">is_equal_approx(v)</code> <code id="doc-Vector3-is_zero_approx" data-doc="is_zero_approx" data-owner="Vector3">is_zero_approx()</code></td><td>Close enough, using <code id="doc-CMP_EPSILON" data-doc="CMP_EPSILON">CMP_EPSILON</code> which is <code>0.00001</code></td></tr>
+            <tr><td><code id="doc-Vector3-clone" data-doc="clone" data-owner="Vector3">clone()</code> <code id="doc-Vector3-component" data-doc="component" data-owner="Vector3">component(index)</code></td><td>A copy, or x, y, or z by 0, 1, or 2</td></tr>
+          </table>
+          <p><code id="doc-Vector2-cross" data-doc="cross" data-owner="Vector2">Vector2.cross</code> returns a number, not a vector. <code>Vector3i</code> has <code id="doc-Vector3i-add" data-doc="add" data-owner="Vector3i">add</code>, <code id="doc-Vector3i-sub" data-doc="sub" data-owner="Vector3i">sub</code>, <code id="doc-Vector3i-mul" data-doc="mul" data-owner="Vector3i">mul</code>, <code id="doc-Vector3i-length" data-doc="length" data-owner="Vector3i">length</code>, <code id="doc-Vector3i-length_squared" data-doc="length_squared" data-owner="Vector3i">length_squared</code>, <code id="doc-Vector3i-to_vector3" data-doc="to_vector3" data-owner="Vector3i">to_vector3</code>, and <code id="doc-Vector3i-is_equal" data-doc="is_equal" data-owner="Vector3i">is_equal</code>. It truncates toward zero when a value is not already an integer.</p>
+          <p><code id="doc-is_equal_approx" data-doc="is_equal_approx">is_equal_approx(a, b)</code> and <code id="doc-is_zero_approx" data-doc="is_zero_approx">is_zero_approx(a)</code> compare plain numbers.</p>
+        </div>
+      </section>
+
+      <section class="red" id="rotation">
+        <h2>Rotation</h2>
+        <div class="body">
+          <p>A <code id="doc-Basis" data-doc="Basis">Basis</code> is a 3×3 rotation and scale. Rows are stored. <code>.x</code>, <code>.y</code>, and <code>.z</code> are the columns, which are the local axes. <code id="doc-Basis-IDENTITY" data-doc="IDENTITY" data-owner="Basis">Basis.IDENTITY</code> is no rotation.</p>
+          <table>
+            <tr><th>Basis</th><th>Job</th></tr>
+            <tr><td><code id="doc-Basis-from_euler" data-doc="from_euler" data-owner="Basis">from_euler(radians)</code></td><td>YXZ order, which is Godot’s default</td></tr>
+            <tr><td><code id="doc-Basis-looking_at" data-doc="looking_at" data-owner="Basis">looking_at(target, up, use_model_front)</code></td><td>Aim. <code>target</code> is a direction. With <code>use_model_front</code>, local +Z points along it, so a character faces the camera. Without it, local −Z points along it, so a camera looks</td></tr>
+            <tr><td><code id="doc-Basis-from_columns" data-doc="from_columns" data-owner="Basis">from_columns(x, y, z)</code> <code id="doc-Basis-from_scale" data-doc="from_scale" data-owner="Basis">from_scale(scale)</code></td><td>Build one from axes, or from a scale</td></tr>
+            <tr><td><code id="doc-Basis-get_column" data-doc="get_column" data-owner="Basis">get_column(index)</code> <code id="doc-Basis-get_euler" data-doc="get_euler" data-owner="Basis">get_euler()</code> <code id="doc-Basis-get_quaternion" data-doc="get_quaternion" data-owner="Basis">get_quaternion()</code></td><td>Read it back</td></tr>
+            <tr><td><code id="doc-Basis-xform" data-doc="xform" data-owner="Basis">xform(v)</code> <code id="doc-Basis-xform_inv" data-doc="xform_inv" data-owner="Basis">xform_inv(v)</code> <code id="doc-Basis-mul" data-doc="mul" data-owner="Basis">mul(basis)</code></td><td>Apply it</td></tr>
+            <tr><td><code id="doc-Basis-transposed" data-doc="transposed" data-owner="Basis">transposed()</code> <code id="doc-Basis-inverse" data-doc="inverse" data-owner="Basis">inverse()</code> <code id="doc-Basis-determinant" data-doc="determinant" data-owner="Basis">determinant()</code></td><td>The other directions</td></tr>
+            <tr><td><code id="doc-Basis-is_equal_approx" data-doc="is_equal_approx" data-owner="Basis">is_equal_approx(basis)</code></td><td>Close enough</td></tr>
+          </table>
+          <p>A <code id="doc-Quaternion" data-doc="Quaternion">Quaternion</code> is <code>x, y, z, w</code>. Identity is <code>(0, 0, 0, 1)</code>. It has <code id="doc-Quaternion-from_euler" data-doc="from_euler" data-owner="Quaternion">from_euler</code>, <code id="doc-Quaternion-length" data-doc="length" data-owner="Quaternion">length</code>, <code id="doc-Quaternion-normalized" data-doc="normalized" data-owner="Quaternion">normalized</code>, <code id="doc-Quaternion-dot" data-doc="dot" data-owner="Quaternion">dot</code>, <code id="doc-Quaternion-inverse" data-doc="inverse" data-owner="Quaternion">inverse</code>, <code id="doc-Quaternion-mul" data-doc="mul" data-owner="Quaternion">mul</code>, <code id="doc-Quaternion-xform" data-doc="xform" data-owner="Quaternion">xform</code>, <code id="doc-Quaternion-slerp" data-doc="slerp" data-owner="Quaternion">slerp</code>, <code id="doc-Quaternion-get_euler" data-doc="get_euler" data-owner="Quaternion">get_euler</code>, <code id="doc-Quaternion-is_equal_approx" data-doc="is_equal_approx" data-owner="Quaternion">is_equal_approx</code>, and <code id="doc-Quaternion-is_zero_approx" data-doc="is_zero_approx" data-owner="Quaternion">is_zero_approx</code>.</p>
+          <p>A <code id="doc-Transform3D" data-doc="Transform3D">Transform3D</code> is a basis plus an origin. <code id="doc-Transform3D-IDENTITY" data-doc="IDENTITY" data-owner="Transform3D">IDENTITY</code> is unmoved. <code id="doc-Transform3D-xform" data-doc="xform" data-owner="Transform3D">xform(point)</code> moves a point. <code id="doc-Transform3D-looking_at" data-doc="looking_at" data-owner="Transform3D">looking_at(target, up, use_model_front)</code> returns a new transform aimed at a point. <code id="doc-Transform3D-translated" data-doc="translated" data-owner="Transform3D">translated(offset)</code> shifts the origin. <code id="doc-Transform3D-is_equal_approx" data-doc="is_equal_approx" data-owner="Transform3D">is_equal_approx</code> compares two transforms.</p>
+<pre><span class="kw">import</span> <span class="op">{</span> <span class="ty">Transform3D</span><span class="op">,</span> <span class="ty">Vector3</span> <span class="op">}</span> <span class="kw">from</span> <span class="st">"@corbel/core"</span><span class="op">;</span>
+
+<span class="kw">const</span> <span class="vr">camera_pos</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">1.5</span><span class="op">,</span> <span class="num">4</span><span class="op">);</span>
+<span class="kw">const</span> <span class="vr">facing</span> <span class="op">=</span> <span class="ty">Transform3D</span><span class="op">.</span><span class="mem">IDENTITY</span><span class="op">.</span><span class="call">looking_at</span><span class="op">(</span><span class="vr">camera_pos</span><span class="op">,</span> <span class="ty">Vector3</span><span class="op">.</span><span class="mem">UP</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></pre>
+        </div>
+      </section>
+
+      <section class="teal" id="shape">
+        <h2>Plane, box, and color</h2>
+        <div class="body">
+          <p>A <code id="doc-Plane" data-doc="Plane">Plane</code> is a normal and a distance <code id="doc-Plane-d" data-doc="d" data-owner="Plane">d</code>. <code>new Plane(Vector3.UP, 0)</code> is the ground. <code id="doc-Plane-from_point_normal" data-doc="from_point_normal" data-owner="Plane">from_point_normal(point, normal)</code> builds one. <code id="doc-Plane-distance_to" data-doc="distance_to" data-owner="Plane">distance_to(point)</code> and <code id="doc-Plane-project" data-doc="project" data-owner="Plane">project(point)</code> measure and drop a point onto the plane. <code id="doc-Plane-intersects_ray" data-doc="intersects_ray" data-owner="Plane">intersects_ray(from, dir)</code> returns the hit, or null when the ray points away.</p>
+          <p>An <code id="doc-AABB" data-doc="AABB">AABB</code> is a corner <code id="doc-AABB-position" data-doc="position" data-owner="AABB" data-type="Vector3">position</code> and a <code id="doc-AABB-size" data-doc="size" data-owner="AABB" data-type="Vector3">size</code>. <code id="doc-AABB-get_center" data-doc="get_center" data-owner="AABB">get_center</code> and <code id="doc-AABB-get_end" data-doc="get_end" data-owner="AABB">get_end</code> read it. <code id="doc-AABB-has_point" data-doc="has_point" data-owner="AABB">has_point</code> tests a point. <code id="doc-AABB-intersects" data-doc="intersects" data-owner="AABB">intersects</code> tests another box. <code id="doc-AABB-expand" data-doc="expand" data-owner="AABB">expand(point)</code> and <code id="doc-AABB-merge" data-doc="merge" data-owner="AABB">merge(other)</code> grow it.</p>
+          <p>A <code id="doc-Color" data-doc="Color">Color</code> is <code>r, g, b, a</code> from 0 to 1. <code id="doc-Color-WHITE" data-doc="WHITE" data-owner="Color">WHITE</code> and <code id="doc-Color-BLACK" data-doc="BLACK" data-owner="Color">BLACK</code> are ready. <code id="doc-Color-html" data-doc="html" data-owner="Color">Color.html("#ff8000")</code> reads <code>#rgb</code>, <code>#rrggbb</code>, or <code>#rrggbbaa</code>. <code id="doc-Color-to_html" data-doc="to_html" data-owner="Color">to_html()</code> writes <code>#rrggbb</code>, and <code>to_html(true)</code> includes the alpha.</p>
+<pre><span class="kw">const</span> <span class="vr">ground</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">Plane</span><span class="op">(</span><span class="ty">Vector3</span><span class="op">.</span><span class="mem">UP</span><span class="op">,</span> <span class="num">0</span><span class="op">);</span>
+<span class="kw">const</span> <span class="vr">hit</span> <span class="op">=</span> <span class="vr">ground</span><span class="op">.</span><span class="call">intersects_ray</span><span class="op">(</span><span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">),</span> <span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">-1</span><span class="op">,</span> <span class="num">0</span><span class="op">));</span>
+<span class="cm">// hit is (1, 0, 3)</span></pre>
+          <p class="note">A voxel cell will be a <code>Vector3i</code>. The volume that stores cells is not written yet.</p>
+        </div>
+      </section>
+
+      <section class="zinc" id="ahead">
+        <h2>Not built yet</h2>
+        <div class="body">
+          <ol>
+            <li>Math, the scene tree, <code>.cscene</code>, and this editor are in place.</li>
+            <li>A canvas. WebGPU first, then WebGL2 when WebGPU is missing. A cube and a camera should draw on both.</li>
+            <li>Voxel picking. The solid cell, and the empty cell in front of the face.</li>
+            <li>Editing a cell and seeing the mesh change.</li>
+            <li>Play, which will open the main scene in a new window and run <code>_process</code>.</li>
+          </ol>
+          <p>Commands from the Corbel folder: <code>npm run check</code> for typos, <code>npm test</code> for the math and scene checks, <code>npm run try</code> for <code>packages/try/src/main.ts</code>, and <code>npm run editor</code> for this editor.</p>
+        </div>
+      </section>
+    </article>
+  </main>
+  <script>
+    const find = document.querySelector("#find");
+    const links = [...document.querySelectorAll(".toc a")];
+    find.addEventListener("input", () => {
+      const query = find.value.trim().toLowerCase();
+      for (const link of links) {
+        link.hidden = query.length > 0 && !link.textContent.toLowerCase().includes(query);
+      }
+    });
+
+    const scroller = document.querySelector("main");
+    function revealDocs() {
+      const id = decodeURIComponent(location.hash.replace(/^#/, ""));
+      const target = id ? document.getElementById(id) : null;
+      if (!target || !scroller) {
+        return;
+      }
+      const top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      scroller.scrollTop = Math.max(0, top);
+    }
+    window.revealDocs = revealDocs;
+    window.addEventListener("hashchange", revealDocs);
+    revealDocs();
+    requestAnimationFrame(revealDocs);
+  </script>
+</body>
+</html>

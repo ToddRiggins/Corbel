@@ -150,7 +150,7 @@ export class Vector3 {
     return new Vector3(this.x, this.y, this.z);
   }
 
-  component(index: 0 | 1 | 2): number {
+  component(index: number): number {
     if (index === 0) return this.x;
     if (index === 1) return this.y;
     return this.z;

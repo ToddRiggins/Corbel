@@ -83,7 +83,7 @@ export class Basis {
     return this.get_column(2);
   }
 
-  get_column(index: 0 | 1 | 2): Vector3 {
+  get_column(index: number): Vector3 {
     return new Vector3(this.rows[0].component(index), this.rows[1].component(index), this.rows[2].component(index));
   }
 

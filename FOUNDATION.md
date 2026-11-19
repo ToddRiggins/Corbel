@@ -226,7 +226,7 @@ License file for the repo is MIT, same as Godot and PixiJS.
 Each slice ends with something we can run or test. We do not start the next slice in the same change.
 
 1. **Math and names.** Done. `@corbel/core` has `Vector2`, `Vector3`, `Vector3i`, `Quaternion`, `Basis`, `Transform3D`, `Plane`, `AABB`, and `Color`. Tests cover `FORWARD` and a `looking_at` that faces +Z toward the camera. How to call it is in `tutorial.html`.
-2. **Tree.** `Node`, `Node3D`, signals, groups, `_enter_tree`, `_ready`, `_process`, `queue_free`. A headless test builds a parent and a child and checks that the child is ready first.
+2. **Tree.** Done. `Node`, `Node3D`, `Camera3D`, `MeshInstance3D`, signals, groups, `_enter_tree`, `_ready`, `_process`, `queue_free`. A headless test builds a parent and a child and checks that the child is ready first. Scenes save as `.cscene`. The browser editor is `apps/editor`, started with `start_editor.bat`. It opens `.cscene` and `.ts` files. The script editor colors each kind of code, and the font size can grow. Right-click a documented name and choose Look up. `documentation.html` opens with that name at the top. Play and the 3D canvas are still slice 3.
 3. **Canvas.** `SceneTree.init` with `preference: "webgpu"`. A `MeshInstance3D` cube and a `Camera3D` draw on both backends. The sandbox shows which backend started.
 4. **Picking.** `project_ray_origin` and `project_ray_normal`. `VoxelData` plus `intersect_ray`. Tests cover a single cube, a stack, a miss, draw's `place_cell`, and erase's `cell`. The sandbox panel prints the cell under the pointer.
 5. **Edit.** `set_voxel` rebuilds the exposed faces and the next pick sees the new cell. This is the smallest loop the future editor needs.

@@ -5,47 +5,115 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Corbel — how to use</title>
   <style>
-    body { font-family: Georgia, "Times New Roman", serif; max-width: 40rem; margin: 2.5rem auto; padding: 0 1.25rem 4rem; line-height: 1.55; color: #1c1917; background: #fafaf9; }
-    h1 { font-weight: normal; font-size: 2rem; margin-bottom: 0.25rem; }
-    h2 { font-weight: normal; font-size: 1.35rem; margin-top: 2.2rem; }
-    a { color: #9a3412; }
+    body { font-family: Georgia, "Times New Roman", serif; max-width: 42rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; line-height: 1.55; color: #e7e5e4; background: #121212; }
+    h1 { font-weight: normal; font-size: 2rem; margin: 0 0 0.25rem; }
+    a { color: #fdba74; }
     code, pre { font-family: Consolas, "Courier New", monospace; font-size: 0.92rem; }
-    code { background: #f5f5f4; padding: 0.05rem 0.3rem; }
-    pre { background: #fff; border: 1px solid #e7e5e4; padding: 0.85rem 1rem; overflow: auto; line-height: 1.45; }
-    .note { color: #44403c; }
-    nav { margin: 0.5rem 0 1.5rem; }
+    code { background: #2a2a2a; color: #fde68a; padding: 0.05rem 0.3rem; }
+    pre { background: #0f0f0f; color: #e7e5e4; padding: 0.85rem 1rem; overflow: auto; line-height: 1.45; margin: 0.8rem 0; }
+    .note { color: #a8a29e; }
+    nav { margin: 0.6rem 0 1.4rem; }
+    .block { background: #1c1c1c; margin: 1.15rem 0; }
+    .block h2 { margin: 0; padding: 0.55rem 1rem; color: #fff; font-size: 1.05rem; font-weight: normal; }
+    .block .body { padding: 0.15rem 1rem 1rem; }
+    .amber h2 { background: #b45309; }
+    .red h2 { background: #b91c1c; }
+    .blue h2 { background: #1d4ed8; }
+    .green h2 { background: #047857; }
+    .violet h2 { background: #6d28d9; }
+    .rose h2 { background: #be123c; }
+    .stone h2 { background: #44403c; }
+    .zinc h2 { background: #3f3f46; }
+    ol, ul { padding-left: 1.2rem; }
+    li { margin: 0.35rem 0; }
   </style>
 </head>
 <body>
   <h1>Corbel</h1>
   <p class="note">How to use it, and how to program with it. This page grows as the engine grows.</p>
-  <nav><a href="history.html">History</a> · <a href="FOUNDATION.md">Foundation plan</a></nav>
+  <nav><a href="documentation.html">Documentation</a> · <a href="history.html">History</a> · <a href="FOUNDATION.md">Foundation plan</a></nav>
 
-  <h2>What it is</h2>
-  <p>Corbel is an HTML5 creation engine. Games run on it. The future VoxiTect editor runs on it. You write TypeScript. The names of the types and methods follow Godot 4, so a script can move between GDScript and Corbel with small edits.</p>
-  <p>React is for panels, menus, and the site page. The scene tree, once it exists, owns the 3D world. That part is not built yet.</p>
+  <section class="block amber">
+    <h2>Editor, project, and file type</h2>
+    <div class="body">
+      <p>Use <strong>Visual Studio Code</strong>. It is free, and it is already installed on this machine. Download it from <a href="https://code.visualstudio.com/">code.visualstudio.com</a> only if that copy is missing.</p>
+      <p>The project is the folder <code>C:\Users\exode\Desktop\Corbel</code>. There is no special Corbel project file. In Visual Studio Code choose File → Open Folder and open that folder. Leave it open while you work.</p>
+      <p>Code is saved as <code>.ts</code> files. That is TypeScript. The file you edit to try an idea is:</p>
+      <pre>packages/try/src/main.ts</pre>
+      <p>Save with Ctrl+S. A second experiment is File → New Text File, then Save As, into <code>packages/try/src</code>, and the name must end in <code>.ts</code>. Docs such as this page stay <code>.html</code>. Do not start new engine code as <code>.js</code> or <code>.gd</code>.</p>
+    </div>
+  </section>
 
-  <h2>What you can do today</h2>
-  <p>Slice 1 is in <code>@corbel/core</code>. You can do math: positions, directions, rotations, colors, planes, and boxes. You cannot add a node, draw a mesh, or pick a voxel yet. Those are the next slices.</p>
-  <p>From the Corbel folder:</p>
-  <pre>npm test</pre>
-  <p>That runs the checks that the numbers still match Godot.</p>
+  <section class="block red">
+    <h2>Typos and errors</h2>
+    <div class="body">
+      <p>A typo should show up before you trust a result. There are two reports, and you use both.</p>
+      <p>While you type, Visual Studio Code draws a red underline. Hover it. On a misspelled <code>Vector3.FORWRD</code> it says the name does not exist, and it asks if you meant <code>FORWARD</code>.</p>
+      <p>The underline can be missed. The command that lists every one is <code>npm run check</code>. Run it from the terminal after you save. Terminal → New Terminal, in the Corbel folder. A real misspelling prints this:</p>
+      <pre>src/bad.ts(2,19): error TS2551: Property 'FORWRD' does not exist on type 'typeof Vector3'. Did you mean 'FORWARD'?</pre>
+      <p>Read it from the left. <code>src/bad.ts</code> is the file. <code>2</code> is the line. <code>19</code> is the column. The rest is the mistake. Fix that line, save, and run <code>npm run check</code> again. A clean run prints no line that says <code>error TS</code>.</p>
+      <p><code>npm test</code> does a different job. It runs the math checks and names the check that failed. A typo in a file that no test imports can pass <code>npm test</code> and still be wrong. Run <code>npm run check</code> first.</p>
+      <p>After check is clean, <code>npm run try</code> runs <code>main.ts</code>. Today a good run prints:</p>
+      <pre>Corbel try file is running.
+Vector3.FORWARD is 0 0 -1</pre>
+      <p>If the run still crashes, the terminal names the file and the line. That line is the one to read. Check would already have caught a bad name. A crash after a clean check is a value problem, such as dividing by zero, not a misspelled word.</p>
+    </div>
+  </section>
 
-  <h2>A first script</h2>
-  <pre>import { Basis, Transform3D, Vector3 } from "@corbel/core";
+  <section class="block zinc">
+    <h2>Browser editor</h2>
+    <div class="body">
+      <p>Double-click <code>start_editor.bat</code> in the Corbel folder. It starts the editor and opens <code>http://127.0.0.1:5177/</code>. The same server is <code>npm run editor</code>. The page is dark, with rounded flat docks: Scene and FileSystem on the left, the 3D workspace and Output in the middle, and the Inspector on the right.</p>
+      <p>The demo project is <code>projects/demo</code>. A scene is a <code>.cscene</code> file. <code>main.cscene</code> is the one that opens. <code>player.ts</code> is the script. The Script workspace colors keywords, types, functions, members, variables, strings, and numbers separately. <code>A−</code> and <code>A+</code> change the code font. A typo such as <code>Vector3.FORWRD</code> shows under the script, with the file, the line, and “Did you mean FORWARD?”. Help → Documentation opens the reference in a new window. Right-click a documented name in a script and choose Look up. That name sits at the top of the reference.</p>
+      <p>The Scene dock lists each node by name. The arrow folds its children. The eye hides a 3D node. Right-click a node to add a child, attach a <code>.ts</code> script, rename it, or delete it. A new node is named after its type. A second one under the same parent is <code>Name2</code>. The inspector is where the type, position, rotation, visible flag, and script path are edited. Drop a node onto another to parent it. Save writes a <code>.cscene</code> file.</p>
+      <p>Another project is a folder under <code>projects</code>. The Project menu switches to it. Play, Pause, and Stop stay off until the canvas can draw. The 3D view names the open scene and does not draw it yet.</p>
+    </div>
+  </section>
+
+  <section class="block blue">
+    <h2>What it is</h2>
+    <div class="body">
+      <p>Corbel is an HTML5 creation engine. Games run on it. The future VoxiTect editor runs on it. You write TypeScript. The names of the types and methods follow Godot 4, so a script can move between GDScript and Corbel with small edits.</p>
+      <p>React is for panels, menus, and the site page. The scene tree owns the nodes. The class reference is <a href="documentation.html">documentation.html</a>.</p>
+    </div>
+  </section>
+
+  <section class="block green">
+    <h2>What you can do today</h2>
+    <div class="body">
+      <p>Math, the scene tree, and the browser editor are in <code>@corbel/core</code> and <code>apps/editor</code>. You can add a node, save a <code>.cscene</code>, and type a <code>.ts</code> script. You cannot draw a mesh or pick a voxel yet. The class list is <a href="documentation.html">documentation.html</a>.</p>
+      <p>Three commands, from the Corbel folder:</p>
+      <pre>npm run check
+npm test
+npm run try</pre>
+      <p><code>check</code> finds typos. <code>test</code> checks that the math still matches Godot. <code>try</code> runs the file you are editing.</p>
+    </div>
+  </section>
+
+  <section class="block violet">
+    <h2>The file you edit</h2>
+    <div class="body">
+      <p><code>packages/try/src/main.ts</code> already contains this:</p>
+      <pre>import { Vector3 } from "@corbel/core";
+
+const forward = Vector3.FORWARD;
+
+console.log("Corbel try file is running.");
+console.log("Vector3.FORWARD is", forward.x, forward.y, forward.z);</pre>
+      <p>Change it, save, then <code>npm run check</code> and <code>npm run try</code>. A character facing the camera looks like this:</p>
+      <pre>import { Transform3D, Vector3 } from "@corbel/core";
 
 const camera_pos = new Vector3(0, 1.5, 4);
+const facing = Transform3D.IDENTITY.looking_at(camera_pos, Vector3.UP, true);</pre>
+      <p>The world is Y-up and right-handed. <code>Vector3.FORWARD</code> is <code>(0, 0, -1)</code>. A camera looks down -Z. A character that faces the camera looks toward +Z. Pass <code>true</code> as the third argument of <code>looking_at</code> for that facing.</p>
+    </div>
+  </section>
 
-// A character at the origin. Local +Z points at the camera.
-const facing = Transform3D.IDENTITY.looking_at(camera_pos, Vector3.UP, true);
-
-// A camera looks the other way: local -Z points at the target.
-const look = Basis.looking_at(new Vector3(0, 0, -5));</pre>
-  <p>The world is Y-up and right-handed. <code>Vector3.FORWARD</code> is <code>(0, 0, -1)</code>. A camera looks down -Z. A character that faces the camera looks toward +Z. Pass <code>true</code> as the third argument of <code>looking_at</code> when you want that character facing.</p>
-
-  <h2>Where GDScript and Corbel differ</h2>
-  <p>TypeScript has no <code>+</code> for these types. A method does the same job.</p>
-  <pre>// GDScript
+  <section class="block rose">
+    <h2>Where GDScript and Corbel differ</h2>
+    <div class="body">
+      <p>TypeScript has no <code>+</code> for these types. A method does the same job.</p>
+      <pre>// GDScript
 var mid := a.lerp(b, 0.5)
 var sum := a + b
 var scaled := a * 2.0
@@ -54,11 +122,15 @@ var scaled := a * 2.0
 const mid = a.lerp(b, 0.5);
 const sum = a.add(b);
 const scaled = a.mul(2);</pre>
-  <p>The method names that already match are unchanged: <code>length()</code>, <code>normalized()</code>, <code>dot()</code>, <code>cross()</code>, <code>lerp()</code>, <code>distance_to()</code>.</p>
-  <p>In 2D, Godot's Y points down the screen. <code>Vector2.UP</code> is <code>(0, -1)</code>. In 3D, Y points up. <code>Vector3.UP</code> is <code>(0, 1, 0)</code>.</p>
+      <p>The method names that already match are unchanged: <code>length()</code>, <code>normalized()</code>, <code>dot()</code>, <code>cross()</code>, <code>lerp()</code>, <code>distance_to()</code>.</p>
+      <p>In 2D, Godot's Y points down the screen. <code>Vector2.UP</code> is <code>(0, -1)</code>. In 3D, Y points up. <code>Vector3.UP</code> is <code>(0, 1, 0)</code>.</p>
+    </div>
+  </section>
 
-  <h2>Colors, cells, and the ground</h2>
-  <pre>import { AABB, Color, Plane, Vector3, Vector3i } from "@corbel/core";
+  <section class="block stone">
+    <h2>Colors, cells, and the ground</h2>
+    <div class="body">
+      <pre>import { AABB, Color, Plane, Vector3, Vector3i } from "@corbel/core";
 
 const orange = Color.html("#ff8000");
 const cell = new Vector3i(2, 0, -1);
@@ -70,16 +142,21 @@ const hit = ground.intersects_ray(new Vector3(1, 2, 3), new Vector3(0, -1, 0));
 
 const box = new AABB(new Vector3(0, 0, 0), new Vector3(2, 2, 2));
 box.has_point(box.get_center());</pre>
-  <p><code>Vector3i</code> truncates toward zero. A voxel cell will be one of these. The volume that stores cells is not written yet.</p>
+      <p><code>Vector3i</code> truncates toward zero. A voxel cell will be one of these. The volume that stores cells is not written yet.</p>
+    </div>
+  </section>
 
-  <h2>Not built yet</h2>
-  <ol>
-    <li>Math. Done.</li>
-    <li>Scene tree. <code>Node</code>, <code>Node3D</code>, <code>_ready</code>, <code>_process</code>.</li>
-    <li>A canvas. WebGPU, then WebGL2 if WebGPU is missing.</li>
-    <li>Voxel picking. The solid cell, and the empty cell in front of the face.</li>
-    <li>Editing a cell and seeing the mesh change.</li>
-    <li>React. <code>EngineView</code>, a scene dock, and an inspector.</li>
-  </ol>
+  <section class="block zinc">
+    <h2>Not built yet</h2>
+    <div class="body">
+      <ol>
+        <li>Math, the scene tree, <code>.cscene</code>, and the browser editor. Done. See <a href="documentation.html">documentation.html</a>.</li>
+        <li>A canvas. WebGPU, then WebGL2 if WebGPU is missing.</li>
+        <li>Voxel picking. The solid cell, and the empty cell in front of the face.</li>
+        <li>Editing a cell and seeing the mesh change.</li>
+        <li>Play, which runs the main scene in a new window.</li>
+      </ol>
+    </div>
+  </section>
 </body>
 </html>

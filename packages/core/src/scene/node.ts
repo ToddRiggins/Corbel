@@ -1,0 +1,287 @@
+import type { TreeHost } from "./tree_host.js";
+
+const NAME_CHARS = /[./:@%]/;
+
+function match_name(name: string, pattern: string): boolean {
+  const body = pattern.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*");
+  return new RegExp(`^${body}$`).test(name);
+}
+
+/**
+ * Godot 4 Node. The tree calls `_enter_tree`, then `_ready` after children,
+ * then `_process` each frame. `_ready` runs once.
+ */
+export class Node {
+  name: string;
+  owner: Node | null = null;
+
+  private _parent: Node | null = null;
+  private _children: Node[] = [];
+  private _groups = new Set<string>();
+  private _meta = new Map<string, unknown>();
+  private _tree: TreeHost | null = null;
+  private _ready_called = false;
+  private _queued = false;
+
+  constructor() {
+    this.name = new.target.name;
+  }
+
+  get_class(): string {
+    return this.constructor.name;
+  }
+
+  get_parent(): Node | null {
+    return this._parent;
+  }
+
+  get_child_count(): number {
+    return this._children.length;
+  }
+
+  get_child(index: number): Node {
+    const child = this._children[index];
+    if (!child) {
+      throw new Error(`Child index ${index} is out of range.`);
+    }
+    return child;
+  }
+
+  get_children(): Node[] {
+    return [...this._children];
+  }
+
+  set_name(next: string): void {
+    const name = checked_name(next);
+    const parent = this._parent;
+    if (parent && parent._children.some((child) => child !== this && child.name === name)) {
+      throw new Error(`A sibling is already named ${name}.`);
+    }
+    this.name = name;
+  }
+
+  add_child(node: Node): void {
+    if (node === this) {
+      throw new Error("A node cannot be added to itself.");
+    }
+    if (node._parent) {
+      throw new Error(`${node.name} already has a parent. Remove it first.`);
+    }
+    let walk: Node | null = this;
+    while (walk) {
+      if (walk === node) {
+        throw new Error("A node cannot be parented to its descendant.");
+      }
+      walk = walk._parent;
+    }
+    node.name = unique_child_name(this, checked_name(node.name));
+    node._parent = this;
+    this._children.push(node);
+    if (this._tree) {
+      node._entered(this._tree);
+      if (this._ready_called) {
+        node._ready_down();
+      }
+    }
+  }
+
+  remove_child(node: Node): void {
+    const index = this._children.indexOf(node);
+    if (index < 0) {
+      throw new Error(`${node.name} is not a child of ${this.name}.`);
+    }
+    if (node._tree) {
+      node._exited();
+    }
+    node._parent = null;
+    this._children.splice(index, 1);
+  }
+
+  reparent(new_parent: Node): void {
+    const old_parent = this._parent;
+    if (!old_parent) {
+      throw new Error(`${this.name} has no parent.`);
+    }
+    old_parent.remove_child(this);
+    new_parent.add_child(this);
+  }
+
+  get_node(path: string): Node {
+    const found = this.get_node_or_null(path);
+    if (!found) {
+      throw new Error(`Node not found: ${path}`);
+    }
+    return found;
+  }
+
+  get_node_or_null(path: string): Node | null {
+    if (path === "" || path === ".") {
+      return this;
+    }
+    let current: Node | null = this;
+    let rest = path;
+    if (rest.startsWith("/root")) {
+      current = this._tree?.get_root() ?? null;
+      rest = rest.slice("/root".length).replace(/^\//, "");
+      if (rest === "") {
+        return current;
+      }
+    }
+    for (const part of rest.split("/")) {
+      if (!current || part === "") {
+        return null;
+      }
+      if (part === ".") {
+        continue;
+      }
+      if (part === "..") {
+        current = current._parent;
+        continue;
+      }
+      current = current._children.find((child) => child.name === part) ?? null;
+    }
+    return current;
+  }
+
+  find_child(pattern: string, recursive = true, owned = true): Node | null {
+    for (const child of this._children) {
+      const same_owner = child.owner === this.owner || child.owner === this;
+      if ((!owned || same_owner) && match_name(child.name, pattern)) {
+        return child;
+      }
+      if (recursive) {
+        const found = child.find_child(pattern, true, owned);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  add_to_group(group: string): void {
+    this._groups.add(group);
+  }
+
+  remove_from_group(group: string): void {
+    this._groups.delete(group);
+  }
+
+  is_in_group(group: string): boolean {
+    return this._groups.has(group);
+  }
+
+  get_groups(): string[] {
+    return [...this._groups];
+  }
+
+  set_meta(key: string, value: unknown): void {
+    this._meta.set(key, value);
+  }
+
+  get_meta(key: string): unknown {
+    return this._meta.get(key);
+  }
+
+  has_meta(key: string): boolean {
+    return this._meta.has(key);
+  }
+
+  is_inside_tree(): boolean {
+    return this._tree !== null;
+  }
+
+  is_queued_for_deletion(): boolean {
+    return this._queued;
+  }
+
+  queue_free(): void {
+    if (this._queued) {
+      return;
+    }
+    this._queued = true;
+    this._tree?.queue_delete(this);
+  }
+
+  /** @internal SceneTree calls this for the hidden root. */
+  _become_root(tree: TreeHost): void {
+    this._tree = tree;
+    this._enter_tree();
+    this._ready_called = true;
+    this._ready();
+  }
+
+  /** @internal */
+  _process_branch(delta: number): void {
+    this._process(delta);
+    for (const child of [...this._children]) {
+      if (child._tree) {
+        child._process_branch(delta);
+      }
+    }
+  }
+
+  /** @internal Cleared after the node leaves the tree. */
+  _clear_queue(): void {
+    this._queued = false;
+  }
+
+  _enter_tree(): void {}
+
+  _ready(): void {}
+
+  _process(_delta: number): void {}
+
+  _exit_tree(): void {}
+
+  private _entered(tree: TreeHost): void {
+    this._tree = tree;
+    this._enter_tree();
+    for (const child of [...this._children]) {
+      child._entered(tree);
+    }
+  }
+
+  private _ready_down(): void {
+    for (const child of [...this._children]) {
+      if (!child._ready_called) {
+        child._ready_down();
+      }
+    }
+    if (!this._ready_called) {
+      this._ready_called = true;
+      this._ready();
+    }
+  }
+
+  private _exited(): void {
+    for (const child of [...this._children]) {
+      child._exited();
+    }
+    this._exit_tree();
+    this._tree = null;
+  }
+}
+
+function checked_name(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error("A node needs a name.");
+  }
+  if (NAME_CHARS.test(trimmed)) {
+    throw new Error("A node name cannot contain . / : @ or %.");
+  }
+  return trimmed;
+}
+
+function unique_child_name(parent: Node, name: string): string {
+  const taken = new Set(parent.get_children().map((child) => child.name));
+  if (!taken.has(name)) {
+    return name;
+  }
+  let index = 2;
+  while (taken.has(`${name}${index}`)) {
+    index += 1;
+  }
+  return `${name}${index}`;
+}

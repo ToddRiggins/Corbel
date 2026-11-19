@@ -1,0 +1,5 @@
+{
+  "name": "Demo",
+  "main_scene": "res://main.cscene",
+  "window": { "width": 1280, "height": 720 }
+}

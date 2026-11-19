@@ -6,11 +6,18 @@ The API follows Godot 4 names. The code is TypeScript. Rendering will prefer Web
 
 Open [tutorial.html](tutorial.html) for how to use what exists today. Open [history.html](history.html) for what has been done. The build order is in [FOUNDATION.md](FOUNDATION.md).
 
+Open the folder in Visual Studio Code. Code files are `.ts`. The file to edit is `packages/try/src/main.ts`.
+
 ```bash
+npm run check
 npm test
+npm run try
+npm run editor
 ```
 
-Slice 1 is the math in `@corbel/core`. Nodes, drawing, and voxels are not in yet.
+`check` lists typos with a file and a line. `test` checks the math and the scene tree. `try` runs `main.ts`. `editor` opens the browser editor at `http://127.0.0.1:5177/`. `start_editor.bat` does that and opens the page.
+
+Slice 1 is the math in `@corbel/core`. Slice 2 is the scene tree. Drawing and voxels are not in yet.
 
 This project is not affiliated with the Godot Foundation. Godot is a trademark of the Godot Foundation.
 

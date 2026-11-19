@@ -3,11 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Corbel engine core. Scene tree, renderer, and voxels will live here. Slice 1 is the math.",
+  "description": "Corbel engine core. Math and the scene tree live here. The renderer and voxels come next.",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
+    "check": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {

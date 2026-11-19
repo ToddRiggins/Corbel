@@ -1,0 +1,17 @@
+{
+  "name": "@corbel/try",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@corbel/core": "0.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "~5.8.2"
+  }
+}
