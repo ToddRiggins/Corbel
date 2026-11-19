@@ -1,0 +1,17 @@
+{
+  "name": "corbel",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Corbel is an HTML5 creation engine. VoxiTect runs on Corbel.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test -w @corbel/core"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Corbel — how to use</title>
+  <style>
+    body { font-family: Georgia, "Times New Roman", serif; max-width: 40rem; margin: 2.5rem auto; padding: 0 1.25rem 4rem; line-height: 1.55; color: #1c1917; background: #fafaf9; }
+    h1 { font-weight: normal; font-size: 2rem; margin-bottom: 0.25rem; }
+    h2 { font-weight: normal; font-size: 1.35rem; margin-top: 2.2rem; }
+    a { color: #9a3412; }
+    code, pre { font-family: Consolas, "Courier New", monospace; font-size: 0.92rem; }
+    code { background: #f5f5f4; padding: 0.05rem 0.3rem; }
+    pre { background: #fff; border: 1px solid #e7e5e4; padding: 0.85rem 1rem; overflow: auto; line-height: 1.45; }
+    .note { color: #44403c; }
+    nav { margin: 0.5rem 0 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Corbel</h1>
+  <p class="note">How to use it, and how to program with it. This page grows as the engine grows.</p>
+  <nav><a href="history.html">History</a> · <a href="FOUNDATION.md">Foundation plan</a></nav>
+
+  <h2>What it is</h2>
+  <p>Corbel is an HTML5 creation engine. Games run on it. The future VoxiTect editor runs on it. You write TypeScript. The names of the types and methods follow Godot 4, so a script can move between GDScript and Corbel with small edits.</p>
+  <p>React is for panels, menus, and the site page. The scene tree, once it exists, owns the 3D world. That part is not built yet.</p>
+
+  <h2>What you can do today</h2>
+  <p>Slice 1 is in <code>@corbel/core</code>. You can do math: positions, directions, rotations, colors, planes, and boxes. You cannot add a node, draw a mesh, or pick a voxel yet. Those are the next slices.</p>
+  <p>From the Corbel folder:</p>
+  <pre>npm test</pre>
+  <p>That runs the checks that the numbers still match Godot.</p>
+
+  <h2>A first script</h2>
+  <pre>import { Basis, Transform3D, Vector3 } from "@corbel/core";
+
+const camera_pos = new Vector3(0, 1.5, 4);
+
+// A character at the origin. Local +Z points at the camera.
+const facing = Transform3D.IDENTITY.looking_at(camera_pos, Vector3.UP, true);
+
+// A camera looks the other way: local -Z points at the target.
+const look = Basis.looking_at(new Vector3(0, 0, -5));</pre>
+  <p>The world is Y-up and right-handed. <code>Vector3.FORWARD</code> is <code>(0, 0, -1)</code>. A camera looks down -Z. A character that faces the camera looks toward +Z. Pass <code>true</code> as the third argument of <code>looking_at</code> when you want that character facing.</p>
+
+  <h2>Where GDScript and Corbel differ</h2>
+  <p>TypeScript has no <code>+</code> for these types. A method does the same job.</p>
+  <pre>// GDScript
+var mid := a.lerp(b, 0.5)
+var sum := a + b
+var scaled := a * 2.0
+
+// Corbel
+const mid = a.lerp(b, 0.5);
+const sum = a.add(b);
+const scaled = a.mul(2);</pre>
+  <p>The method names that already match are unchanged: <code>length()</code>, <code>normalized()</code>, <code>dot()</code>, <code>cross()</code>, <code>lerp()</code>, <code>distance_to()</code>.</p>
+  <p>In 2D, Godot's Y points down the screen. <code>Vector2.UP</code> is <code>(0, -1)</code>. In 3D, Y points up. <code>Vector3.UP</code> is <code>(0, 1, 0)</code>.</p>
+
+  <h2>Colors, cells, and the ground</h2>
+  <pre>import { AABB, Color, Plane, Vector3, Vector3i } from "@corbel/core";
+
+const orange = Color.html("#ff8000");
+const cell = new Vector3i(2, 0, -1);
+const above = cell.add(Vector3i.UP);
+
+const ground = new Plane(Vector3.UP, 0);
+const hit = ground.intersects_ray(new Vector3(1, 2, 3), new Vector3(0, -1, 0));
+// hit is (1, 0, 3). A ray that points away comes back null.
+
+const box = new AABB(new Vector3(0, 0, 0), new Vector3(2, 2, 2));
+box.has_point(box.get_center());</pre>
+  <p><code>Vector3i</code> truncates toward zero. A voxel cell will be one of these. The volume that stores cells is not written yet.</p>
+
+  <h2>Not built yet</h2>
+  <ol>
+    <li>Math. Done.</li>
+    <li>Scene tree. <code>Node</code>, <code>Node3D</code>, <code>_ready</code>, <code>_process</code>.</li>
+    <li>A canvas. WebGPU, then WebGL2 if WebGPU is missing.</li>
+    <li>Voxel picking. The solid cell, and the empty cell in front of the face.</li>
+    <li>Editing a cell and seeing the mesh change.</li>
+    <li>React. <code>EngineView</code>, a scene dock, and an inspector.</li>
+  </ol>
+</body>
+</html>
