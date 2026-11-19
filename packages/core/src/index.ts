@@ -30,6 +30,7 @@ export {
   key_event,
   key_from_name,
   key_name_from_dom,
+  key_name_from_layout,
   mouse_event_from_dom,
 } from "./input/index.js";
 export type { ProjectActionSpec, ProjectEventSpec } from "./input/index.js";

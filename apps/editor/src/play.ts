@@ -7,9 +7,10 @@ import {
   Node3D,
   ProjectSettings,
   SceneTree,
-  mouse_event_from_dom,
   key_from_name,
   key_name_from_dom,
+  key_name_from_layout,
+  mouse_event_from_dom,
   pack_scene,
   unpack_scene,
 } from "@corbel/core";
@@ -70,10 +71,11 @@ export class Player {
     // Project settings: the Input Map goes live before any script's _ready can read it.
     let settings: ProjectSettings | null = null;
     try {
-      const text = await fetch("/__project/file?project=" + encodeURIComponent(project) + "&path=" + encodeURIComponent("res://project.corbel.json"))
-        .then(async (response) => (response.ok ? response.text() : ""));
-      if (text) {
-        settings = ProjectSettings.load(JSON.parse(text) as Record<string, unknown>);
+      const payload = await fetch("/__project/file?project=" + encodeURIComponent(project) + "&path=" + encodeURIComponent("res://project.corbel.json"))
+        .then(async (response) => (response.ok ? (await response.json() as { text?: string }) : null));
+      const settings_text = payload?.text ?? "";
+      if (settings_text) {
+        settings = ProjectSettings.load(JSON.parse(settings_text) as Record<string, unknown>);
         log(`Project settings: ${InputMap.get_actions().length} action${InputMap.get_actions().length === 1 ? "" : "s"}.`);
       }
     } catch (error) {
@@ -201,8 +203,16 @@ function attach_input(canvas: HTMLCanvasElement): () => void {
     meta: event.metaKey,
   });
   const on_key = (event: KeyboardEvent, pressed: boolean): void => {
-    const code = key_from_name(key_name_from_dom(event));
-    Input.parse_input_event(new InputEventKey(code, pressed, { echo: event.repeat, unicode: event.key, ...modifiers(event) }));
+    Input.parse_input_event(new InputEventKey(
+      key_from_name(key_name_from_layout(event)),
+      pressed,
+      {
+        physical: key_from_name(key_name_from_dom(event)),
+        echo: event.repeat,
+        unicode: event.key,
+        ...modifiers(event),
+      },
+    ));
     // The game canvas should not scroll the page or trigger browser shortcuts.
     if (event.key === " " || event.key === "Backspace") {
       event.preventDefault();
@@ -220,9 +230,15 @@ function attach_input(canvas: HTMLCanvasElement): () => void {
 
   const keydown = (event: KeyboardEvent): void => on_key(event, true);
   const keyup = (event: KeyboardEvent): void => on_key(event, false);
-  const mousedown = (event: MouseEvent): void => on_button(event, true);
+  const mousedown = (event: MouseEvent): void => {
+    // A click makes the canvas focusable, not focused; keyboard events
+    // follow focus, so the game gets the keys the player is pressing.
+    canvas.focus();
+    on_button(event, true);
+  };
   const mouseup = (event: MouseEvent): void => on_button(event, false);
   canvas.tabIndex = 0;
+  canvas.focus();
   canvas.addEventListener("keydown", keydown);
   canvas.addEventListener("keyup", keyup);
   canvas.addEventListener("mousedown", mousedown);

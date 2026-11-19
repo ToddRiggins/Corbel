@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type P
 import { ScriptEditor, type ScriptEditorHandle } from "./script/ScriptEditor";
 import { scriptRoles } from "./script/roles";
 import { Player } from "./play";
+import { chooser_result, event_label, matches_filter, type ChooserState, type InputActionSpec, type InputEventSpec, KEYBOARD_KEYS, MOUSE_BUTTONS } from "./inputMap";
 import {
   Node,
   Node3D,
@@ -63,9 +64,9 @@ export function EditorApp() {
   const [modal, setModal] = useState<null | "add" | "save" | "script" | "settings">(null);
   const [context, setContext] = useState<{ x: number; y: number; path: string } | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [binds, setBinds] = useState<Array<{ action: string; keys: string[]; mouse: number[] }>>([]);
+  const [imap, setImap] = useState<Array<{ action: string; deadzone: number; events: InputEventSpec[] }>>([]);
   const [settingsFile, setSettingsFile] = useState<Record<string, unknown> | null>(null);
-  const [recording, setRecording] = useState<number | null>(null);
+  const [chooser, setChooser] = useState<ChooserState | null>(null);
   const [newAction, setNewAction] = useState("");
   const [menu, setMenu] = useState<null | "scene" | "project" | "help">(null);
   const [fontSize, setFontSize] = useState(() => {
@@ -350,39 +351,31 @@ export function EditorApp() {
       const text = await readFile(project, "res://project.corbel.json");
       const data = JSON.parse(text) as Record<string, unknown>;
       setSettingsFile(data);
-      const input = (data.input ?? {}) as Record<string, { events?: Array<{ key?: string; mouse_button?: number }> }>;
-      const rows = Object.entries(input).map(([action, spec]) => ({
+      const input = (data.input ?? {}) as Record<string, { deadzone?: number; events?: InputEventSpec[] }>;
+      const rows: InputActionSpec[] = Object.entries(input).map(([action, spec]) => ({
         action,
-        keys: (spec.events ?? []).filter((event) => event.key !== undefined).map((event) => event.key as string),
-        mouse: (spec.events ?? []).filter((event) => event.mouse_button !== undefined).map((event) => event.mouse_button as number),
+        deadzone: spec.deadzone ?? 0.2,
+        events: spec.events ?? [],
       }));
-      setBinds(rows);
-      log(`Project settings: ${rows.length} action${rows.length === 1 ? "" : "s"}.`);
+      setImap(rows);
+      log(`Input Map: ${rows.length} action${rows.length === 1 ? "" : "s"}.`);
     } catch {
       // No project file yet: start with an empty map.
       setSettingsFile({ name: project });
-      setBinds([]);
+      setImap([]);
       log("No project settings yet. Save creates project.corbel.json.");
     }
     setModal("settings");
   }
 
   async function saveProjectSettings(): Promise<void> {
-    const input: Record<string, { events: Array<{ key?: string; mouse_button?: number }> }> = {};
-    for (const row of binds) {
-      if (!row.action.trim()) {
+    const input: Record<string, { deadzone: number; events: InputEventSpec[] }> = {};
+    for (const row of imap) {
+      const action = row.action.trim();
+      if (!action || row.events.length === 0) {
         continue;
       }
-      const events: Array<{ key?: string; mouse_button?: number }> = [];
-      for (const key of row.keys) {
-        events.push({ key });
-      }
-      for (const mouse of row.mouse) {
-        events.push({ mouse_button: mouse });
-      }
-      if (events.length > 0) {
-        input[row.action] = { events };
-      }
+      input[action] = { deadzone: row.deadzone, events: row.events };
     }
     const merged = { ...(settingsFile ?? { name: project }), input };
     await writeFile(project, "res://project.corbel.json", `${JSON.stringify(merged, null, 2)}\n`);
@@ -391,29 +384,65 @@ export function EditorApp() {
     log("Saved project.corbel.json. Play re-reads the binds.");
   }
 
-  // While recording, the next key pressed becomes the bind.
-  useEffect(() => {
-    if (modal !== "settings" || recording === null) {
+  /** The next event list after applying the chooser to an action. */
+  function applyChooser(): void {
+    if (chooser === null) {
       return;
     }
-    const onKey = (event: KeyboardEvent): void => {
-      event.preventDefault();
-      event.stopPropagation();
-      setRecording(null);
-      if (event.key === "Escape") {
-        return;
+    const spec = chooser_result(chooser);
+    if (spec === null) {
+      setChooser(null);
+      return;
+    }
+    setImap((prev) => prev.map((row, index) => {
+      if (index !== chooser.index) {
+        return row;
       }
-      const name = key_name_from_dom(event);
-      setBinds((prev) => prev.map((row, index) => {
-        if (index !== recording || row.keys.includes(name)) {
-          return row;
-        }
-        return { ...row, keys: [...row.keys, name] };
-      }));
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [modal, recording]);
+      const events = [...row.events];
+      if (chooser.event_at === null) {
+        events.push(spec);
+      } else if (chooser.event_at < events.length) {
+        events[chooser.event_at] = spec;
+      }
+      return { ...row, events };
+    }));
+    setChooser(null);
+  }
+
+  /** Chooser defaults for a fresh pick. */
+  function openChooser(actionIndex: number, eventAt: number | null): void {
+    const editing = eventAt !== null ? imap[actionIndex]?.events[eventAt] : null;
+    setChooser({
+      index: actionIndex,
+      event_at: eventAt,
+      pick: editing ? { ...editing } : null,
+      physical: (editing?.physical ?? true) === true,
+      shift: editing?.shift === true,
+      ctrl: editing?.ctrl === true,
+      alt: editing?.alt === true,
+      meta: editing?.meta === true,
+      filter: "",
+    });
+  }
+
+  function add_action(): void {
+    const name = newAction.trim();
+    if (!name) {
+      return;
+    }
+    setImap((prev) => [...prev, { action: name, deadzone: 0.2, events: [] }]);
+    setNewAction("");
+  }
+
+  function remove_action(index: number): void {
+    setImap((prev) => prev.filter((_, at) => at !== index));
+    setChooser(null);
+  }
+
+  function remove_event(actionIndex: number, eventAt: number): void {
+    setImap((prev) => prev.map((row, at) => (at === actionIndex ? { ...row, events: row.events.filter((_, at2) => at2 !== eventAt) } : row)));
+    setChooser(null);
+  }
 
   function jump(line: number): void {
     scriptRef.current?.jump(line);
@@ -872,45 +901,111 @@ export function EditorApp() {
               </>
             ) : modal === "settings" ? (
               <>
-                <h3>Project settings — Input Map</h3>
-                <p className="note">An action is a name scripts can read. Add a key bind with + Key, then press the key. Save writes project.corbel.json; Play re-reads it.</p>
-                <div className="binds">
-                  {binds.map((row, index) => (
-                    <div className="bind-row" key={index}>
-                      <input
-                        value={row.action}
-                        aria-label="Action name"
-                        onChange={(event) => setBinds((prev) => prev.map((item, spot) => (spot === index ? { ...item, action: event.target.value } : item)))}
-                      />
-                      {row.keys.map((key, keySpot) => (
-                        <button
-                          key={key}
-                          className="bind"
-                          title="Remove the bind"
-                          onClick={() => setBinds((prev) => prev.map((item, spot) => (spot === index ? { ...item, keys: item.keys.filter((_, j) => j !== keySpot) } : item)))}
-                        >{key} ✕</button>
+                <h3>Input Map — Project settings</h3>
+                <div className="imap-add">
+                  <input
+                    placeholder="Add New Action"
+                    value={newAction}
+                    onChange={(event) => setNewAction(event.target.value)}
+                    onKeyDown={(event) => { if (event.key === "Enter") { add_action(); } }}
+                  />
+                  <button onClick={add_action}>+ Add</button>
+                </div>
+                <div className="imap-list">
+                  <div className="imap-head">
+                    <span>Action</span>
+                    <span>Deadzone</span>
+                  </div>
+                  {imap.map((row, index) => (
+                    <div className="imap-group" key={`${row.action}:${index}`}>
+                      <div className="imap-row">
+                        <input
+                          className="imap-name"
+                          aria-label="Action name"
+                          value={row.action}
+                          onChange={(event) => setImap((prev) => prev.map((entry, at) => (at === index ? { ...entry, action: event.target.value } : entry)))}
+                        />
+                        <input
+                          className="imap-deadzone"
+                          aria-label="Deadzone"
+                          type="number"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={row.deadzone}
+                          onChange={(event) => {
+                            const deadzone = Math.min(1, Math.max(0, Number(event.target.value)));
+                            setImap((prev) => prev.map((entry, at) => (at === index ? { ...entry, deadzone } : entry)));
+                          }}
+                        />
+                        <button title="Add an event to this action" onClick={() => openChooser(index, null)}>+</button>
+                        <button className="danger" title="Delete this action" onClick={() => remove_action(index)}>🗑</button>
+                      </div>
+                      {row.events.map((event, eventAt) => (
+                        <div className="imap-event" key={`${index}:${eventAt}`}>
+                          <span className="imap-key">⌨ {event_label(event)}</span>
+                          <button className="mini" title="Edit this event" onClick={() => openChooser(index, eventAt)}>✎</button>
+                          <button className="mini danger" title="Delete this event" onClick={() => remove_event(index, eventAt)}>🗑</button>
+                        </div>
                       ))}
-                      <button
-                        title="Record the next key pressed. Escape cancels."
-                        onClick={() => setRecording(recording === index ? null : index)}
-                      >{recording === index ? "press a key…" : "+ Key"}</button>
-                      <button className="danger" onClick={() => setBinds((prev) => prev.filter((_, spot) => spot !== index))}>Delete</button>
                     </div>
                   ))}
+                  {imap.length === 0 ? <div className="empty">No actions yet. Add one above.</div> : null}
                 </div>
-                <div className="bind-add">
-                  <input placeholder="move_forward" value={newAction} onChange={(event) => setNewAction(event.target.value)} />
-                  <button onClick={() => {
-                    const name = newAction.trim();
-                    if (!name) {
-                      return;
-                    }
-                    setBinds((prev) => [...prev, { action: name, keys: [], mouse: [] }]);
-                    setNewAction("");
-                  }}>Add action</button>
+                {chooser ? (
+                  <div className="chooser">
+                    <h4>Event Configuration for &quot;{imap[chooser.index]?.action ?? ""}&quot;</h4>
+                    <div className="chooser-pick">
+                      {chooser.pick === null ? <span className="note">Click a key or mouse button below, or type to filter.</span> : <span>{event_label(chooser.pick)}</span>}
+                    </div>
+                    <input
+                      className="chooser-filter"
+                      placeholder="Filter by Event"
+                      value={chooser.filter}
+                      autoFocus
+                      onChange={(event) => setChooser({ ...chooser, filter: event.target.value })}
+                    />
+                    <div className="chooser-list">
+                      <div className="chooser-group">
+                        {KEYBOARD_KEYS.filter((name) => matches_filter(name, chooser.filter)).map((name) => (
+                          <button key={name} className={chooser.pick?.key === name ? "on" : ""} onClick={() => setChooser({ ...chooser, pick: { key: name } })}>{name}</button>
+                        ))}
+                      </div>
+                      <div className="chooser-group">
+                        {MOUSE_BUTTONS.filter(([name]) => matches_filter(name, chooser.filter)).map(([name, index]) => (
+                          <button key={name} className={chooser.pick?.mouse_button === index ? "on" : ""} onClick={() => setChooser({ ...chooser, pick: { mouse_button: index } })}>🖱 {name}</button>
+                        ))}
+                      </div>
+                    </div>
+                    {typeof chooser.pick?.key === "string" ? (
+                      <>
+                        <div className="chooser-options">
+                          <span>Additional Options</span>
+                          <label><input type="checkbox" checked={chooser.alt} onChange={(event) => setChooser({ ...chooser, alt: event.target.checked })} /> Alt</label>
+                          <label><input type="checkbox" checked={chooser.shift} onChange={(event) => setChooser({ ...chooser, shift: event.target.checked })} /> Shift</label>
+                          <label><input type="checkbox" checked={chooser.ctrl} onChange={(event) => setChooser({ ...chooser, ctrl: event.target.checked })} /> Ctrl</label>
+                          <label><input type="checkbox" checked={chooser.meta} onChange={(event) => setChooser({ ...chooser, meta: event.target.checked })} /> Windows (Meta)</label>
+                        </div>
+                        <select
+                          value={chooser.physical ? "physical" : "layout"}
+                          aria-label="Key code mode"
+                          onChange={(event) => setChooser({ ...chooser, physical: event.target.value === "physical" })}
+                        >
+                          <option value="physical">Physical Keycode (Position on US QWERTY Keyboard)</option>
+                          <option value="layout">Keycode (Keyboard Layout)</option>
+                        </select>
+                      </>
+                    ) : null}
+                    <div className="chooser-actions">
+                      <button onClick={applyChooser}>OK</button>
+                      <button onClick={() => setChooser(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="imap-actions">
+                  <button onClick={() => { void saveProjectSettings(); }}>Save</button>
+                  <button onClick={() => setModal(null)}>Cancel</button>
                 </div>
-                <button onClick={() => { void saveProjectSettings(); }}>Save</button>
-                <button onClick={() => setModal(null)}>Cancel</button>
               </>
             ) : (
               <>

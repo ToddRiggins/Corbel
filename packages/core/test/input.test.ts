@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Input } from "../src/input/input.js";
 import { InputEventAction, InputEventKey, InputEventMouseButton, Key, MouseButton, key_event, key_from_name, key_name_from_dom } from "../src/input/events.js";
-import { InputMap } from "../src/input/input_map.js";
+import { InputMap, event_from_spec } from "../src/input/input_map.js";
 import { Vector2 } from "../src/math/vector2.js";
 import { Node } from "../src/scene/node.js";
 import { SceneTree } from "../src/scene/scene_tree.js";
@@ -70,6 +70,23 @@ describe("InputMap", () => {
     expect(InputMap.event_is_action(shift_s, "dash_plain")).toBe(true);
     const plain_s = new InputEventKey(83, true);
     expect(InputMap.event_is_action(plain_s, "dash_shift")).toBe(false);
+  });
+
+  it("specs default to physical binds, and a layout bind matches layout codes", () => {
+    InputMap.clear();
+    InputMap.add_action("phys");
+    InputMap.action_add_event("phys", event_from_spec({ key: "Space" }, "phys"));
+    InputMap.add_action("layout");
+    InputMap.action_add_event("layout", event_from_spec({ key: "Space", physical: false }, "layout"));
+
+    // A plain event carries both codes; both bind kinds match Space.
+    const stroke = new InputEventKey(32, true, { physical: 32 });
+    expect(InputMap.event_is_action(stroke, "phys")).toBe(true);
+    expect(InputMap.event_is_action(stroke, "layout")).toBe(true);
+    // The physical bind rejects a key whose physical code is different.
+    const elsewhere = new InputEventKey(32, true, { physical: 87 });
+    expect(InputMap.event_is_action(elsewhere, "phys")).toBe(false);
+    expect(InputMap.event_is_action(elsewhere, "layout")).toBe(true);
   });
 });
 

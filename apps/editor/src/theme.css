@@ -231,6 +231,33 @@ button.twist:hover, button.eye:hover { background: transparent; color: #f5f5f4; 
 .bind-row input { width: 11rem; }
 .bind { background: var(--panel, #2a2a2a); }
 .bind-add { display: flex; gap: 0.4rem; align-items: center; margin: 0.6rem 0; }
+.imap-add { display: flex; gap: 0.4rem; }
+.imap-add input { flex: 1; min-width: 16rem; }
+.imap-list { margin: 0.6rem 0; border: 1px solid var(--line); border-radius: 6px; max-height: 46vh; overflow: auto; }
+.imap-head { display: flex; justify-content: space-between; padding: 0.3rem 0.6rem; color: #a8a29e; font-size: 0.8rem; background: #232323; position: sticky; top: 0; }
+.imap-group { border-bottom: 1px solid var(--line); }
+.imap-row { display: flex; gap: 0.4rem; align-items: center; padding: 0.35rem 0.6rem; }
+.imap-row > button { flex: none; }
+.imap-name { flex: 1; min-width: 8rem; }
+.imap-deadzone { width: 5em; }
+.imap-event { display: flex; gap: 0.45rem; align-items: center; padding: 0.2rem 1.4rem; color: #d6d3d1; font-size: 0.88rem; border-top: 1px solid #222; }
+.imap-event .imap-key { flex: 1; }
+.mini { padding: 0.05rem 0.4rem; font-size: 0.8rem; }
+.imap-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
+.chooser { position: absolute; inset: 1.6rem auto auto 50%; transform: translateX(-50%); width: 30rem; background: #202020; border: 1px solid var(--line); border-radius: 8px; padding: 0.9rem 1rem; box-shadow: 0 12px 40px #000a; z-index: 2; }
+.chooser h4 { margin: 0 0 0.5rem; font-weight: 600; font-size: 0.95rem; text-align: center; }
+.chooser-pick { text-align: center; margin-bottom: 0.5rem; color: #fde68a; min-height: 1.3rem; }
+.chooser-filter { width: 100%; box-sizing: border-box; }
+.chooser-list { max-height: 40vh; overflow: auto; border: 1px solid var(--line); border-radius: 6px; margin: 0.4rem 0; }
+.chooser-group { display: flex; flex-direction: column; }
+.chooser-group button { text-align: left; border: none; border-radius: 0; padding: 0.3rem 0.7rem; background: none; color: var(--text); }
+.chooser-group button:hover { background: #2e2e2e; }
+.chooser-group button.on { background: #3f3f46; }
+.chooser-options { display: flex; gap: 0.8rem; align-items: center; margin: 0.5rem 0 0.35rem; }
+.chooser-options span { color: #a8a29e; font-size: 0.8rem; }
+.chooser-options label { display: inline-flex; gap: 0.3rem; align-items: center; font-size: 0.85rem; }
+.chooser select { width: 100%; box-sizing: border-box; }
+.chooser-actions { display: flex; gap: 0.6rem; justify-content: center; margin-top: 0.7rem; }
 .run-bar { position: relative; pointer-events: none; z-index: 1; color: #dedbc9; text-shadow: 0 1px 6px #000c; }
 .run-bar h3 { color: #dedbc9; }
 .script-host { flex: 1; min-height: 0; overflow: hidden; border-radius: 8px 8px 0 0; }

@@ -1,16 +1,25 @@
 import { Vector2 } from "../math/vector2.js";
 import { InputEvent, InputEventKey, InputEventMouseButton } from "./events.js";
-import { key_event } from "./events.js";
+import { key_event, key_from_name } from "./events.js";
 
 /** Action event from `project.corbel.json`: `{ "key": "Space" }` or `{ "mouse_button": 1 }`. */
 export interface ProjectEventSpec {
   key?: string;
   mouse_button?: number;
+  /** Godot's Additional Options: each true name matches that modifier. */
+  shift?: boolean;
+  ctrl?: boolean;
+  alt?: boolean;
+  meta?: boolean;
+  /** True (default) matches the physical key position; false matches the layout key. */
+  physical?: boolean;
 }
 
 /** Action spec from `project.corbel.json`: `{ "spin": { "events": [{ "key": "Space" }] } }`. */
 export interface ProjectActionSpec {
   events?: ProjectEventSpec[];
+  /** Analog threshold, like Godot's. Keys ignore it; stored with the action. */
+  deadzone?: number;
 }
 
 /**
@@ -19,11 +28,13 @@ export interface ProjectActionSpec {
  */
 export class InputMap {
   private static readonly _actions = new Map<string, InputEvent[]>();
+  private static readonly _deadzones = new Map<string, number>();
 
   /** Adds an action. Adding an existing name is a no-op, like Godot's. */
-  static add_action(action: string): void {
+  static add_action(action: string, deadzone = 0.2): void {
     if (!this._actions.has(action)) {
       this._actions.set(action, []);
+      this._deadzones.set(action, deadzone);
     }
   }
 
@@ -37,6 +48,18 @@ export class InputMap {
 
   static erase_action(action: string): void {
     this._actions.delete(action);
+    this._deadzones.delete(action);
+  }
+
+  /** The analog threshold stored with the action; keys ignore it. */
+  static action_get_deadzone(action: string): number {
+    return this._deadzones.get(action) ?? 0.2;
+  }
+
+  static action_set_deadzone(action: string, deadzone: number): void {
+    if (this._actions.has(action)) {
+      this._deadzones.set(action, deadzone);
+    }
   }
 
   static action_add_event(action: string, event: InputEvent): void {
@@ -71,7 +94,7 @@ export class InputMap {
   static load_from_project(input: Record<string, ProjectActionSpec>): void {
     this.clear();
     for (const [action, spec] of Object.entries(input)) {
-      this.add_action(action);
+      this.add_action(action, spec.deadzone ?? 0.2);
       for (const event of spec.events ?? []) {
         this.action_add_event(action, event_from_spec(event, action));
       }
@@ -80,32 +103,54 @@ export class InputMap {
 
   static clear(): void {
     this._actions.clear();
+    this._deadzones.clear();
   }
 }
 
-/** Builds an InputEvent from a project-settings spec. */
+/** Builds an InputEvent from a project-settings spec; absent modifiers match any. */
 export function event_from_spec(spec: ProjectEventSpec, action: string): InputEvent {
+  const modifiers = {
+    shift: spec.shift === true ? true : null,
+    ctrl: spec.ctrl === true ? true : null,
+    alt: spec.alt === true ? true : null,
+    meta: spec.meta === true ? true : null,
+  };
   if (spec.key !== undefined) {
-    return key_event(true, spec.key);
+    // Godot's editor binds physical positions by default.
+    const bind = new InputEventKey(key_from_name(spec.key), true, modifiers);
+    bind.physical = spec.physical ?? true;
+    return bind;
   }
   if (spec.mouse_button !== undefined) {
-    return new InputEventMouseButton(spec.mouse_button, true, new Vector2());
+    return new InputEventMouseButton(spec.mouse_button, true, new Vector2(), modifiers);
   }
   throw new Error(`Action "${action}" has an event with neither "key" nor "mouse_button".`);
 }
 
 /**
- * A bind matches when the event kind matches and every modifier the bind
- * names (non-null) agrees. A bind without modifiers matches any modifier state.
+ * A bind matches when the event kind matches, the physical-vs-layout kind
+ * matches for keys, and every modifier the bind names (non-null) agrees.
+ * A bind without modifiers matches any modifier state.
  */
 export function binds_match(bind: InputEvent, event: InputEvent): boolean {
   if (bind instanceof InputEventKey && event instanceof InputEventKey) {
-    return bind.key_code === event.key_code && modifiers_match(bind, event);
+    return key_codes_match(bind, event) && modifiers_match(bind, event);
   }
   if (bind instanceof InputEventMouseButton && event instanceof InputEventMouseButton) {
     return bind.button_index === event.button_index && modifiers_match(bind, event);
   }
   return false;
+}
+
+/** Keys match when the bind's code kind matches the event's same kind. */
+function key_codes_match(bind: InputEventKey, event: InputEventKey): boolean {
+  if (bind.physical === true) {
+    return event.physical_key_code === bind.key_code;
+  }
+  if (bind.physical === false) {
+    return event.key_code === bind.key_code;
+  }
+  return event.key_code === bind.key_code || event.physical_key_code === bind.key_code;
 }
 
 function modifiers_match(bind: InputEvent, event: InputEvent): boolean {

@@ -101,14 +101,24 @@ export abstract class InputEvent {
 }
 
 export class InputEventKey extends InputEvent {
+  /** Layout-dependent code, like a typed character key. */
   readonly key_code: Key;
+  /** Position on the US QWERTY keyboard, independent of the layout. */
+  readonly physical_key_code: Key;
+  /**
+   * Which code a bind was stored against: true matches the physical
+   * position, false the layout key, and null (a plain event) either.
+   */
+  physical: boolean | null;
   readonly pressed: boolean;
   readonly echo: boolean;
   readonly unicode: string;
 
-  constructor(key_code: Key, pressed: boolean, options: { echo?: boolean; unicode?: string; shift?: boolean | null; ctrl?: boolean | null; alt?: boolean | null; meta?: boolean | null } = {}) {
+  constructor(key_code: Key, pressed: boolean, options: { physical?: Key; physical_bind?: boolean | null; echo?: boolean; unicode?: string; shift?: boolean | null; ctrl?: boolean | null; alt?: boolean | null; meta?: boolean | null } = {}) {
     super();
     this.key_code = key_code;
+    this.physical_key_code = options.physical ?? key_code;
+    this.physical = options.physical_bind ?? null;
     this.pressed = pressed;
     this.echo = options.echo ?? false;
     this.unicode = options.unicode ?? "";
@@ -239,7 +249,52 @@ export function key_from_name(name: string): Key {
   throw new Error(`Unknown key name "${name}".`);
 }
 
-/** The project-settings name for a DOM KeyboardEvent, Godot style. */
+/**
+ * The project-settings name for a layout-dependent key: what `event.key`
+ * says on this machine, so on AZERTY the key typing "a" binds as "A".
+ */
+export function key_name_from_layout(event: KeyboardEvent): string {
+  const key = event.key;
+  if (key.length === 1) {
+    return key.toUpperCase();
+  }
+  const named: Record<string, string> = {
+    Space: "Space",
+    Backspace: "Backspace",
+    Enter: "Enter",
+    Tab: "Tab",
+    Escape: "Escape",
+    Insert: "Insert",
+    Delete: "Delete",
+    Home: "Home",
+    End: "End",
+    PageUp: "PageUp",
+    PageDown: "PageDown",
+    Shift: "Shift",
+    Control: "Ctrl",
+    Alt: "Alt",
+    Meta: "Meta",
+  };
+  const special = named[key];
+  if (special !== undefined) {
+    return special;
+  }
+  const arrows: Record<string, string> = {
+    ArrowLeft: "Left",
+    ArrowUp: "Up",
+    ArrowRight: "Right",
+    ArrowDown: "Down",
+  };
+  if (arrows[key] !== undefined) {
+    return arrows[key];
+  }
+  if (/^F\d+$/.test(key)) {
+    return key;
+  }
+  return key;
+}
+
+/** The project-settings name for the physical key position a DOM event pressed (from `event.code`). */
 export function key_name_from_dom(event: KeyboardEvent): string {
   if (event.code.startsWith("Key")) {
     return event.code.slice(3);

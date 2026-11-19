@@ -20,6 +20,7 @@ import {
   Vector3,
   key_from_name,
   key_name_from_dom,
+  key_name_from_layout,
   mouse_event_from_dom,
 } from "@corbel/core";
 import { EngineView, useSceneTree } from "@corbel/react";
@@ -113,8 +114,12 @@ function attach_input(canvas: HTMLCanvasElement): () => void {
     meta: event.metaKey,
   });
   const on_key = (event: KeyboardEvent, pressed: boolean): void => {
-    const code = key_from_name(key_name_from_dom(event));
-    Input.parse_input_event(new InputEventKey(code, pressed, { echo: event.repeat, unicode: event.key, ...modifiers(event) }));
+    Input.parse_input_event(new InputEventKey(key_from_name(key_name_from_layout(event)), pressed, {
+      physical: key_from_name(key_name_from_dom(event)),
+      echo: event.repeat,
+      unicode: event.key,
+      ...modifiers(event),
+    }));
   };
   const on_button = (event: MouseEvent, pressed: boolean): void => {
     Input.parse_input_event(mouse_event_from_dom(event, canvas, "button", new Vector2(), pressed));
@@ -128,9 +133,13 @@ function attach_input(canvas: HTMLCanvasElement): () => void {
 
   const keydown = (event: KeyboardEvent): void => on_key(event, true);
   const keyup = (event: KeyboardEvent): void => on_key(event, false);
-  const mousedown = (event: MouseEvent): void => on_button(event, true);
+  const mousedown = (event: MouseEvent): void => {
+    canvas.focus();
+    on_button(event, true);
+  };
   const mouseup = (event: MouseEvent): void => on_button(event, false);
   canvas.tabIndex = 0;
+  canvas.focus();
   canvas.addEventListener("keydown", keydown);
   canvas.addEventListener("keyup", keyup);
   canvas.addEventListener("mousedown", mousedown);

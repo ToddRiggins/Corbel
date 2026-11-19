@@ -170,7 +170,7 @@ body.geometry = tool.commit();</pre>
   <section class="block amber">
     <h2>Input and key binds</h2>
     <div class="body">
-      <p>An <strong>action</strong> is a name a script reads, so a script can move between keyboard layouts and devices without edits. It works the way Godot's Input Map works. The binds live in <code>project.corbel.json</code>. Open Project → <strong>Project settings…</strong> in the editor, name an action, press <strong>+ Key</strong>, and press the key on the keyboard. Save writes the file.</p>
+      <p>An <strong>action</strong> is a name a script reads, so a script can move between keyboard layouts and devices without edits. It works the way Godot's Input Map works, and the editor's dialog works like Godot's too: Project → <strong>Project settings…</strong> opens the <strong>Input Map</strong>. Type a name into Add New Action and press <strong>+ Add</strong>, then press the action's <strong>+</strong> button to open the <strong>Event Configuration</strong> popup: type into Filter by Event, click the key (Keyboard Keys) or mouse button (Mouse Buttons), tick <strong>Additional Options</strong> (Alt, Shift, Ctrl, Windows) when they must be held along with it, and pick <strong>Physical Keycode</strong> (the key's position on a US QWERTY keyboard, layout-independent — Godot's default) or <strong>Keycode</strong> (what the current keyboard layout produces — auto-detected). The list shows binds Godot-style, like <code>Space (Physical)</code>, with edit and delete buttons; each action also carries a Deadzone for later analog inputs.</p>
       <pre>import { Input, Node3D } from "@corbel/core";
 
 export default class Player extends Node3D {
