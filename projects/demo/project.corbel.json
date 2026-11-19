@@ -1,5 +1,27 @@
 {
   "name": "Demo",
   "main_scene": "res://main.cscene",
-  "window": { "width": 1280, "height": 720 }
+  "window": {
+    "width": 1280,
+    "height": 720
+  },
+  "input": {
+    "spin_fast": {
+      "events": [
+        {
+          "key": "Space"
+        }
+      ]
+    },
+    "spin_slow": {
+      "events": [
+        {
+          "key": "X"
+        },
+        {
+          "mouse_button": 1
+        }
+      ]
+    }
+  }
 }

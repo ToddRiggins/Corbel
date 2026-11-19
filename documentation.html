@@ -298,7 +298,7 @@
             <tr><td><code id="doc-Node-is_inside_tree" data-doc="is_inside_tree" data-owner="Node">is_inside_tree()</code></td><td>True after it has entered a scene tree</td></tr>
             <tr><td><code id="doc-Node-is_queued_for_deletion" data-doc="is_queued_for_deletion" data-owner="Node">is_queued_for_deletion()</code></td><td>True after <code>queue_free</code></td></tr>
           </table>
-          <p>Override <code id="doc-Node-_enter_tree" data-doc="_enter_tree" data-owner="Node">_enter_tree</code>, <code id="doc-Node-_ready" data-doc="_ready" data-owner="Node">_ready</code>, <code id="doc-Node-_process" data-doc="_process" data-owner="Node">_process</code>, and <code id="doc-Node-_exit_tree" data-doc="_exit_tree" data-owner="Node">_exit_tree</code>. Leave them empty when a node has nothing to do. A throw in <code>_ready</code> or <code>_process</code> does not stop the tree; <code>SceneTree.on_node_error</code> receives the node and the error.</p>
+          <p>Override <code id="doc-Node-_enter_tree" data-doc="_enter_tree" data-owner="Node">_enter_tree</code>, <code id="doc-Node-_ready" data-doc="_ready" data-owner="Node">_ready</code>, <code id="doc-Node-_process" data-doc="_process" data-owner="Node">_process</code>, <code id="doc-Node-_input" data-doc="_input" data-owner="Node">_input</code>, and <code id="doc-Node-_exit_tree" data-doc="_exit_tree" data-owner="Node">_exit_tree</code>. Leave them empty when a node has nothing to do. <code>_input</code> only runs when a subclass overrides it. A throw in <code>_ready</code> or <code>_process</code> does not stop the tree; <code>SceneTree.on_node_error</code> receives the node and the error.</p>
         </div>
       </section>
 
@@ -316,6 +316,54 @@
             <tr><td><code id="doc-Node3D-visible" data-doc="visible" data-owner="Node3D">visible</code></td><td><code>true</code> until something hides it</td></tr>
           </table>
           <p>Copy a basis or a vector before you keep it. The constants on <code>Basis</code> and <code>Vector3</code> are shared.</p>
+        </div>
+      </section>
+
+      <section class="stone" id="dictionary">
+        <h2 id="doc-Dictionary" data-doc="Dictionary">Dictionary</h2>
+        <div class="body">
+          <p>The Godot 4 key/value map. Keys are strings and numbers, kept in the order they were set.</p>
+          <table>
+            <tr><th>Method</th><th>Job</th></tr>
+            <tr><td><code id="doc-Dictionary-size" data-doc="size" data-owner="Dictionary">size()</code>, <code id="doc-Dictionary-is_empty" data-doc="is_empty" data-owner="Dictionary">is_empty()</code>, <code id="doc-Dictionary-clear" data-doc="clear" data-owner="Dictionary">clear()</code></td><td>Count, emptiness, wipe</td></tr>
+            <tr><td><code id="doc-Dictionary-has" data-doc="has" data-owner="Dictionary">has(key)</code>, <code id="doc-Dictionary-has_all" data-doc="has_all" data-owner="Dictionary">has_all(keys)</code></td><td>Key lookups</td></tr>
+            <tr><td><code id="doc-Dictionary-get" data-doc="get" data-owner="Dictionary">get(key, fallback)</code></td><td>The value, or the fallback (null)</td></tr>
+            <tr><td><code id="doc-Dictionary-set" data-doc="set" data-owner="Dictionary">set(key, value)</code></td><td>Store, in order</td></tr>
+            <tr><td><code id="doc-Dictionary-get_or_add" data-doc="get_or_add" data-owner="Dictionary">get_or_add(key, fallback)</code></td><td>Read, storing the fallback first when missing</td></tr>
+            <tr><td><code id="doc-Dictionary-erase" data-doc="erase" data-owner="Dictionary">erase(key)</code></td><td>Remove; true when it was there</td></tr>
+            <tr><td><code id="doc-Dictionary-keys" data-doc="keys" data-owner="Dictionary">keys()</code>, <code id="doc-Dictionary-values" data-doc="values" data-owner="Dictionary">values()</code></td><td>Copies of the lists</td></tr>
+            <tr><td><code id="doc-Dictionary-merge" data-doc="merge" data-owner="Dictionary">merge(other, overwrite)</code></td><td>Add another dictionary’s pairs</td></tr>
+            <tr><td><code id="doc-Dictionary-duplicate" data-doc="duplicate" data-owner="Dictionary">duplicate(deep)</code></td><td>A copy; deep also copies nested dictionaries and arrays</td></tr>
+            <tr><td><code id="doc-Dictionary-find_key" data-doc="find_key" data-owner="Dictionary">find_key(value)</code></td><td>The first key with that value</td></tr>
+          </table>
+        </div>
+      </section>
+
+      <section class="blue" id="project-settings">
+        <h2 id="doc-ProjectSettings" data-doc="ProjectSettings">ProjectSettings</h2>
+        <div class="body">
+          <p><code id="doc-ProjectSettings-load" data-doc="load" data-owner="ProjectSettings">ProjectSettings.load(data)</code> holds the parsed <code>project.corbel.json</code>. Loading installs the Input Map and clears <code>Input</code>. <code id="doc-ProjectSettings-get" data-doc="get" data-owner="ProjectSettings">get(name)</code> reads a top-level key such as <code>window</code> or <code>main_scene</code>.</p>
+        </div>
+      </section>
+
+      <section class="rose" id="input">
+        <h2>Input and InputMap</h2>
+        <div class="body">
+          <p>An action is a name in <code>project.corbel.json</code> with key or mouse binds. The editor edits them under Project → Project settings… The run reads them through the Godot names.</p>
+          <table>
+            <tr><th>Call</th><th>Job</th></tr>
+            <tr><td><code id="doc-Input-is_action_pressed" data-doc="is_action_pressed" data-owner="Input">Input.is_action_pressed(action)</code></td><td>True while the action is held</td></tr>
+            <tr><td><code id="doc-Input-is_action_just_pressed" data-doc="is_action_just_pressed" data-owner="Input">Input.is_action_just_pressed(action)</code></td><td>True for the one frame it went down</td></tr>
+            <tr><td><code id="doc-Input-is_action_just_released" data-doc="is_action_just_released" data-owner="Input">Input.is_action_just_released(action)</code></td><td>True for the one frame it came up</td></tr>
+            <tr><td><code id="doc-Input-is_key_pressed" data-doc="is_key_pressed" data-owner="Input">Input.is_key_pressed(key)</code></td><td>Raw key state, with Godot Key values (<code>Key.W</code>, <code>Key.SPACE</code>)</td></tr>
+            <tr><td><code id="doc-Input-is_mouse_button_pressed" data-doc="is_mouse_button_pressed" data-owner="Input">Input.is_mouse_button_pressed(button)</code></td><td><code>MouseButton.LEFT</code> and friends</td></tr>
+            <tr><td><code id="doc-Input-get_mouse_position" data-doc="get_mouse_position" data-owner="Input">Input.get_mouse_position()</code></td><td>Canvas pixels</td></tr>
+            <tr><td><code id="doc-Input-parse_input_event" data-doc="parse_input_event" data-owner="Input">Input.parse_input_event(event)</code></td><td>Feed one event; state updates and the tree calls <code>_input</code></td></tr>
+            <tr><td><code id="doc-InputMap-load_from_project" data-doc="load_from_project" data-owner="InputMap">InputMap.load_from_project(input)</code></td><td>Replace every action from a settings block</td></tr>
+            <tr><td><code id="doc-InputMap-add_action" data-doc="add_action" data-owner="InputMap">InputMap.add_action(name)</code></td><td>Start an action, then <code id="doc-InputMap-action_add_event" data-doc="action_add_event" data-owner="InputMap">action_add_event</code> binds</td></tr>
+            <tr><td><code id="doc-InputMap-event_is_action" data-doc="event_is_action" data-owner="InputMap">InputMap.event_is_action(event, action)</code></td><td>True when the event matches a bind</td></tr>
+          </table>
+          <p>Event classes: <code id="doc-InputEventKey" data-doc="InputEventKey">InputEventKey</code> with <code id="doc-InputEventKey-key_code" data-doc="key_code" data-owner="InputEventKey">key_code</code> and <code id="doc-InputEventKey-is_echo" data-doc="is_echo" data-owner="InputEventKey">is_echo()</code>, <code id="doc-InputEventMouseButton" data-doc="InputEventMouseButton">InputEventMouseButton</code> with <code id="doc-InputEventMouseButton-button_index" data-doc="button_index" data-owner="InputEventMouseButton">button_index</code>, <code id="doc-InputEventMouseMotion" data-doc="InputEventMouseMotion">InputEventMouseMotion</code> with <code id="doc-InputEventMouseMotion-relative" data-doc="relative" data-owner="InputEventMouseMotion">relative</code>, and <code id="doc-InputEventAction" data-doc="InputEventAction">InputEventAction</code> for events sent from code.</p>
         </div>
       </section>
 

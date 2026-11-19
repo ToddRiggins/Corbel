@@ -1,0 +1,21 @@
+{
+  "name": "@corbel/react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "React panel helpers for the Corbel engine",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@corbel/core": "0.0.0",
+    "react": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "typescript": "~5.8.2"
+  }
+}

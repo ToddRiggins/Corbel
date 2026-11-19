@@ -207,14 +207,16 @@ Corbel/
   packages/
     core/                   @corbel/core
       src/math/
+      src/input/            Key, InputEvent*, InputMap, Input
       src/scene/            Node, Node3D, Viewport, Camera3D
       src/render/           backend interface, webgpu, webgl2
       src/voxel/            VoxelData, VoxelInstance3D, intersect_ray
       test/
     react/                  @corbel/react
-      src/EngineView.tsx
+      src/index.tsx         EngineView, useSceneTree, useSelection
   apps/
-    sandbox/                Vite app, one canvas, one React panel
+    sandbox/                Vite + React app, one canvas, one panel
+    editor/                 the browser editor
 ```
 
 `packages/core` has no React dependency. `apps/sandbox` depends on React, Vite, and both packages. TypeScript is strict. Decorators are on, matching the editor's `experimentalDecorators` setting. Tests run in Vitest with no GPU: math, signal order, `_ready` order, and voxel hits.
@@ -228,12 +230,16 @@ Each slice ends with something we can run or test. We do not start the next slic
 1. **Math and names.** Done. `@corbel/core` has `Vector2`, `Vector3`, `Vector3i`, `Quaternion`, `Basis`, `Transform3D`, `Plane`, `AABB`, and `Color`. Tests cover `FORWARD` and a `looking_at` that faces +Z toward the camera. How to call it is in `tutorial.html`.
 2. **Tree.** Done. `Node`, `Node3D`, `Camera3D`, `MeshInstance3D`, signals, groups, `_enter_tree`, `_ready`, `_process`, `queue_free`. A headless test builds a parent and a child and checks that the child is ready first. Scenes save as `.cscene`. The browser editor is `apps/editor`, started with `start_editor.bat`. It opens `.cscene` and `.ts` files. The script editor colors each kind of code, and the font size can grow. Right-click a documented name and choose Look up. `documentation.html` opens with that name at the top. The editor's 3D canvas is in: the 3D workspace holds a canvas, and Play runs the open scene on it through `apps/editor/src/play.ts`, which rebuilds the tree and swaps scripted nodes for instances of their script's default export. A broken `_ready` or `_process` reports to the Output panel through `SceneTree.on_node_error`, and `SceneTree.paused` pauses a run while it keeps drawing.
 3. **Canvas.** Done. `SceneTree.init({ canvas, preference: "webgpu" })` picks the backend, WebGPU first and WebGL2 when the browser lacks it, and runs a frame loop: `_process` in tree order, then a draw. `MeshInstance3D` with a `BoxMesh` or `ArrayMesh`, a `Camera3D`, and a `DirectionalLight3D` draw through a `GeometryInstance3D` walk in `src/render/`. The same lit material ships twice, in WGSL for WebGPU and in GLSL for WebGL2. `renderer_name` says which backend started. The sandbox is `apps/sandbox`, with `npm run sandbox`; `?backend=webgl2` forces the fallback.
-4. **Picking.** `project_ray_origin` and `project_ray_normal`. `VoxelData` plus `intersect_ray`. Tests cover a single cube, a stack, a miss, draw's `place_cell`, and erase's `cell`. The sandbox panel prints the cell under the pointer.
-5. **Edit.** `set_voxel` rebuilds the exposed faces and the next pick sees the new cell. This is the smallest loop the future editor needs.
-6. **React shell.** `EngineView`, a scene dock, and an inspector for `position` and `visible`. The dock lists real nodes from the tree.
+4. **React shell.** Done. `@corbel/react` has `EngineView` (one canvas, one `SceneTree` per mount), `useSceneTree` (the same tree for panels inside the view), and `useSelection`. The sandbox is a React app now: `EngineView` owns the canvas and the spinning cube, and the panel reads the live tree.
+5. **Input and project settings.** Done. `Key` with Godot 4 values, `InputEventKey`, `InputEventMouseButton`, `InputEventMouseMotion`, and `InputEventAction`. `InputMap` loads named actions from `project.corbel.json` through `ProjectSettings.load`; `Input.is_action_pressed` and `is_action_just_pressed` read the binds. The run canvas turns DOM events into Godot events, and `SceneTree.push_input` calls `Node._input` on every node that overrides it. The editor's Project menu has Project settings with an Input Map: name an action and record keys.
+6. **Picking.** `project_ray_origin` and `project_ray_normal`. `VoxelData` plus `intersect_ray`. Tests cover a single cube, a stack, a miss, draw's `place_cell`, and erase's `cell`. The sandbox panel prints the cell under the pointer.
+7. **Edit.** `set_voxel` rebuilds the exposed faces and the next pick sees the new cell. This is the smallest loop the future editor needs.
 
-After slice 6, the foundation is done. Growth from there, in order, when we ask for it:
+After slice 7, the foundation is done. Growth from there, in order, when we ask for it:
 
+- Procedural mesh building, Godot `SurfaceTool` style: triangles, vertices, normals, vertex colors, tangents, and UVs into `ArrayMesh`.
+- Materials and shader loading: a Godot-style `ShaderMaterial` over the WGSL/GLSL twin pair.
+- A second window for the running game, detached from the editor canvas.
 - More than one voxel object, a palette resource, and a ground plane node.
 - `StandardMaterial3D` lighting and a shadow map.
 - `AnimationPlayer` with rotation keys, because the editor's clips are bone rotations.

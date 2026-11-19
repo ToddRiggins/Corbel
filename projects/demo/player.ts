@@ -1,8 +1,16 @@
-import { BoxMesh, Color, DirectionalLight3D, MeshInstance3D, Node3D, StandardMaterial3D, Vector3 } from "@corbel/core";
+import {
+  BoxMesh,
+  Color,
+  DirectionalLight3D,
+  Input,
+  MeshInstance3D,
+  Node3D,
+  StandardMaterial3D,
+  Vector3,
+} from "@corbel/core";
 
+/** The demo Player: a body mesh that spins, using the project's action binds. */
 export default class Player extends Node3D {
-  speed = 3;
-
   override _ready(): void {
     const body = this.get_node("Body") as MeshInstance3D;
     body.geometry = new BoxMesh(new Vector3(1, 1, 1));
@@ -17,6 +25,13 @@ export default class Player extends Node3D {
 
   override _process(delta: number): void {
     const body = this.get_node("Body") as MeshInstance3D;
-    body.rotation = body.rotation.add(new Vector3(0, delta * this.speed, delta * this.speed * 0.4));
+    let speed = 1.5;
+    if (Input.is_action_pressed("spin_fast")) {
+      speed = 12;
+    }
+    if (Input.is_action_pressed("spin_slow")) {
+      speed = 0.3;
+    }
+    body.rotation = body.rotation.add(new Vector3(0, delta * speed, delta * speed * 0.4));
   }
 }

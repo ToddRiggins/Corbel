@@ -1,6 +1,8 @@
 import { Node } from "./node.js";
 import type { TreeHost } from "./tree_host.js";
 import { Renderer, type BackendPreference } from "../render/renderer.js";
+import { Input } from "../input/input.js";
+import type { InputEvent } from "../input/events.js";
 
 /** Options for `SceneTree.init`. */
 export interface TreeInit {
@@ -39,6 +41,7 @@ export class SceneTree implements TreeHost {
       throw new Error("SceneTree is already initialized.");
     }
     this._renderer = await Renderer.create(view.canvas, view.preference ?? "webgpu");
+    Input.event_handler = this._handle_input;
     this._last_time = performance.now();
     const tick = (now: number): void => {
       // Clamped so a background tab does not feed a giant delta at return.
@@ -61,22 +64,46 @@ export class SceneTree implements TreeHost {
       cancelAnimationFrame(this._raf);
       this._raf = 0;
     }
+    if (Input.event_handler === this._handle_input) {
+      Input.event_handler = null;
+    }
     this._renderer?.dispose();
     this._renderer = null;
   }
 
   /** One frame. `_process` is skipped while `paused`; the draw still happens. */
   tick(delta: number): void {
+    Input._advance_frame();
     if (!this.paused) {
       this._process(delta);
     }
     this._renderer?.render_tree(this);
   }
 
+  /**
+   * Godot 4 SceneTree input dispatch: the event goes to every node that
+   * overrides `_input`, in tree order.
+   */
+  push_input(event: InputEvent): void {
+    const walk = (node: Node): void => {
+      if (node._input !== Node.prototype._input) {
+        node._input(event);
+      }
+      for (const child of node.get_children()) {
+        walk(child);
+      }
+    };
+    walk(this._root);
+  }
+
   /** @internal */
   _report_node_error(node: Node, error: unknown, where: "process" | "ready"): void {
     this.on_node_error?.(node, error, where);
   }
+
+  private readonly _handle_input = (event: InputEvent): void => {
+    this.push_input(event);
+  };
 
   get_root(): Node {
     return this._root;

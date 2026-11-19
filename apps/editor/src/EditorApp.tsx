@@ -8,6 +8,7 @@ import {
   SceneTree,
   Vector3,
   create_node,
+  key_name_from_dom,
   node_label,
   pack_scene,
   unpack_scene,
@@ -56,12 +57,16 @@ export function EditorApp() {
   const [scriptText, setScriptText] = useState("");
   const [diags, setDiags] = useState<Diagnostic[]>([]);
   const [output, setOutput] = useState<string[]>([]);
-  const [modal, setModal] = useState<null | "add" | "save" | "script">(null);
   const [savePath, setSavePath] = useState("res://main.cscene");
   const [scriptFile, setScriptFile] = useState("res://Script.ts");
   const [collapsed, setCollapsed] = useState<string[]>([]);
+  const [modal, setModal] = useState<null | "add" | "save" | "script" | "settings">(null);
   const [context, setContext] = useState<{ x: number; y: number; path: string } | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [binds, setBinds] = useState<Array<{ action: string; keys: string[]; mouse: number[] }>>([]);
+  const [settingsFile, setSettingsFile] = useState<Record<string, unknown> | null>(null);
+  const [recording, setRecording] = useState<number | null>(null);
+  const [newAction, setNewAction] = useState("");
   const [menu, setMenu] = useState<null | "scene" | "project" | "help">(null);
   const [fontSize, setFontSize] = useState(() => {
     const saved = Number(localStorage.getItem("corbel.scriptFont"));
@@ -338,6 +343,78 @@ export function EditorApp() {
     log(`Saved ${scriptPath}.`);
   }
 
+  /** Loads project.corbel.json into the Input Map editor. */
+  async function openProjectSettings(): Promise<void> {
+    setMenu(null);
+    try {
+      const text = await readFile(project, "res://project.corbel.json");
+      const data = JSON.parse(text) as Record<string, unknown>;
+      setSettingsFile(data);
+      const input = (data.input ?? {}) as Record<string, { events?: Array<{ key?: string; mouse_button?: number }> }>;
+      const rows = Object.entries(input).map(([action, spec]) => ({
+        action,
+        keys: (spec.events ?? []).filter((event) => event.key !== undefined).map((event) => event.key as string),
+        mouse: (spec.events ?? []).filter((event) => event.mouse_button !== undefined).map((event) => event.mouse_button as number),
+      }));
+      setBinds(rows);
+      log(`Project settings: ${rows.length} action${rows.length === 1 ? "" : "s"}.`);
+    } catch {
+      // No project file yet: start with an empty map.
+      setSettingsFile({ name: project });
+      setBinds([]);
+      log("No project settings yet. Save creates project.corbel.json.");
+    }
+    setModal("settings");
+  }
+
+  async function saveProjectSettings(): Promise<void> {
+    const input: Record<string, { events: Array<{ key?: string; mouse_button?: number }> }> = {};
+    for (const row of binds) {
+      if (!row.action.trim()) {
+        continue;
+      }
+      const events: Array<{ key?: string; mouse_button?: number }> = [];
+      for (const key of row.keys) {
+        events.push({ key });
+      }
+      for (const mouse of row.mouse) {
+        events.push({ mouse_button: mouse });
+      }
+      if (events.length > 0) {
+        input[row.action] = { events };
+      }
+    }
+    const merged = { ...(settingsFile ?? { name: project }), input };
+    await writeFile(project, "res://project.corbel.json", `${JSON.stringify(merged, null, 2)}\n`);
+    setModal(null);
+    await refreshFiles();
+    log("Saved project.corbel.json. Play re-reads the binds.");
+  }
+
+  // While recording, the next key pressed becomes the bind.
+  useEffect(() => {
+    if (modal !== "settings" || recording === null) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      setRecording(null);
+      if (event.key === "Escape") {
+        return;
+      }
+      const name = key_name_from_dom(event);
+      setBinds((prev) => prev.map((row, index) => {
+        if (index !== recording || row.keys.includes(name)) {
+          return row;
+        }
+        return { ...row, keys: [...row.keys, name] };
+      }));
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [modal, recording]);
+
   function jump(line: number): void {
     scriptRef.current?.jump(line);
   }
@@ -544,10 +621,13 @@ export function EditorApp() {
             label="Project"
             open={menu === "project"}
             onToggle={() => setMenu(menu === "project" ? null : "project")}
-            items={projects.map((name) => [name, () => {
-              setMenu(null);
-              void switchProject(name);
-            }])}
+            items={[
+              ...projects.map((name) => [name, () => {
+                setMenu(null);
+                void switchProject(name);
+              }] as [string, () => void]),
+              ["Project settings…", () => { void openProjectSettings(); }],
+            ]}
           />
           <Menu
             label="Help"
@@ -788,6 +868,48 @@ export function EditorApp() {
                 {NODE_TYPES.map((type) => (
                   <button key={type} onClick={() => { addNode(type); setModal(null); }}>{type}</button>
                 ))}
+                <button onClick={() => setModal(null)}>Cancel</button>
+              </>
+            ) : modal === "settings" ? (
+              <>
+                <h3>Project settings — Input Map</h3>
+                <p className="note">An action is a name scripts can read. Add a key bind with + Key, then press the key. Save writes project.corbel.json; Play re-reads it.</p>
+                <div className="binds">
+                  {binds.map((row, index) => (
+                    <div className="bind-row" key={index}>
+                      <input
+                        value={row.action}
+                        aria-label="Action name"
+                        onChange={(event) => setBinds((prev) => prev.map((item, spot) => (spot === index ? { ...item, action: event.target.value } : item)))}
+                      />
+                      {row.keys.map((key, keySpot) => (
+                        <button
+                          key={key}
+                          className="bind"
+                          title="Remove the bind"
+                          onClick={() => setBinds((prev) => prev.map((item, spot) => (spot === index ? { ...item, keys: item.keys.filter((_, j) => j !== keySpot) } : item)))}
+                        >{key} ✕</button>
+                      ))}
+                      <button
+                        title="Record the next key pressed. Escape cancels."
+                        onClick={() => setRecording(recording === index ? null : index)}
+                      >{recording === index ? "press a key…" : "+ Key"}</button>
+                      <button className="danger" onClick={() => setBinds((prev) => prev.filter((_, spot) => spot !== index))}>Delete</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="bind-add">
+                  <input placeholder="move_forward" value={newAction} onChange={(event) => setNewAction(event.target.value)} />
+                  <button onClick={() => {
+                    const name = newAction.trim();
+                    if (!name) {
+                      return;
+                    }
+                    setBinds((prev) => [...prev, { action: name, keys: [], mouse: [] }]);
+                    setNewAction("");
+                  }}>Add action</button>
+                </div>
+                <button onClick={() => { void saveProjectSettings(); }}>Save</button>
                 <button onClick={() => setModal(null)}>Cancel</button>
               </>
             ) : (

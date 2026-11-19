@@ -12,6 +12,25 @@ export {
   is_equal_approx,
   is_zero_approx,
 } from "./math/index.js";
+export { Dictionary } from "./dictionary.js";
+export { ProjectSettings } from "./project_settings.js";
+export {
+  Input,
+  InputEvent,
+  InputEventAction,
+  InputEventKey,
+  InputEventMouseButton,
+  InputEventMouseMotion,
+  InputMap,
+  Key,
+  MouseButton,
+  event_from_spec,
+  key_event,
+  key_from_name,
+  key_name_from_dom,
+  mouse_event_from_dom,
+} from "./input/index.js";
+export type { ProjectActionSpec, ProjectEventSpec } from "./input/index.js";
 export {
   ArrayMesh,
   BoxMesh,

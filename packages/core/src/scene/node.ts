@@ -1,4 +1,5 @@
 import type { TreeHost } from "./tree_host.js";
+import type { InputEvent } from "../input/events.js";
 
 const NAME_CHARS = /[./:@%]/;
 
@@ -239,6 +240,12 @@ export class Node {
   _ready(): void {}
 
   _process(_delta: number): void {}
+
+  /**
+   * Godot 4 `Node._input`. Only called when a subclass overrides it; the
+   * caller of `SceneTree.push_input` feeds the event to every live node.
+   */
+  _input(_event: InputEvent): void {}
 
   _exit_tree(): void {}
 

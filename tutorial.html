@@ -147,6 +147,43 @@ box.has_point(box.get_center());</pre>
     </div>
   </section>
 
+  <section class="block amber">
+    <h2>Input and key binds</h2>
+    <div class="body">
+      <p>An <strong>action</strong> is a name a script reads, so a script can move between keyboard layouts and devices without edits. It works the way Godot's Input Map works. The binds live in <code>project.corbel.json</code>. Open Project → <strong>Project settings…</strong> in the editor, name an action, press <strong>+ Key</strong>, and press the key on the keyboard. Save writes the file.</p>
+      <pre>import { Input, Node3D } from "@corbel/core";
+
+export default class Player extends Node3D {
+  override _process(delta: number): void {
+    if (Input.is_action_pressed("move_forward")) {
+      this.position.z -= delta * 2.0;
+    }
+  }
+}</pre>
+      <p>In the running game the canvas takes keyboard focus, so click the canvas once before playing with the keyboard. <code>Input.is_action_just_pressed</code> is true for the one frame a key went down; <code>Input.is_key_pressed(Key.W)</code> reads the raw key, and <code>Key</code> constants match Godot 4. A script class can also override <code>_input(event)</code> to see every event, key and mouse, in tree order.</p>
+    </div>
+  </section>
+
+  <section class="block violet">
+    <h2>Dictionaries and variables</h2>
+    <div class="body">
+      <p>TypeScript has no <code>var</code>-style untyped values here; use <code>const</code> and <code>let</code>. The Godot simple types map this way: <code>int</code> and <code>float</code> are <code>number</code>, <code>bool</code> is <code>boolean</code>, <code>String</code> is <code>string</code>, <code>Array</code> is an array, and <code>Dictionary</code> is the <code>Dictionary</code> class in <code>@corbel/core</code>: a key/value map kept in the order you set it.</p>
+      <pre>import { Dictionary } from "@corbel/core";
+
+const stats = new Dictionary<string, number>();
+stats.set("hp", 100);
+stats.get_or_add("mp", 50);
+
+const enemy = new Dictionary<string, unknown>();
+enemy.set("name", "Slime");
+enemy.set("colors", ["green", "red"]);
+enemy.merge(stats, true);        // overwrite the "hp" it finds
+enemy.erase("mp");
+const deep = enemy.duplicate(true); // nested dictionaries and arrays copied</pre>
+      <p><code>has(key)</code>, <code>get(key, fallback)</code>, <code>keys()</code>, <code>values()</code>, <code>merge(other, overwrite)</code>, <code>duplicate(deep)</code>, <code>find_key(value)</code>, and <code>erase(key)</code> are there. The full class list is <a href="documentation.html">documentation.html</a>.</p>
+    </div>
+  </section>
+
   <section class="block zinc">
     <h2>Not built yet</h2>
     <div class="body">
@@ -155,7 +192,7 @@ box.has_point(box.get_center());</pre>
         <li>A canvas. WebGPU, then WebGL2 if WebGPU is missing. Done. <code>npm run sandbox</code> turns a box, and the panel names the renderer.</li>
         <li>Voxel picking. The solid cell, and the empty cell in front of the face.</li>
         <li>Editing a cell and seeing the mesh change.</li>
-        <li>Play runs the open scene in the 3D view today. Still missing: a second window for the game, and the runtime input nodes a game would need.</li>
+        <li>Play runs the open scene in the 3D view today. Still missing: a second window for the game, and joypads and touch input.</li>
       </ol>
     </div>
   </section>
