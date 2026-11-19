@@ -354,6 +354,7 @@ export function EditorApp() {
     setRunRenderer(null);
     setWorkspace("3d");
     setPendingPlay(true);
+    log(`Play pressed: ${sceneRef.current.name}${scenePath ? ` (${scenePath})` : ""}.`);
   }
 
   function pauseClicked(): void {
@@ -408,6 +409,23 @@ export function EditorApp() {
   useEffect(() => {
     localStorage.setItem("corbel.scriptFont", String(fontSize));
   }, [fontSize]);
+
+  // Page-wide errors always reach the Output panel, play or no play.
+  useEffect(() => {
+    const onError = (event: ErrorEvent): void => {
+      log(`Page: ${event.message} (${event.filename}:${event.lineno})`, "error");
+    };
+    const onReject = (event: PromiseRejectionEvent): void => {
+      log(`Uncaught promise: ${String(event.reason)}`, "error");
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onReject);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onReject);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const contextNode = context && scene
     ? (context.path === "." ? scene : scene.get_node_or_null(context.path))
