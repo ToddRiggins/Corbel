@@ -81,12 +81,13 @@ Vector3.FORWARD is 0 0 -1</pre>
   <section class="block green">
     <h2>What you can do today</h2>
     <div class="body">
-      <p>Math, the scene tree, and the browser editor are in <code>@corbel/core</code> and <code>apps/editor</code>. You can add a node, save a <code>.cscene</code>, and type a <code>.ts</code> script. You cannot draw a mesh or pick a voxel yet. The class list is <a href="documentation.html">documentation.html</a>.</p>
-      <p>Three commands, from the Corbel folder:</p>
+      <p>Math, the scene tree, and drawing are in <code>@corbel/core</code>. A canvas draws <code>MeshInstance3D</code> cubes through a <code>Camera3D</code>, lit by a <code>DirectionalLight3D</code>: WebGPU when the browser has it, WebGL2 otherwise. You cannot pick a voxel yet. The class list is <a href="documentation.html">documentation.html</a>.</p>
+      <p>Four commands, from the Corbel folder:</p>
       <pre>npm run check
 npm test
-npm run try</pre>
-      <p><code>check</code> finds typos. <code>test</code> checks that the math still matches Godot. <code>try</code> runs the file you are editing.</p>
+npm run try
+npm run sandbox</pre>
+      <p><code>check</code> finds typos. <code>test</code> checks that the math and the scene tree still match Godot. <code>try</code> runs the file you are editing. <code>sandbox</code> opens <code>http://127.0.0.1:5178/</code>, where a box turns in 3D and the sidebar names the renderer. Add <code>?backend=webgl2</code> to that address to force the fallback.</p>
     </div>
   </section>
 
@@ -151,7 +152,7 @@ box.has_point(box.get_center());</pre>
     <div class="body">
       <ol>
         <li>Math, the scene tree, <code>.cscene</code>, and the browser editor. Done. See <a href="documentation.html">documentation.html</a>.</li>
-        <li>A canvas. WebGPU, then WebGL2 if WebGPU is missing.</li>
+        <li>A canvas. WebGPU, then WebGL2 if WebGPU is missing. Done. <code>npm run sandbox</code> turns a box, and the panel names the renderer.</li>
         <li>Voxel picking. The solid cell, and the empty cell in front of the face.</li>
         <li>Editing a cell and seeing the mesh change.</li>
         <li>Play, which runs the main scene in a new window.</li>

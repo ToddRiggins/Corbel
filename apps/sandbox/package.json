@@ -1,0 +1,17 @@
+{
+  "name": "@corbel/sandbox",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5178",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@corbel/core": "0.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2",
+    "vite": "^6.3.5"
+  }
+}

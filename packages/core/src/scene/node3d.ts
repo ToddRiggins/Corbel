@@ -36,6 +36,15 @@ export class Node3D extends Node {
     this.basis = copy_basis(value.basis);
     this.position = value.origin.clone();
   }
+
+  /** Godot 4 `global_transform`: this transform composed with every Node3D parent. */
+  get_global_transform(): Transform3D {
+    const parent = this.get_parent();
+    if (parent instanceof Node3D) {
+      return parent.get_global_transform().mul(this.transform);
+    }
+    return this.transform;
+  }
 }
 
 export function copy_basis(basis: Basis): Basis {

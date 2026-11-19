@@ -13,16 +13,22 @@ export {
   is_zero_approx,
 } from "./math/index.js";
 export {
+  ArrayMesh,
+  BoxMesh,
   Camera3D,
+  DirectionalLight3D,
+  GeometryInstance3D,
+  Mesh,
   MeshInstance3D,
   Node,
   Node3D,
   SceneTree,
   Signal,
+  StandardMaterial3D,
   create_node,
   import_tscn,
   node_label,
   pack_scene,
   unpack_scene,
 } from "./scene/index.js";
-export type { CSceneNode } from "./scene/index.js";
+export type { CSceneNode, SurfaceArrays, TreeInit } from "./scene/index.js";

@@ -29,6 +29,15 @@ export class Transform3D {
     return new Transform3D(this.basis, this.origin.add(offset));
   }
 
+  /** Composes two transforms: `a.mul(b)` applies `b` first. */
+  mul(t: Transform3D): Transform3D {
+    return new Transform3D(this.basis.mul(t.basis), this.xform(t.origin));
+  }
+
+  inverse(): Transform3D {
+    return new Transform3D(this.basis.inverse(), this.basis.inverse().xform(this.origin).neg());
+  }
+
   is_equal_approx(t: Transform3D): boolean {
     return this.basis.is_equal_approx(t.basis) && this.origin.is_equal_approx(t.origin);
   }

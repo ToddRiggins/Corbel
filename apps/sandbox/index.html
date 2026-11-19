@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Corbel Sandbox</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #101014; color: #ddd; font-family: system-ui, sans-serif; }
+      main { display: flex; height: 100%; }
+      canvas { flex: 1; width: 100%; height: 100%; display: block; }
+      aside { width: 15em; padding: 1em; box-sizing: border-box; border-left: 1px solid #333; font-size: 14px; }
+      aside h1 { font-size: 15px; margin: 0 0 0.5em; }
+      dl dt { color: #888; }
+      dl dd { margin: 0 0 0.6em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="view"></canvas>
+      <aside>
+        <h1>Corbel Sandbox</h1>
+        <dl>
+          <dt>Renderer</dt>
+          <dd id="renderer">starting…</dd>
+          <dt>Cube</dt>
+          <dd>1 MeshInstance3D</dd>
+        </dl>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

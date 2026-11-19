@@ -26,6 +26,8 @@
     <h2>2026-11-19</h2>
     <div class="body">
       <ul>
+        <li>Slice 3: the canvas draws. <code id="doc-SceneTree-init">SceneTree.init({ canvas, preference })</code> picks WebGPU and falls back to WebGL2, runs <code>_process</code>, and draws <code>MeshInstance3D</code> boxes lit by a <code>DirectionalLight3D</code> through a <code>Camera3D</code>. The panel names the backend. The sandbox is <code>apps/sandbox</code>, at <code>http://127.0.0.1:5178/</code> with <code>npm run sandbox</code>; <code>?backend=webgl2</code> forces the fallback.</li>
+        <li>Pushed slice 2, the scene tree and the browser editor, to GitHub as <code>6cfe87f</code>.</li>
         <li>Right-click a documented name in the Script workspace and choose Look up. <a href="documentation.html">documentation.html</a> opens with that name at the top of the page. A name that has no entry keeps the usual browser menu.</li>
       </ul>
     </div>
