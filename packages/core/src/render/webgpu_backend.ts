@@ -1,7 +1,21 @@
+import { Color } from "../math/color.js";
 import type { Mesh } from "../scene/mesh.js";
+import type { Material } from "../scene/material.js";
+import { ShaderMaterial } from "../scene/material.js";
+import { StandardMaterial3D } from "../scene/standard_material3d.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
 import { CLEAR_COLOR, surface_attribs } from "./frame.js";
-import { fill_wgsl_uniforms, SHADER_WGSL, view_proj_for_backend, WGSL_UNIFORM_FLOATS } from "./shaders.js";
+import { Shader } from "./shaders.js";
+import {
+  LIT_SHADER,
+  WGSL_CAMERA_FLOATS,
+  WGSL_DRAW_FLOATS,
+  coerce_vec4,
+  fill_camera,
+  fill_draw,
+  light_dir_for,
+  view_proj_for_backend,
+} from "./shaders.js";
 
 const VERTEX_FLOATS = 9; // position 3 + normal 3 + color 3
 const VERTEX_LAYOUT: GPUVertexBufferLayout = {
@@ -13,50 +27,78 @@ const VERTEX_LAYOUT: GPUVertexBufferLayout = {
   ],
 };
 
+const DRAW_SCRATCH = new Float32Array(WGSL_DRAW_FLOATS);
+const CAMERA_SCRATCH = new Float32Array(WGSL_CAMERA_FLOATS);
+const WHITE_ALBEDO = new Color(1, 1, 1, 1);
+
 interface UploadedMesh {
   vertex: GPUBuffer;
   indices: GPUBuffer;
   count: number;
 }
 
+export function material_id(): (material: Material) => number {
+  const ids = new WeakMap<Material, number>();
+  let next = 1;
+  return (material) => {
+    let id = ids.get(material);
+    if (id === undefined) {
+      id = next;
+      next += 1;
+      ids.set(material, id);
+    }
+    return id;
+  };
+}
+
+const id_of = material_id();
+
 export class WebGPURenderBackend implements RenderBackend {
   readonly name = "webgpu" as const;
 
   private readonly context: GPUCanvasContext;
   private readonly device: GPUDevice;
-  private readonly pipeline: GPURenderPipeline;
-  /** One uniform buffer per draw slot; `queue.writeBuffer` runs before a submitted pass, so draws cannot share one buffer. */
-  private readonly uniforms: GPUBuffer[] = [];
-  private readonly bind_groups: GPUBindGroup[] = [];
-  private readonly scratch = new Float32Array(WGSL_UNIFORM_FLOATS);
+  private readonly camera_layout: GPUBindGroupLayout;
+  private readonly draw_layout: GPUBindGroupLayout;
+  private readonly pipeline_layout: GPUPipelineLayout;
+  private readonly camera_buffer: GPUBuffer;
+  private readonly camera_group: GPUBindGroup;
+  private readonly dummy_params: GPUBuffer;
+
+  /** One pipeline per Shader, one draw uniform per draw slot, one bind group per slot-and-material. */
+  private readonly pipelines = new Map<Shader, GPURenderPipeline>();
+  private readonly draw_buffers: GPUBuffer[] = [];
+  private readonly bind_groups = new Map<string, GPUBindGroup>();
+  private readonly materials = new Map<ShaderMaterial, GPUBuffer>();
   private readonly meshes = new Map<Mesh, UploadedMesh>();
   private readonly view_proj = new Float32Array(16);
   private depth: GPUTexture | null = null;
   private depth_view: GPUTextureView | null = null;
 
-  private constructor(
-    context: GPUCanvasContext,
-    device: GPUDevice,
-    format: GPUTextureFormat,
-  ) {
+  private constructor(context: GPUCanvasContext, device: GPUDevice) {
     this.context = context;
     this.device = device;
-    const module = device.createShaderModule({ code: SHADER_WGSL });
-    this.pipeline = device.createRenderPipeline({
-      layout: "auto",
-      vertex: { module, entryPoint: "vs", buffers: [VERTEX_LAYOUT] },
-      fragment: {
-        module,
-        entryPoint: "fs",
-        targets: [{ format }],
-      },
-      primitive: { topology: "triangle-list", cullMode: "back" },
-      depthStencil: {
-        format: "depth24plus",
-        depthWriteEnabled: true,
-        depthCompare: "less",
-      },
+    const camera_layout = device.createBindGroupLayout({
+      entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: {} }],
     });
+    const draw_layout = device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: {} },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: {} },
+      ],
+    });
+    this.pipeline_layout = device.createPipelineLayout({ bindGroupLayouts: [camera_layout, draw_layout] });
+    this.draw_layout = draw_layout;
+    this.camera_layout = camera_layout;
+    this.camera_buffer = device.createBuffer({
+      size: WGSL_CAMERA_FLOATS * 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    this.camera_group = device.createBindGroup({
+      layout: camera_layout,
+      entries: [{ binding: 0, resource: { buffer: this.camera_buffer } }],
+    });
+    this.dummy_params = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   }
 
   static async create(canvas: HTMLCanvasElement): Promise<WebGPURenderBackend> {
@@ -74,14 +116,16 @@ export class WebGPURenderBackend implements RenderBackend {
     }
     const format = navigator.gpu.getPreferredCanvasFormat();
     context.configure({ device, format, alphaMode: "opaque" });
-    return new WebGPURenderBackend(context, device, format);
+    return new WebGPURenderBackend(context, device);
   }
 
   render(frame: RenderFrame): void {
     const depth = this.depth_view_for(frame.width, frame.height);
-    if (frame.draws.length > 0 && frame.camera && frame.camera_transform) {
+    if (frame.camera && frame.camera_transform) {
       view_proj_for_backend(frame, true, this.view_proj);
     }
+    fill_camera(CAMERA_SCRATCH, this.view_proj, light_dir_for(frame), frame.light_color, frame.ambient);
+    this.device.queue.writeBuffer(this.camera_buffer, 0, CAMERA_SCRATCH);
 
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
@@ -98,15 +142,22 @@ export class WebGPURenderBackend implements RenderBackend {
         depthStoreOp: "store",
       },
     });
-    pass.setPipeline(this.pipeline);
 
     for (let slot = 0; slot < frame.draws.length; slot += 1) {
       const draw = frame.draws[slot];
+      const material = draw.material;
       const uploaded = this.mesh_for(draw.mesh);
-      const [uniform, bind_group] = this.uniform_slot(slot);
-      fill_wgsl_uniforms(this.scratch, this.view_proj, frame, draw.transform, draw.normal_matrix, draw.albedo);
-      this.device.queue.writeBuffer(uniform, 0, this.scratch);
-      pass.setBindGroup(0, bind_group);
+      const albedo = material instanceof StandardMaterial3D ? material.albedo : WHITE_ALBEDO;
+      fill_draw(DRAW_SCRATCH, draw.transform, draw.normal_matrix, albedo);
+      const draw_buffer = this.draw_uniform(slot);
+      this.device.queue.writeBuffer(draw_buffer, 0, DRAW_SCRATCH);
+      const group = this.draw_bind_group(slot, material);
+      if (material instanceof ShaderMaterial) {
+        this.device.queue.writeBuffer(this.params_buffer(material), 0, this.param_scratch(material));
+      }
+      pass.setPipeline(this.pipeline_for(material));
+      pass.setBindGroup(0, this.camera_group);
+      pass.setBindGroup(1, group);
       pass.setVertexBuffer(0, uploaded.vertex);
       pass.setIndexBuffer(uploaded.indices, "uint32");
       pass.drawIndexed(uploaded.count);
@@ -116,23 +167,80 @@ export class WebGPURenderBackend implements RenderBackend {
     this.device.queue.submit([encoder.finish()]);
   }
 
-  /** Grows the per-draw uniform pool on demand; bind groups are cached per slot. */
-  private uniform_slot(slot: number): [GPUBuffer, GPUBindGroup] {
-    if (slot >= this.uniforms.length) {
-      const count = Math.max(4, slot + 1);
-      while (this.uniforms.length < count) {
-        const uniform = this.device.createBuffer({
-          size: WGSL_UNIFORM_FLOATS * 4,
-          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        });
-        this.uniforms.push(uniform);
-        this.bind_groups.push(this.device.createBindGroup({
-          layout: this.pipeline.getBindGroupLayout(0),
-          entries: [{ binding: 0, resource: { buffer: uniform } }],
-        }));
-      }
+  private pipeline_for(material: Material): GPURenderPipeline {
+    const shader = material instanceof ShaderMaterial ? material.shader : LIT_SHADER;
+    let pipeline = this.pipelines.get(shader);
+    if (pipeline === undefined) {
+      const module = this.device.createShaderModule({ code: shader.webgpu });
+      pipeline = this.device.createRenderPipeline({
+        layout: this.pipeline_layout,
+        vertex: { module, entryPoint: "vs", buffers: [VERTEX_LAYOUT] },
+        fragment: {
+          module,
+          entryPoint: "fs",
+          // The preferred surface format, read at configure time.
+          targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }],
+        },
+        primitive: { topology: "triangle-list", cullMode: "back" },
+        depthStencil: { format: "depth24plus", depthWriteEnabled: true, depthCompare: "less" },
+      });
+      this.pipelines.set(shader, pipeline);
     }
-    return [this.uniforms[slot], this.bind_groups[slot]];
+    return pipeline;
+  }
+
+  /** Grows the per-draw uniform pool; 128 bytes per slot. */
+  private draw_uniform(slot: number): GPUBuffer {
+    while (this.draw_buffers.length <= slot) {
+      this.draw_buffers.push(this.device.createBuffer({
+        size: WGSL_DRAW_FLOATS * 4,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      }));
+    }
+    return this.draw_buffers[slot];
+  }
+
+  private draw_bind_group(slot: number, material: Material): GPUBindGroup {
+    const params = material instanceof ShaderMaterial ? this.params_buffer(material) : this.dummy_params;
+    const key = `${slot}:${material instanceof ShaderMaterial ? id_of(material) : 0}`;
+    let group = this.bind_groups.get(key);
+    if (group === undefined) {
+      group = this.device.createBindGroup({
+        layout: this.draw_layout,
+        entries: [
+          { binding: 0, resource: { buffer: this.draw_uniform(slot) } },
+          { binding: 1, resource: { buffer: params } },
+        ],
+      });
+      this.bind_groups.set(key, group);
+    }
+    return group;
+  }
+
+  private params_buffer(material: ShaderMaterial): GPUBuffer {
+    let buffer = this.materials.get(material);
+    if (buffer === undefined) {
+      buffer = this.device.createBuffer({
+        size: Math.max(16, material.shader.params.length * 16),
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      this.materials.set(material, buffer);
+    }
+    return buffer;
+  }
+
+  /** Packed shader parameters, in the Shader's own order. */
+  private param_scratch(material: ShaderMaterial): Float32Array {
+    const scratch = new Float32Array(Math.max(4, material.shader.params.length * 4));
+    const values = material.get_shader_parameter_list();
+    material.shader.params.forEach((name: string, index: number) => {
+      const [r, g, b, a] = coerce_vec4(values.get(name));
+      scratch[index * 4] = r;
+      scratch[index * 4 + 1] = g;
+      scratch[index * 4 + 2] = b;
+      scratch[index * 4 + 3] = a;
+    });
+    return scratch;
   }
 
   /** Depth texture view matching the current canvas size; recreated when the size moves. */
@@ -147,7 +255,7 @@ export class WebGPURenderBackend implements RenderBackend {
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
     this.depth_view = this.depth.createView();
-    return this.depth_view as GPUTextureView;
+    return this.depth_view;
   }
 
   dispose(): void {
@@ -155,15 +263,22 @@ export class WebGPURenderBackend implements RenderBackend {
       mesh.vertex.destroy();
       mesh.indices.destroy();
     }
+    for (const buffer of this.draw_buffers) {
+      buffer.destroy();
+    }
+    for (const buffer of this.materials.values()) {
+      buffer.destroy();
+    }
     this.meshes.clear();
+    this.draw_buffers.length = 0;
+    this.materials.clear();
+    this.bind_groups.clear();
+    this.pipelines.clear();
     this.depth?.destroy();
     this.depth = null;
     this.depth_view = null;
-    for (const uniform of this.uniforms) {
-      uniform.destroy();
-    }
-    this.uniforms.length = 0;
-    this.bind_groups.length = 0;
+    this.camera_buffer.destroy();
+    this.dummy_params.destroy();
   }
 
   private mesh_for(mesh: Mesh): UploadedMesh {

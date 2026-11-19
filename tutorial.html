@@ -184,6 +184,24 @@ export default class Player extends Node3D {
     </div>
   </section>
 
+  <section class="block rose">
+    <h2>Write a material's shader</h2>
+    <div class="body">
+      <p>A <code>Shader</code> is one program pair: the WGSL body runs on WebGPU and the GLSL body runs on WebGL2. Both bodies see the same names — <code>color</code>, <code>normal</code>, <code>albedo</code>, the light (<code>light_dir</code>, <code>light_color</code>, <code>ambient</code>, and a <code>lighting()</code> helper), and your own uniforms. Parameters are vec4, so a <code>Color</code>, a <code>Vector3</code>, and a single number all pass through <code>set_shader_parameter</code>.</p>
+      <pre>import { Color, ShaderMaterial, Shader } from "@corbel/core";
+
+const shader = Shader.lit({
+  uniforms: ["Tint"],
+  webgpu_body: "  return vec4f(albedo * color * lighting(normal) * Tint.rgb, 1.0);",
+  webgl_body: "  return vec4(albedo * color * lighting() * Tint.rgb, 1.0);",
+});
+const material = new ShaderMaterial(shader);
+material.set_shader_parameter("Tint", Color.html("#eab308"));
+body.material_override = material; // the MeshInstance3D draws with it</pre>
+      <p>Change the parameter and the next frame shows it. The same names work on both backends, so a machine on WebGL2 does not lose the effect.</p>
+    </div>
+  </section>
+
   <section class="block violet">
     <h2>Dictionaries and variables</h2>
     <div class="body">

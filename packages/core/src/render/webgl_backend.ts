@@ -1,7 +1,14 @@
+import { Color } from "../math/color.js";
 import type { Mesh } from "../scene/mesh.js";
+import type { Material } from "../scene/material.js";
+import { ShaderMaterial } from "../scene/material.js";
+import { StandardMaterial3D } from "../scene/standard_material3d.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
 import { CLEAR_COLOR, surface_attribs } from "./frame.js";
-import { light_dir_for, SHADER_FRAG_GLSL, SHADER_VERT_GLSL, view_proj_for_backend } from "./shaders.js";
+import { Shader, coerce_vec4, light_dir_for, view_proj_for_backend } from "./shaders.js";
+import { LIT_SHADER } from "./shaders.js";
+
+const WHITE_ALBEDO = new Color(1, 1, 1, 1);
 
 interface UploadedMesh {
   vertex: WebGLBuffer;
@@ -9,12 +16,33 @@ interface UploadedMesh {
   count: number;
 }
 
+interface CompiledShader {
+  program: WebGLProgram;
+  /** Locations resolved once per program, cached by uniform name. */
+  locations: Map<string, WebGLUniformLocation | null>;
+}
+
+export function material_id(): (material: Material) => number {
+  const ids = new WeakMap<Material, number>();
+  let next = 1;
+  return (material) => {
+    let id = ids.get(material);
+    if (id === undefined) {
+      id = next;
+      next += 1;
+      ids.set(material, id);
+    }
+    return id;
+  };
+}
+
+const id_of = material_id();
+
 export class WebGL2RenderBackend implements RenderBackend {
   readonly name = "webgl2" as const;
 
   private readonly gl: WebGL2RenderingContext;
-  private readonly program: WebGLProgram;
-  private readonly uniforms: Record<string, WebGLUniformLocation | null>;
+  private readonly compiled = new Map<Shader, CompiledShader>();
   private readonly meshes = new Map<Mesh, UploadedMesh>();
   private readonly view_proj = new Float32Array(16);
 
@@ -24,16 +52,6 @@ export class WebGL2RenderBackend implements RenderBackend {
       throw new Error("WebGL2 is not available.");
     }
     this.gl = gl;
-    this.program = link_program(gl, SHADER_VERT_GLSL, SHADER_FRAG_GLSL);
-    this.uniforms = {
-      view_proj: gl.getUniformLocation(this.program, "u_view_proj"),
-      model: gl.getUniformLocation(this.program, "u_model"),
-      normal_mat: gl.getUniformLocation(this.program, "u_normal_mat"),
-      light_dir: gl.getUniformLocation(this.program, "u_light_dir"),
-      light_color: gl.getUniformLocation(this.program, "u_light_color"),
-      ambient: gl.getUniformLocation(this.program, "u_ambient"),
-      albedo: gl.getUniformLocation(this.program, "u_albedo"),
-    };
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.CULL_FACE);
@@ -54,25 +72,68 @@ export class WebGL2RenderBackend implements RenderBackend {
     if (!frame.camera || !frame.camera_transform || frame.draws.length === 0) {
       return;
     }
-    gl.useProgram(this.program);
-    view_proj_for_backend(frame, false, this.view_proj);
-    gl.uniformMatrix4fv(this.uniforms.view_proj, false, this.view_proj);
     const dir = light_dir_for(frame);
-    gl.uniform4f(this.uniforms.light_dir, dir.x, dir.y, dir.z, 0);
-    gl.uniform4f(this.uniforms.light_color, frame.light_color.r, frame.light_color.g, frame.light_color.b, 1);
-    gl.uniform4f(this.uniforms.ambient, frame.ambient.r, frame.ambient.g, frame.ambient.b, 1);
 
-    for (const draw of frame.draws) {
+    for (let slot = 0; slot < frame.draws.length; slot += 1) {
+      const draw = frame.draws[slot];
+      const material = draw.material;
+      const shader = material instanceof ShaderMaterial ? material.shader : LIT_SHADER;
+      const compiled = this.shader_for(shader);
       const uploaded = this.mesh_for(draw.mesh);
+
+      gl.useProgram(compiled.program);
+      view_proj_for_backend(frame, false, this.view_proj);
+      this.set_uniform(compiled, "u_view_proj", (location) => gl.uniformMatrix4fv(location, false, this.view_proj));
+      this.set_uniform(compiled, "u_light_dir", (location) => gl.uniform4f(location, dir.x, dir.y, dir.z, 0));
+      this.set_uniform(compiled, "u_light_color", (location) => gl.uniform4f(location, frame.light_color.r, frame.light_color.g, frame.light_color.b, 1));
+      this.set_uniform(compiled, "u_ambient", (location) => gl.uniform4f(location, frame.ambient.r, frame.ambient.g, frame.ambient.b, 1));
+
+      const albedo = material instanceof StandardMaterial3D ? material.albedo : WHITE_ALBEDO;
       gl.bindBuffer(gl.ARRAY_BUFFER, uploaded.vertex);
       gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 36, 0);
       gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 36, 12);
       gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 36, 24);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, uploaded.indices);
-      gl.uniformMatrix4fv(this.uniforms.model, false, draw.transform);
-      gl.uniformMatrix3fv(this.uniforms.normal_mat, false, draw.normal_matrix);
-      gl.uniform4f(this.uniforms.albedo, draw.albedo.r, draw.albedo.g, draw.albedo.b, 1);
+      gl.uniformMatrix4fv(this.location(compiled, "u_model"), false, draw.transform);
+      gl.uniformMatrix3fv(this.location(compiled, "u_normal_mat"), false, draw.normal_matrix);
+      gl.uniform4f(this.location(compiled, "u_albedo"), albedo.r, albedo.g, albedo.b, 1);
+      if (material instanceof ShaderMaterial) {
+        const values = material.get_shader_parameter_list();
+        for (const name of shader.params) {
+          const [r, g, b, a] = coerce_vec4(values.get(name));
+          gl.uniform4f(this.location(compiled, name), r, g, b, a);
+        }
+      }
       gl.drawElements(gl.TRIANGLES, uploaded.count, gl.UNSIGNED_INT, 0);
+    }
+  }
+
+  private shader_for(shader: Shader): CompiledShader {
+    let compiled = this.compiled.get(shader);
+    if (compiled === undefined) {
+      compiled = {
+        program: link_program(this.gl, shader.webgl.vertex, shader.webgl.fragment),
+        locations: new Map(),
+      };
+      this.compiled.set(shader, compiled);
+    }
+    return compiled;
+  }
+
+  private location(compiled: CompiledShader, name: string): WebGLUniformLocation | null {
+    let location = compiled.locations.get(name);
+    if (location === undefined) {
+      location = this.gl.getUniformLocation(compiled.program, name);
+      compiled.locations.set(name, location);
+    }
+    return location;
+  }
+
+  /** Sets one uniform when the program actually has it; optional uniforms stay silent. */
+  private set_uniform(compiled: CompiledShader, name: string, write: (location: WebGLUniformLocation) => void): void {
+    const location = this.location(compiled, name);
+    if (location) {
+      write(location);
     }
   }
 
@@ -81,8 +142,11 @@ export class WebGL2RenderBackend implements RenderBackend {
       this.gl.deleteBuffer(mesh.vertex);
       this.gl.deleteBuffer(mesh.indices);
     }
+    for (const compiled of this.compiled.values()) {
+      this.gl.deleteProgram(compiled.program);
+    }
     this.meshes.clear();
-    this.gl.deleteProgram(this.program);
+    this.compiled.clear();
   }
 
   private mesh_for(mesh: Mesh): UploadedMesh {

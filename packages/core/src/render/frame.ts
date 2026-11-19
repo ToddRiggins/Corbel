@@ -6,6 +6,7 @@ import { Camera3D } from "../scene/camera3d.js";
 import { DirectionalLight3D } from "../scene/directional_light3d.js";
 import type { Mesh, SurfaceArrays } from "../scene/mesh.js";
 import { MeshInstance3D } from "../scene/mesh_instance3d.js";
+import type { Material } from "../scene/material.js";
 import type { Node } from "../scene/node.js";
 import type { SceneTree } from "../scene/scene_tree.js";
 import { StandardMaterial3D } from "../scene/standard_material3d.js";
@@ -16,13 +17,16 @@ export const CLEAR_COLOR = new Color(0.16, 0.16, 0.18, 1.0);
 /** Ambient floor when no lighting is configured. Godot's default environment is dimmer; this stays visible. */
 export const DEFAULT_AMBIENT = new Color(0.3, 0.3, 0.3, 1.0);
 
+/** Shared default so a mesh without a material stays white; treat as read-only. */
+export const DEFAULT_MATERIAL = new StandardMaterial3D();
+
 export interface RenderDraw {
   mesh: Mesh;
   /** Model matrix, column-major 4x4. */
   transform: Float32Array;
   /** World-space normal matrix, column-major 3x3. */
   normal_matrix: Float32Array;
-  albedo: Color;
+  material: Material;
 }
 
 /**
@@ -76,13 +80,12 @@ export function build_render_frame(
       light = node;
     }
     if (node instanceof MeshInstance3D && node.visible && node.geometry !== null) {
-      const material = node.material_override ?? new StandardMaterial3D();
       const global = node.get_global_transform();
       draws.push({
         mesh: node.geometry,
         transform: transform_to_mat4(global),
         normal_matrix: basis_to_mat3(global.basis.inverse().transposed()),
-        albedo: material.albedo,
+        material: node.material_override ?? DEFAULT_MATERIAL,
       });
     }
     for (const child of node.get_children()) {

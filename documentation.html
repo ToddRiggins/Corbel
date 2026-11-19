@@ -367,6 +367,22 @@
         </div>
       </section>
 
+      <section class="stone" id="shader">
+        <h2 id="doc-Shader" data-doc="Shader">Shader and ShaderMaterial</h2>
+        <div class="body">
+          <p><code id="doc-Shader" data-doc="Shader">Shader.lit({ uniforms, webgpu_body, webgl_body })</code> builds one program pair. The <code>uniforms</code> are <code>vec4</code> (colors, vectors, and scalars coerce). Write the body twice — once in WGSL, once in GLSL — and it sees the same names: <code>color</code>, <code>normal</code>, <code>albedo</code>, <code>light_dir</code>, <code>light_color</code>, <code>ambient</code>, each parameter by its own name, and <code>lighting(normal)</code> (WGSL) or <code>lighting()</code> (GLSL). The body returns the final color.</p>
+          <p><code id="doc-ShaderMaterial" data-doc="ShaderMaterial">ShaderMaterial(shader)</code> carries the values: <code id="doc-ShaderMaterial-set_shader_parameter" data-doc="set_shader_parameter" data-owner="ShaderMaterial">set_shader_parameter(name, value)</code>, <code id="doc-ShaderMaterial-get_shader_parameter" data-doc="get_shader_parameter" data-owner="ShaderMaterial">get_shader_parameter(name)</code>, and <code id="doc-ShaderMaterial-get_shader_parameter_list" data-doc="get_shader_parameter_list" data-owner="ShaderMaterial">get_shader_parameter_list()</code>. Set it on a <code>MeshInstance3D</code> as <code>material_override</code>.</p>
+<pre><span class="kw">const</span> <span class="vr">shader</span> <span class="op">=</span> <span class="ty">Shader</span><span class="op">.</span><span class="call">lit</span><span class="op">({</span>
+  <span class="vr">uniforms</span><span class="op">:</span> <span class="op">[</span><span class="st">"Tint"</span><span class="op">],</span>
+  <span class="vr">webgpu_body</span><span class="op">:</span> <span class="op">`</span><span class="st">  return vec4f(albedo * color * lighting(normal) * Tint.rgb, 1.0);</span><span class="op">`,</span>
+  <span class="vr">webgl_body</span><span class="op">:</span> <span class="op">`</span><span class="st">  return vec4(albedo * color * lighting() * Tint.rgb, 1.0);</span><span class="op">`,</span>
+<span class="op">});</span>
+<span class="kw">const</span> <span class="vr">material</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">ShaderMaterial</span><span class="op">(</span><span class="vr">shader</span><span class="op">);</span>
+<span class="vr">material</span><span class="op">.</span><span class="call">set_shader_parameter</span><span class="op">(</span><span class="st">"Tint"</span><span class="op">,</span> <span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#eab308"</span><span class="op">));</span></pre>
+          <p>The built-in lit material every <code>StandardMaterial3D</code> draws with is a <code>Shader</code> the same way. UV attributes ride along in <code>ArrayMesh</code> data today; texture sampling lands with the texture slice.</p>
+        </div>
+      </section>
+
       <section class="green" id="camera">
         <h2>Camera3D and MeshInstance3D</h2>
         <div class="body">

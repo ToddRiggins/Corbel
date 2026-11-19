@@ -6,6 +6,7 @@ export { DirectionalLight3D } from "./directional_light3d.js";
 export { ArrayMesh, BoxMesh } from "./mesh.js";
 export type { SurfaceArrays } from "./mesh.js";
 export { GeometryInstance3D, MeshInstance3D } from "./mesh_instance3d.js";
+export { Material, ShaderMaterial } from "./material.js";
 export { Mesh } from "./mesh.js";
 export { Node } from "./node.js";
 export { Node3D } from "./node3d.js";

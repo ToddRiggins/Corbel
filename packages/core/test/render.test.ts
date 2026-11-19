@@ -178,7 +178,16 @@ describe("build_render_frame", () => {
     // mesh_a's origin composes with its world parent.
     const origin = xform_point(frame.draws[0].transform, Vector3.ZERO);
     expect(origin.x).toBeCloseTo(1);
-    expect(frame.draws[0].albedo.is_equal_approx(new StandardMaterial3D().albedo)).toBe(true);
+    // A material_override rides through to the draw.
+    const tint = new StandardMaterial3D();
+    tint.albedo = new Color(0.2, 0.4, 0.6, 1);
+    mesh_a.material_override = tint;
+    const frame_tinted = build_render_frame(tree, 1280, 720);
+    expect(frame_tinted.draws[0].material).toBe(tint);
+    // Without an override, the white default material is used.
+    mesh_a.material_override = null;
+    const frame_default = build_render_frame(tree, 1280, 720);
+    expect((frame_default.draws[0].material as StandardMaterial3D).albedo.is_equal_approx(new StandardMaterial3D().albedo)).toBe(true);
   });
 
   it("picks the last current camera, or the first when none is current", () => {

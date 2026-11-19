@@ -11,6 +11,8 @@ import {
   type Node,
   PrimitiveType,
   SceneTree,
+  Shader,
+  ShaderMaterial,
   StandardMaterial3D,
   SurfaceTool,
   Transform3D,
@@ -52,6 +54,15 @@ function build_pyramid(): MeshInstance3D {
   const body = new MeshInstance3D();
   body.set_name("Pyramid");
   body.geometry = tool.commit();
+  // A user material: same names in both bodies, the tint arrives as a vec4.
+  const pyramid_shader = Shader.lit({
+    uniforms: ["Sides"],
+    webgpu_body: `  return vec4f(color * lighting(normal) * Sides.rgb + albedo * 0.15, 1.0);`,
+    webgl_body: `  return vec4(color * lighting() * Sides.rgb + albedo * 0.15, 1.0);`,
+  });
+  const tinted = new ShaderMaterial(pyramid_shader);
+  tinted.set_shader_parameter("Sides", Color.html("#eab308"));
+  body.material_override = tinted;
   body.position = new Vector3(2.2, 0.45, -0.6);
   return body;
 }
@@ -160,7 +171,7 @@ function Sandbox(): React.JSX.Element {
   return (
     <EngineView
       className="view"
-      preference="webgpu"
+      preference={(window.location.search.includes("webgl2") === true ? "webgl2" : "webgpu")}
       onReady={(tree) => {
         InputMap.load_from_project({ spin_fast: { events: [{ key: "Space" }] } });
         build_demo(tree);

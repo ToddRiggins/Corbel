@@ -15,6 +15,7 @@ export {
 export { Dictionary } from "./dictionary.js";
 export { ProjectSettings } from "./project_settings.js";
 export { debug_frames } from "./render/renderer.js";
+export { Shader, build_wgsl, build_glsl, coerce_vec4 } from "./render/shaders.js";
 export {
   Input,
   InputEvent,
@@ -38,6 +39,8 @@ export {
   Camera3D,
   DirectionalLight3D,
   GeometryInstance3D,
+  Material,
+  ShaderMaterial,
   Mesh,
   MeshInstance3D,
   Node,
