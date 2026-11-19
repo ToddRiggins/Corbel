@@ -387,6 +387,27 @@
         </div>
       </section>
 
+      <section class="violet" id="surface-tool">
+        <h2 id="doc-SurfaceTool" data-doc="SurfaceTool">SurfaceTool</h2>
+        <div class="body">
+          <p>Builds a mesh one vertex at a time, the way Godot's <code>SurfaceTool</code> does, and <code id="doc-SurfaceTool-commit" data-doc="commit" data-owner="SurfaceTool">commit()</code> hands back an <code>ArrayMesh</code>. Start with <code id="doc-SurfaceTool-begin" data-doc="begin" data-owner="SurfaceTool">begin(PrimitiveType.TRIANGLES)</code>, set per-vertex attributes, and close each vertex with <code id="doc-SurfaceTool-add_vertex" data-doc="add_vertex" data-owner="SurfaceTool">add_vertex</code>. Like Godot, the attributes reset after every vertex, so a vertex without color simply sets none.</p>
+          <table>
+            <tr><th>Call</th><th>Job</th></tr>
+            <tr><td><code id="doc-SurfaceTool-set_normal" data-doc="set_normal" data-owner="SurfaceTool">set_normal(v)</code>, <code id="doc-SurfaceTool-set_uv" data-doc="set_uv" data-owner="SurfaceTool">set_uv(uv)</code>, <code id="doc-SurfaceTool-set_color" data-doc="set_color" data-owner="SurfaceTool">set_color(c)</code>, <code id="doc-SurfaceTool-set_tangent" data-doc="set_tangent" data-owner="SurfaceTool">set_tangent(plane)</code></td><td>Attributes for the next vertex</td></tr>
+            <tr><td><code id="doc-SurfaceTool-index" data-doc="index" data-owner="SurfaceTool">index()</code></td><td>Merge identical vertices and share them by index</td></tr>
+            <tr><td><code id="doc-SurfaceTool-generate_normals" data-doc="generate_normals" data-owner="SurfaceTool">generate_normals()</code></td><td>Smooth every triangle face normal onto its vertices</td></tr>
+            <tr><td><code id="doc-SurfaceTool-generate_tangents" data-doc="generate_tangents" data-owner="SurfaceTool">generate_tangents()</code></td><td>Fill the 4-float tangent from the UVs; every vertex needs a UV</td></tr>
+            <tr><td><code id="doc-SurfaceTool-commit" data-doc="commit" data-owner="SurfaceTool">commit()</code>, <code id="doc-SurfaceTool-clear" data-doc="clear" data-owner="SurfaceTool">clear()</code></td><td>Finish into an ArrayMesh, or start over</td></tr>
+          </table>
+<pre><span class="kw">const</span> <span class="vr">tool</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">SurfaceTool</span><span class="op">();</span>
+<span class="vr">tool</span><span class="op">.</span><span class="call">begin</span><span class="op">(</span><span class="ty">PrimitiveType</span><span class="op">.</span><span class="vr">TRIANGLES</span><span class="op">);</span>
+<span class="vr">tool</span><span class="op">.</span><span class="call">set_color</span><span class="op">(</span><span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#22c55e"</span><span class="op">));</span>
+<span class="vr">tool</span><span class="op">.</span><span class="call">add_vertex</span><span class="op">(</span><span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">1</span><span class="op">,</span> <span class="num">0</span><span class="op">));</span>
+<span class="vr">tool</span><span class="op">.</span><span class="call">commit</span><span class="op">();</span> <span class="cm">// an ArrayMesh for MeshInstance3D.geometry</span></pre>
+          <p>UVs and tangents ride along in the mesh data today; the lit material samples only vertex colors, so texture maps land with the ShaderMaterial slice.</p>
+        </div>
+      </section>
+
       <section class="violet" id="tree">
         <h2>SceneTree and Signal</h2>
         <div class="body">

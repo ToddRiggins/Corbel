@@ -147,6 +147,26 @@ box.has_point(box.get_center());</pre>
     </div>
   </section>
 
+  <section class="block green">
+    <h2>Build a mesh in code</h2>
+    <div class="body">
+      <p><code>SurfaceTool</code> builds a mesh with triangles, vertices, normals, vertex colors, UVs, and tangents, and hands back an <code>ArrayMesh</code> any <code>MeshInstance3D</code> can draw. It is the Godot SurfaceTool flow: begin, set attributes, add a vertex, repeat, then commit. Attributes reset after every vertex, like Godot.</p>
+      <pre>import { Color, MeshInstance3D, PrimitiveType, SurfaceTool, Vector2, Vector3 } from "@corbel/core";
+
+const tool = new SurfaceTool();
+tool.begin(PrimitiveType.TRIANGLES);
+tool.set_uv(new Vector2(0.5, 0));
+tool.set_color(Color.html("#22c55e"));
+tool.add_vertex(new Vector3(0, 1, 0));    // apex
+tool.add_vertex(new Vector3(-1, 0, 1));   // base left
+tool.add_vertex(new Vector3(1, 0, 1));    // base right
+tool.generate_normals();
+const body = new MeshInstance3D();
+body.geometry = tool.commit();</pre>
+      <p><code>index()</code> merges vertices that are the same, <code>generate_normals()</code> smooths face normals, and <code>generate_tangents()</code> fills the tangent from UVs. The class list is <a href="documentation.html">documentation.html</a>.</p>
+    </div>
+  </section>
+
   <section class="block amber">
     <h2>Input and key binds</h2>
     <div class="body">

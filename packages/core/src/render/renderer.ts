@@ -9,6 +9,14 @@ export type BackendPreference = "webgpu" | "webgl2";
  * Picks a backend once and renders the tree into the canvas each frame.
  * WebGPU first, WebGL2 when the device has no WebGPU or the adapter fails.
  */
+const debug = { enabled: false, log: [] as string[] };
+
+/** Collects one description per framed draw list while enabled, for tests and debugging. */
+export function debug_frames(enabled: boolean): string[] {
+  debug.enabled = enabled;
+  return debug.log;
+}
+
 export class Renderer {
   private constructor(
     private readonly backend: RenderBackend,
@@ -41,7 +49,14 @@ export class Renderer {
       this.canvas.width = width;
       this.canvas.height = height;
     }
-    this.backend.render(build_render_frame(tree, this.canvas.width, this.canvas.height));
+    const frame = build_render_frame(tree, this.canvas.width, this.canvas.height);
+    if (debug.enabled && debug.log.length < 8) {
+      debug.log.push(frame.draws.map((draw) => draw.mesh.constructor.name +
+        " v=" + (draw.mesh.surface().positions.length / 3) +
+        " at=" + [draw.transform[12], draw.transform[13], draw.transform[14]].map((n) => Math.round(n * 10) / 10).join(",")
+      ).join("; "));
+    }
+    this.backend.render(frame);
   }
 
   dispose(): void {

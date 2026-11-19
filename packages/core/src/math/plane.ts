@@ -19,6 +19,10 @@ export class Plane {
     return new Plane(n, n.dot(point));
   }
 
+  clone(): Plane {
+    return new Plane(this.normal.clone(), this.d);
+  }
+
   distance_to(point: Vector3): number {
     return this.normal.dot(point) - this.d;
   }

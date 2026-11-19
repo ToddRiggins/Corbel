@@ -9,8 +9,10 @@ import {
   InputMap,
   MeshInstance3D,
   type Node,
+  PrimitiveType,
   SceneTree,
   StandardMaterial3D,
+  SurfaceTool,
   Transform3D,
   Vector2,
   Vector3,
@@ -20,6 +22,39 @@ import {
 } from "@corbel/core";
 import { EngineView, useSceneTree } from "@corbel/react";
 import { useEffect, useState } from "react";
+
+/** Procedural, Godot SurfaceTool style: a pyramid with one colored face per side. */
+function build_pyramid(): MeshInstance3D {
+  const tool = new SurfaceTool();
+  tool.begin(PrimitiveType.TRIANGLES);
+  const apex = new Vector3(0, 1, 0);
+  const base = [
+    new Vector3(-0.9, -0.5, 0.9),
+    new Vector3(0.9, -0.5, 0.9),
+    new Vector3(0.9, -0.5, -0.9),
+    new Vector3(-0.9, -0.5, -0.9),
+  ];
+  const side_colors = [Color.html("#3b82f6"), Color.html("#22c55e"), Color.html("#eab308"), Color.html("#ef4444")];
+  for (let side = 0; side < 4; side += 1) {
+    for (const slot of [side, (side + 1) % 4, -1]) {
+      tool.set_color(side_colors[side]);
+      tool.add_vertex(slot === -1 ? apex : base[slot]);
+    }
+  }
+  const ground = Color.html("#52525b");
+  for (const triangle of [[0, 3, 2], [0, 2, 1]] as const) {
+    for (const slot of triangle) {
+      tool.set_color(ground);
+      tool.add_vertex(base[slot]);
+    }
+  }
+  tool.generate_normals();
+  const body = new MeshInstance3D();
+  body.set_name("Pyramid");
+  body.geometry = tool.commit();
+  body.position = new Vector3(2.2, 0.45, -0.6);
+  return body;
+}
 
 /** Spins faster while the bind "spin_fast" is held. */
 class SpinCube extends MeshInstance3D {
@@ -36,6 +71,8 @@ function build_demo(tree: SceneTree): void {
   const material = new StandardMaterial3D();
   material.albedo = new Color(0.9, 0.45, 0.15, 1);
   cube.material_override = material;
+  cube.visible = true;
+  tree.get_root().add_child(build_pyramid());
   tree.get_root().add_child(cube);
 
   const sun = new DirectionalLight3D();

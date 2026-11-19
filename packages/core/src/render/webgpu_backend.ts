@@ -1,6 +1,6 @@
 import type { Mesh } from "../scene/mesh.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
-import { CLEAR_COLOR } from "./frame.js";
+import { CLEAR_COLOR, surface_attribs } from "./frame.js";
 import { fill_wgsl_uniforms, SHADER_WGSL, view_proj_for_backend, WGSL_UNIFORM_FLOATS } from "./shaders.js";
 
 const VERTEX_FLOATS = 9; // position 3 + normal 3 + color 3
@@ -25,8 +25,9 @@ export class WebGPURenderBackend implements RenderBackend {
   private readonly context: GPUCanvasContext;
   private readonly device: GPUDevice;
   private readonly pipeline: GPURenderPipeline;
-  private readonly uniform: GPUBuffer;
-  private readonly bind_group: GPUBindGroup;
+  /** One uniform buffer per draw slot; `queue.writeBuffer` runs before a submitted pass, so draws cannot share one buffer. */
+  private readonly uniforms: GPUBuffer[] = [];
+  private readonly bind_groups: GPUBindGroup[] = [];
   private readonly scratch = new Float32Array(WGSL_UNIFORM_FLOATS);
   private readonly meshes = new Map<Mesh, UploadedMesh>();
   private readonly view_proj = new Float32Array(16);
@@ -55,14 +56,6 @@ export class WebGPURenderBackend implements RenderBackend {
         depthWriteEnabled: true,
         depthCompare: "less",
       },
-    });
-    this.uniform = device.createBuffer({
-      size: WGSL_UNIFORM_FLOATS * 4,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-    this.bind_group = device.createBindGroup({
-      layout: this.pipeline.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: { buffer: this.uniform } }],
     });
   }
 
@@ -106,12 +99,14 @@ export class WebGPURenderBackend implements RenderBackend {
       },
     });
     pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bind_group);
 
-    for (const draw of frame.draws) {
+    for (let slot = 0; slot < frame.draws.length; slot += 1) {
+      const draw = frame.draws[slot];
       const uploaded = this.mesh_for(draw.mesh);
+      const [uniform, bind_group] = this.uniform_slot(slot);
       fill_wgsl_uniforms(this.scratch, this.view_proj, frame, draw.transform, draw.normal_matrix, draw.albedo);
-      this.device.queue.writeBuffer(this.uniform, 0, this.scratch);
+      this.device.queue.writeBuffer(uniform, 0, this.scratch);
+      pass.setBindGroup(0, bind_group);
       pass.setVertexBuffer(0, uploaded.vertex);
       pass.setIndexBuffer(uploaded.indices, "uint32");
       pass.drawIndexed(uploaded.count);
@@ -119,6 +114,25 @@ export class WebGPURenderBackend implements RenderBackend {
 
     pass.end();
     this.device.queue.submit([encoder.finish()]);
+  }
+
+  /** Grows the per-draw uniform pool on demand; bind groups are cached per slot. */
+  private uniform_slot(slot: number): [GPUBuffer, GPUBindGroup] {
+    if (slot >= this.uniforms.length) {
+      const count = Math.max(4, slot + 1);
+      while (this.uniforms.length < count) {
+        const uniform = this.device.createBuffer({
+          size: WGSL_UNIFORM_FLOATS * 4,
+          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this.uniforms.push(uniform);
+        this.bind_groups.push(this.device.createBindGroup({
+          layout: this.pipeline.getBindGroupLayout(0),
+          entries: [{ binding: 0, resource: { buffer: uniform } }],
+        }));
+      }
+    }
+    return [this.uniforms[slot], this.bind_groups[slot]];
   }
 
   /** Depth texture view matching the current canvas size; recreated when the size moves. */
@@ -145,7 +159,11 @@ export class WebGPURenderBackend implements RenderBackend {
     this.depth?.destroy();
     this.depth = null;
     this.depth_view = null;
-    this.uniform.destroy();
+    for (const uniform of this.uniforms) {
+      uniform.destroy();
+    }
+    this.uniforms.length = 0;
+    this.bind_groups.length = 0;
   }
 
   private mesh_for(mesh: Mesh): UploadedMesh {
@@ -154,7 +172,7 @@ export class WebGPURenderBackend implements RenderBackend {
       return cached;
     }
     const surface = mesh.surface();
-    const count = surface.positions.length / 3;
+    const { count, normals, colors } = surface_attribs(surface);
     const interleaved = new Float32Array(count * VERTEX_FLOATS);
     for (let i = 0; i < count; i += 1) {
       interleaved.set(
@@ -162,12 +180,12 @@ export class WebGPURenderBackend implements RenderBackend {
           surface.positions[i * 3],
           surface.positions[i * 3 + 1],
           surface.positions[i * 3 + 2],
-          surface.normals[i * 3],
-          surface.normals[i * 3 + 1],
-          surface.normals[i * 3 + 2],
-          surface.colors[i * 3],
-          surface.colors[i * 3 + 1],
-          surface.colors[i * 3 + 2],
+          normals[i * 3],
+          normals[i * 3 + 1],
+          normals[i * 3 + 2],
+          colors[i * 3],
+          colors[i * 3 + 1],
+          colors[i * 3 + 2],
         ],
         i * VERTEX_FLOATS,
       );

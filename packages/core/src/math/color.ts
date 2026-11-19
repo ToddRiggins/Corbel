@@ -39,6 +39,10 @@ export class Color {
     return with_alpha ? rgb + byte(this.a) : rgb;
   }
 
+  clone(): Color {
+    return new Color(this.r, this.g, this.b, this.a);
+  }
+
   is_equal_approx(c: Color): boolean {
     return (
       is_equal_approx(this.r, c.r) &&

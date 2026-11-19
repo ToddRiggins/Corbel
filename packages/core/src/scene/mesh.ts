@@ -1,10 +1,17 @@
 import { Vector3 } from "../math/vector3.js";
 
-/** The arrays one surface hands to the renderer. Triangles wind counter-clockwise seen from outside. */
+/**
+ * The arrays one surface hands to the renderer. Triangles wind counter-clockwise
+ * seen from outside. `normals`, `colors`, `uvs`, and `tangents` are present when
+ * the mesh carries them; the renderer falls back to per-vertex white.
+ */
 export interface SurfaceArrays {
   positions: Float32Array;
-  normals: Float32Array;
-  colors: Float32Array;
+  normals?: Float32Array;
+  colors?: Float32Array;
+  uvs?: Float32Array;
+  /** Four floats per vertex: tangent xyz plus the binormal sign. */
+  tangents?: Float32Array;
   indices: Uint32Array;
 }
 

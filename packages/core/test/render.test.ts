@@ -36,13 +36,14 @@ describe("BoxMesh", () => {
     expect(surface.indices.length).toBe(36);
 
     // Every normal has length 1 and points outward from the center.
+    const normals = surface.normals!;
     for (let v = 0; v < 24; v += 1) {
       const x = surface.positions[v * 3];
       const y = surface.positions[v * 3 + 1];
       const z = surface.positions[v * 3 + 2];
-      const nx = surface.normals[v * 3];
-      const ny = surface.normals[v * 3 + 1];
-      const nz = surface.normals[v * 3 + 2];
+      const nx = normals[v * 3];
+      const ny = normals[v * 3 + 1];
+      const nz = normals[v * 3 + 2];
       expect(nx * x + ny * y + nz * z).toBeGreaterThan(0);
     }
 

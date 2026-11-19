@@ -1,6 +1,6 @@
 import type { Mesh } from "../scene/mesh.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
-import { CLEAR_COLOR } from "./frame.js";
+import { CLEAR_COLOR, surface_attribs } from "./frame.js";
 import { light_dir_for, SHADER_FRAG_GLSL, SHADER_VERT_GLSL, view_proj_for_backend } from "./shaders.js";
 
 interface UploadedMesh {
@@ -91,7 +91,7 @@ export class WebGL2RenderBackend implements RenderBackend {
       return cached;
     }
     const surface = mesh.surface();
-    const count = surface.positions.length / 3;
+    const { count, normals, colors } = surface_attribs(surface);
     const interleaved = new Float32Array(count * 9);
     for (let i = 0; i < count; i += 1) {
       interleaved.set(
@@ -99,12 +99,12 @@ export class WebGL2RenderBackend implements RenderBackend {
           surface.positions[i * 3],
           surface.positions[i * 3 + 1],
           surface.positions[i * 3 + 2],
-          surface.normals[i * 3],
-          surface.normals[i * 3 + 1],
-          surface.normals[i * 3 + 2],
-          surface.colors[i * 3],
-          surface.colors[i * 3 + 1],
-          surface.colors[i * 3 + 2],
+          normals[i * 3],
+          normals[i * 3 + 1],
+          normals[i * 3 + 2],
+          colors[i * 3],
+          colors[i * 3 + 1],
+          colors[i * 3 + 2],
         ],
         i * 9,
       );

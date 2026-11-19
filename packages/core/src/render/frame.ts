@@ -4,7 +4,7 @@ import { Transform3D } from "../math/transform3d.js";
 import { Vector3 } from "../math/vector3.js";
 import { Camera3D } from "../scene/camera3d.js";
 import { DirectionalLight3D } from "../scene/directional_light3d.js";
-import type { Mesh } from "../scene/mesh.js";
+import type { Mesh, SurfaceArrays } from "../scene/mesh.js";
 import { MeshInstance3D } from "../scene/mesh_instance3d.js";
 import type { Node } from "../scene/node.js";
 import type { SceneTree } from "../scene/scene_tree.js";
@@ -122,6 +122,30 @@ export function transform_to_mat4(t: Transform3D, out = new Float32Array(16)): F
   out[8] = bz.x; out[9] = bz.y; out[10] = bz.z; out[11] = 0;
   out[12] = t.origin.x; out[13] = t.origin.y; out[14] = t.origin.z; out[15] = 1;
   return out;
+}
+
+/**
+ * The per-vertex arrays a backend draws, with defaults for optional data:
+ * missing normals point +Z, missing colors are white, so a mesh a script
+ * built without them still renders.
+ */
+export function surface_attribs(surface: SurfaceArrays): { count: number; normals: Float32Array; colors: Float32Array } {
+  const count = surface.positions.length / 3;
+  const normals = surface.normals ?? forward_normals(count);
+  const colors = surface.colors ?? white_colors(count);
+  return { count, normals, colors };
+}
+
+function forward_normals(count: number): Float32Array {
+  const out = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    out[i * 3 + 2] = 1;
+  }
+  return out;
+}
+
+function white_colors(count: number): Float32Array {
+  return new Float32Array(count * 3).fill(1);
 }
 
 /** Basis as a column-major 3x3. */

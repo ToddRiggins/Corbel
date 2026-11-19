@@ -10,6 +10,7 @@ export { Mesh } from "./mesh.js";
 export { Node } from "./node.js";
 export { Node3D } from "./node3d.js";
 export { StandardMaterial3D } from "./standard_material3d.js";
+export { PrimitiveType, SurfaceTool } from "./surface_tool.js";
 export { SceneTree } from "./scene_tree.js";
 export type { TreeInit } from "./scene_tree.js";
 export { Signal } from "./signal.js";

@@ -14,6 +14,7 @@ export {
 } from "./math/index.js";
 export { Dictionary } from "./dictionary.js";
 export { ProjectSettings } from "./project_settings.js";
+export { debug_frames } from "./render/renderer.js";
 export {
   Input,
   InputEvent,
@@ -41,9 +42,11 @@ export {
   MeshInstance3D,
   Node,
   Node3D,
+  PrimitiveType,
   SceneTree,
   Signal,
   StandardMaterial3D,
+  SurfaceTool,
   create_node,
   import_tscn,
   node_label,
