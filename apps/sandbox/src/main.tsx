@@ -120,9 +120,17 @@ function attach_input(canvas: HTMLCanvasElement): () => void {
       unicode: event.key,
       ...modifiers(event),
     }));
+    // Input lock: game keys while the canvas holds focus; devtools stays reachable.
+    const devtools = event.key === "F12" || (event.ctrlKey && event.shiftKey && ["I", "J", "C"].includes(event.key.toUpperCase()));
+    if (!devtools) {
+      event.preventDefault();
+    }
   };
   const on_button = (event: MouseEvent, pressed: boolean): void => {
     Input.parse_input_event(mouse_event_from_dom(event, canvas, "button", new Vector2(), pressed));
+  };
+  const on_context = (event: MouseEvent): void => {
+    event.preventDefault();
   };
   let last = new Vector2();
   const on_motion = (event: MouseEvent): void => {
@@ -143,12 +151,14 @@ function attach_input(canvas: HTMLCanvasElement): () => void {
   canvas.addEventListener("keydown", keydown);
   canvas.addEventListener("keyup", keyup);
   canvas.addEventListener("mousedown", mousedown);
+  canvas.addEventListener("contextmenu", on_context);
   window.addEventListener("mouseup", mouseup);
   canvas.addEventListener("mousemove", on_motion);
   return () => {
     canvas.removeEventListener("keydown", keydown);
     canvas.removeEventListener("keyup", keyup);
     canvas.removeEventListener("mousedown", mousedown);
+    canvas.removeEventListener("contextmenu", on_context);
     window.removeEventListener("mouseup", mouseup);
     canvas.removeEventListener("mousemove", on_motion);
   };

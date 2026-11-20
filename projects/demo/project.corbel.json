@@ -11,6 +11,10 @@
       "events": [
         {
           "key": "Space"
+        },
+        {
+          "key": "W",
+          "alt": true
         }
       ]
     },

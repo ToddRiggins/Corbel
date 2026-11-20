@@ -88,6 +88,29 @@ describe("InputMap", () => {
     expect(InputMap.event_is_action(elsewhere, "phys")).toBe(false);
     expect(InputMap.event_is_action(elsewhere, "layout")).toBe(true);
   });
+
+  it("a bind with Alt matches only while Alt is down, using the physical code", () => {
+    const tree = new SceneTree();
+    Input._reset();
+    InputMap.clear();
+    InputMap.load_from_project({ boosted: { events: [{ key: "W", alt: true }] } });
+
+    // Plain W: keys set gains the layout code only, the Alt bind stays off.
+    Input.parse_input_event(new InputEventKey(87, true, { physical: 87, alt: false }));
+    tree.tick(0.1);
+    expect(Input.is_action_pressed("boosted")).toBe(false);
+
+    // Alt down, then W with Alt held: the modifier bind fires.
+    Input.parse_input_event(new InputEventKey(4194328, true, { physical: 4194328, alt: true }));
+    Input.parse_input_event(new InputEventKey(87, true, { physical: 87, alt: true }));
+    tree.tick(0.1);
+    expect(Input.is_action_pressed("boosted")).toBe(true);
+
+    // Alt released while W stays down: the bind turns off without re-pressing W.
+    Input.parse_input_event(new InputEventKey(4194328, false, { physical: 4194328, alt: false }));
+    tree.tick(0.1);
+    expect(Input.is_action_pressed("boosted")).toBe(false);
+  });
 });
 
 describe("Input", () => {

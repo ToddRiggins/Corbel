@@ -12,10 +12,10 @@ export class Input {
   static event_handler: ((event: InputEvent) => void) | null = null;
 
   private static readonly _keys = new Set<Key>();
+  private static readonly _layout_keys = new Set<Key>();
   private static readonly _buttons = new Set<number>();
   private static readonly _mouse_position = new Vector2(0, 0);
-  private static readonly _action_pressed = new Map<string, number>();
-  private static readonly _action_released = new Map<string, number>();
+  private static readonly _modifiers = { shift: false, ctrl: false, alt: false, meta: false };
   private static _frame = 0;
 
   static is_key_pressed(key: Key): boolean {
@@ -31,7 +31,7 @@ export class Input {
     return this._mouse_position.clone();
   }
 
-  /** True when an action event said pressed, or any device bind is physically down. */
+  /** True when an action event said pressed, or any device bind is physically down along with its modifiers. */
   static is_action_pressed(action: string): boolean {
     return this.device_action_pressed(action) || this.explicit_action_pressed(action);
   }
@@ -39,30 +39,50 @@ export class Input {
   private static device_action_pressed(action: string): boolean {
     return InputMap.action_get_events(action).some((bind) => {
       if (bind instanceof InputEventKey && !bind.echo) {
-        return this._keys.has(bind.key_code);
+        const down = bind.physical === false
+          ? this._layout_keys.has(bind.key_code)
+          : this._keys.has(bind.key_code);
+        return down && this.modifiers_match(bind);
       }
       if (bind instanceof InputEventMouseButton) {
-        return this._buttons.has(bind.button_index);
+        return this._buttons.has(bind.button_index) && this.modifiers_match(bind);
       }
       return false;
     });
   }
 
+  /** A bind's non-null modifiers must agree with the last seen modifier state. */
+  private static modifiers_match(bind: InputEvent): boolean {
+    return (
+      (bind.shift_pressed === null || bind.shift_pressed === this._modifiers.shift) &&
+      (bind.ctrl_pressed === null || bind.ctrl_pressed === this._modifiers.ctrl) &&
+      (bind.alt_pressed === null || bind.alt_pressed === this._modifiers.alt) &&
+      (bind.meta_pressed === null || bind.meta_pressed === this._modifiers.meta)
+    );
+  }
+
+  /** Device binds are live state, so device matches never leave stale stamps. */
+  private static readonly _explicit_pressed = new Map<string, number>();
+  private static readonly _explicit_released = new Map<string, number>();
+  /** Frame stamps for action just_pressed/just_released, device or explicit. */
+  private static readonly _action_just_pressed = new Map<string, number>();
+  private static readonly _action_just_released = new Map<string, number>();
+
   private static explicit_action_pressed(action: string): boolean {
-    const pressed_at = this._action_pressed.get(action);
+    const pressed_at = this._explicit_pressed.get(action);
     if (pressed_at === undefined) {
       return false;
     }
-    const released_at = this._action_released.get(action);
+    const released_at = this._explicit_released.get(action);
     return released_at === undefined || pressed_at >= released_at;
   }
 
   static is_action_just_pressed(action: string): boolean {
-    return (this._action_pressed.get(action) ?? -1) === this._frame;
+    return (this._action_just_pressed.get(action) ?? -1) === this._frame;
   }
 
   static is_action_just_released(action: string): boolean {
-    return (this._action_released.get(action) ?? -1) === this._frame;
+    return (this._action_just_released.get(action) ?? -1) === this._frame;
   }
 
   /**
@@ -70,12 +90,16 @@ export class Input {
    * SceneTree set, which is what calls `Node._input`.
    */
   static parse_input_event(event: InputEvent): void {
+    const device_match = (action: string): boolean => event instanceof InputEventKey && !event.echo && InputMap.event_is_action(event, action);
     if (event instanceof InputEventKey && !event.echo) {
       if (event.is_pressed()) {
-        this._keys.add(event.key_code);
+        this._keys.add(event.physical_key_code);
+        this._layout_keys.add(event.key_code);
       } else {
-        this._keys.delete(event.key_code);
+        this._keys.delete(event.physical_key_code);
+        this._layout_keys.delete(event.key_code);
       }
+      this.track_modifiers(event);
     }
     if (event instanceof InputEventMouseButton) {
       this._mouse_position.x = event.position.x;
@@ -85,25 +109,30 @@ export class Input {
       } else {
         this._buttons.delete(event.button_index);
       }
+      this.track_modifiers(event);
     }
     for (const action of InputMap.get_actions()) {
       if (event instanceof InputEventKey && event.echo) {
         // Godot actions ignore auto-repeat for just_pressed/released.
         break;
       }
-      if (InputMap.event_is_action(event, action)) {
+      if (device_match(action)) {
         if (event.is_pressed()) {
-          this._action_pressed.set(action, this._frame + 1);
+          this._action_just_pressed.set(action, this._frame + 1);
+          this._action_just_released.delete(action);
         } else {
-          this._action_released.set(action, this._frame + 1);
+          this._action_just_released.set(action, this._frame + 1);
+          this._action_just_pressed.delete(action);
         }
       }
     }
     if (event instanceof InputEventAction) {
       if (event.pressed) {
-        this._action_pressed.set(event.action, this._frame + 1);
+        this._action_just_pressed.set(event.action, this._frame + 1);
+        this._explicit_pressed.set(event.action, this._frame + 1);
       } else {
-        this._action_released.set(event.action, this._frame + 1);
+        this._action_just_released.set(event.action, this._frame + 1);
+        this._explicit_released.set(event.action, this._frame + 1);
       }
     }
     this.event_handler?.(event);
@@ -114,14 +143,31 @@ export class Input {
     this._frame += 1;
   }
 
+  /** Remembers the last event's modifier state, for device-bind matching. */
+  private static track_modifiers(event: InputEvent): void {
+    if (event.shift_pressed !== null) {
+      this._modifiers.shift = event.shift_pressed;
+    }
+    if (event.ctrl_pressed !== null) {
+      this._modifiers.ctrl = event.ctrl_pressed;
+    }
+    if (event.alt_pressed !== null) {
+      this._modifiers.alt = event.alt_pressed;
+    }
+    if (event.meta_pressed !== null) {
+      this._modifiers.meta = event.meta_pressed;
+    }
+  }
+
   /** @internal Drops all state; used between plays and in tests. */
   static _reset(): void {
     this._keys.clear();
+    this._layout_keys.clear();
     this._buttons.clear();
-    this._action_pressed.clear();
-    this._action_released.clear();
+    this._action_just_pressed.clear();
+    this._action_just_released.clear();
     this._frame = 0;
     this._mouse_position.x = 0;
-      this._mouse_position.y = 0;
+    this._mouse_position.y = 0;
   }
 }
