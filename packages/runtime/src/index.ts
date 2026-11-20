@@ -6,8 +6,10 @@ import {
   Node,
   Node3D,
   ProjectSettings,
+  PackedScene,
   register_node_class,
   registered_node_class_names,
+  resource_loader,
   SceneTree,
   key_from_name,
   key_name_from_dom,
@@ -64,20 +66,36 @@ export class Player {
       throw new Error("Could not read the project root from the dev server.");
     }
 
+    // The shared ResourceLoader reads project files through the dev server,
+    // and `.ts` scripts load as classes over the same dynamic-import path
+    // the weave uses.
+    resource_loader().set_file_loader(async (path) => {
+      const payload = await fetch(`/__project/file?project=${encodeURIComponent(this.project)}&path=${encodeURIComponent(path)}`)
+        .then(async (response) => (response.ok ? (await response.json() as { text?: string }) : null));
+      if (!payload?.text) {
+        throw new Error(`Could not read ${path} from project "${this.project}".`);
+      }
+      return payload.text;
+    });
+    resource_loader().set_loader("ts", async (text, path) => {
+      const module = await this.load_module(path);
+      return module.default;
+    });
+
     const tree = new SceneTree();
     this.tree = tree;
     tree.on_node_error = (node, error, where) => {
       const message = error instanceof Error ? error.message : String(error);
       this.log(`${node.name} (${where}): ${message}`, "error");
     };
-    // change_scene_to_file loads saved scenes through the project API.
+    // change_scene_to_file loads saved scenes through the shared loader,
+    // which also weaves project scripts into the fresh instance.
     tree.scene_loader = async (path) => {
-      const payload = await fetch(`/__project/file?project=${encodeURIComponent(this.project)}&path=${encodeURIComponent(path)}`)
-        .then(async (response) => (response.ok ? (await response.json() as { text?: string }) : null));
-      if (!payload?.text) {
-        throw new Error(`Could not read ${path}.`);
+      const packed = await resource_loader().load(path) as PackedScene | null;
+      if (!(packed instanceof PackedScene)) {
+        throw new Error(`Could not load ${path} as a scene.`);
       }
-      return unpack_scene(JSON.parse(payload.text) as CSceneNode);
+      return await this.weave(packed.instantiate());
     };
 
     // Project settings: the Input Map goes live before any script's _ready can read it.
@@ -131,7 +149,8 @@ export class Player {
         walk(child);
       }
     };
-    tree.get_root().add_child(woven);
+    // The scene runs as the current scene, so a later change_scene frees it.
+    tree.change_scene_to_node(woven);
     walk(woven);
     this.detach_input = attach_input(canvas);
     await tree.init({ canvas, preference: "webgpu" });

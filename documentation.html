@@ -281,6 +281,20 @@
         </div>
       </section>
 
+      <section class="teal" id="packedscene">
+        <h2 id="doc-PackedScene" data-doc="PackedScene">PackedScene, load, and saving scenes to disk</h2>
+        <div class="body">
+          <p><code id="doc-PackedScene" data-doc="PackedScene">PackedScene</code> holds saved scene data. <code id="doc-PackedScene-from_node" data-doc="from_node" data-owner="PackedScene">PackedScene.from_node(node)</code> packs a live tree; <code id="doc-PackedScene-instantiate" data-doc="instantiate" data-owner="PackedScene">instantiate()</code> builds a fresh tree each call. Scenes save to <code>.cscene</code> files and load back with Godot's <code id="doc-load" data-doc="load">load("res://…")</code> through the shared <code id="doc-ResourceLoader" data-doc="ResourceLoader">ResourceLoader</code></p>
+<pre><span class="kw">const</span> <span class="vr">packed</span> <span class="op">=</span> <span class="kw">await</span> <span class="call">load</span><span class="op">(</span><span class="st">"res://level2.cscene"</span><span class="op">)</span> <span class="kw">as</span> <span class="ty">PackedScene</span><span class="op">;</span>
+<span class="kw">const</span> <span class="vr">fresh</span> <span class="op">=</span> <span class="vr">packed</span><span class="op">.</span><span class="call">instantiate</span><span class="op">();</span>
+<span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">().</span><span class="call">change_scene_to_node</span><span class="op">(</span><span class="vr">fresh</span><span class="op">);</span>
+<span class="cm">// or the direct swap:</span>
+<span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">().</span><span class="call">change_scene_to_packed</span><span class="op">(</span><span class="vr">packed</span><span class="op">);</span></pre>
+          <p>New resources need a loader per extension: <code id="doc-ResourceLoader-set_loader" data-doc="set_loader" data-owner="ResourceLoader">ResourceLoader.set_loader("json", handler)</code>. Resources cache by path. The runtime wires the project API into the shared loader, so game scripts only ever write <code>await load("res://…")</code>.</p>
+          <p>Scene change ties it together: <code id="doc-SceneTree-change_scene_to_packed" data-doc="change_scene_to_packed" data-owner="SceneTree">change_scene_to_packed(packed)</code> frees the old level at the end of the frame, swaps in the loaded one, and keeps the runner's weaved scripts and Globals (autoload) alive through the swap.</p>
+        </div>
+      </section>
+
       <section class="teal" id="globals">
         <h2 id="doc-Globals" data-doc="Globals">Globals — Autoload, and the class registry</h2>
         <div class="body">

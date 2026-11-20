@@ -1,5 +1,6 @@
 import { Node } from "./node.js";
 import type { TreeHost } from "./tree_host.js";
+import { PackedScene } from "./packed_scene.js";
 import { Renderer, type BackendPreference } from "../render/renderer.js";
 import { Input } from "../input/input.js";
 import type { InputEvent } from "../input/events.js";
@@ -97,6 +98,11 @@ export class SceneTree implements TreeHost {
     }
     this.get_root().add_child(next);
     this._current_scene = next;
+  }
+
+  /** Godot 4 `change_scene_to_packed`: instantiates and swaps. */
+  change_scene_to_packed(packed: PackedScene): void {
+    this.change_scene_to_node(packed.instantiate());
   }
 
   /**

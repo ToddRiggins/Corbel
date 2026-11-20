@@ -3,8 +3,11 @@ import {
   Color,
   DirectionalLight3D,
   Input,
+  InputEvent,
+  load,
   MeshInstance3D,
   Node3D,
+  PackedScene,
   StandardMaterial3D,
   Vector3,
 } from "@corbel/core";
@@ -33,5 +36,21 @@ export default class Player extends Node3D {
       speed = 0.3;
     }
     body.rotation = body.rotation.add(new Vector3(0, delta * speed, delta * speed * 0.4));
+
+    // Godot's level switch: a bind loads the next scene's PackedScene.
+    if (Input.is_action_just_pressed("next_scene")) {
+      void this.change_level("res://level2.cscene");
+    }
+  }
+
+  override _input(event: InputEvent): void {
+    void event;
+  }
+
+  private async change_level(path: string): Promise<void> {
+    const packed = (await load(path)) as PackedScene | null;
+    if (packed !== null && this.get_tree() && packed.get_name() === "Level2") {
+      this.get_tree()!.change_scene_to_packed(packed);
+    }
   }
 }
