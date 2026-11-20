@@ -13,6 +13,7 @@ export {
   is_zero_approx,
 } from "./math/index.js";
 export { Dictionary } from "./dictionary.js";
+export { get_registered_node_class, has_registered_node_class, register_node_class, registered_node_class_names } from "./node_registry.js";
 export { ProjectSettings } from "./project_settings.js";
 export { debug_frames } from "./render/renderer.js";
 export { Shader, build_wgsl, build_glsl, coerce_vec4 } from "./render/shaders.js";

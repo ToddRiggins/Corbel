@@ -1,6 +1,9 @@
 {
   "name": "Demo",
   "main_scene": "res://main.cscene",
+  "autoload": {
+    "Score": "res://score.ts"
+  },
   "window": {
     "width": 1280,
     "height": 720

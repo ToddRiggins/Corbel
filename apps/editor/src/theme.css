@@ -258,6 +258,7 @@ button.twist:hover, button.eye:hover { background: transparent; color: #f5f5f4; 
 .chooser-options label { display: inline-flex; gap: 0.3rem; align-items: center; font-size: 0.85rem; }
 .chooser select { width: 100%; box-sizing: border-box; }
 .chooser-actions { display: flex; gap: 0.6rem; justify-content: center; margin-top: 0.7rem; }
+.autoload-script { width: 14rem; }
 .run-bar { position: relative; pointer-events: none; z-index: 1; color: #dedbc9; text-shadow: 0 1px 6px #000c; }
 .run-bar h3 { color: #dedbc9; }
 .script-host { flex: 1; min-height: 0; overflow: hidden; border-radius: 8px 8px 0 0; }

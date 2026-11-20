@@ -52,6 +52,13 @@ async function handle(req: Connect.IncomingMessage, res: Connect.ServerResponse)
     send(res, 200, { text: fs.readFileSync(file, "utf8") });
     return;
   }
+  if (req.method === "GET" && pathname === "/scripts") {
+    const scripts = listFiles(required(url, "project"))
+      .filter((row) => !row.dir && row.path.endsWith(".ts"))
+      .map((row) => row.path);
+    send(res, 200, { scripts });
+    return;
+  }
   const body = await readBody(req);
   const payload = body ? JSON.parse(body) as { project?: string; path?: string; text?: string } : {};
   const project = payload.project ?? "";

@@ -2,17 +2,18 @@ import { Camera3D } from "./camera3d.js";
 import { MeshInstance3D } from "./mesh_instance3d.js";
 import { Node } from "./node.js";
 import { Node3D } from "./node3d.js";
+import { get_registered_node_class } from "../node_registry.js";
 
-const TYPES = new Map<string, new () => Node>([
-  ["Node", Node],
-  ["Node3D", Node3D],
-  ["Camera3D", Camera3D],
-  ["MeshInstance3D", MeshInstance3D],
-]);
+const BUILTIN_TYPES: Record<string, new () => Node> = {
+  Node,
+  Node3D,
+  Camera3D,
+  MeshInstance3D,
+};
 
-/** Builds a node by Godot class name. Unknown 3D types keep their name in meta. */
+/** Builds a node by Godot class name: built-ins first, then project `class_name` classes. */
 export function create_node(type: string): Node {
-  const Known = TYPES.get(type);
+  const Known = BUILTIN_TYPES[type] ?? get_registered_node_class(type);
   if (Known) {
     return new Known();
   }

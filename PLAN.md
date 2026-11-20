@@ -27,9 +27,9 @@ Corbel grows past the foundation slices toward feature parity with Godot 4 (3D s
 ## Phases
 
 ### P1 — Scripting backbone (autoload, class registry, timers, scenes)
-1. **class_name registry.** `Node.get_class()` works from the class name; a module-side `create_class_registry()` collects exported classes in a project's `scripts/index.ts` (one import barrel), so `create_node("Player")` resolves any project type, Godot style.
-2. **Globals / Autoload.** `project.corbel.json` gains `autoload: { name: "res://path.ts" }`. The runner instantiates each script's default export under `/root/<Name>` before the main scene, `_ready` before the game, and exposes `Engine.get_singleton(name)`; scripts access it by import from the registry. Editor dialog: Project → Globals lists autoloads.
-3. **Timer + SceneTree conveniences.** `Timer` node, `SceneTree.create_timer(seconds)` awaiting, `get_tree().change_scene_to_file(path)` with proper teardown, `get_tree().paused` already half-done — finish `process_mode` semantics (INHERIT/PAUSABLE/WHEN_PAUSED/ALWAYS).
+1. **Done.** **class_name registry.** Every project script's default export class registers in a shared registry (`node_registry.ts`, pinned on `globalThis` across page realms); `create_node("Custom")` builds custom node types, the editor Add menu lists them, and scenes keep the type on save. Verified: the game window's tree holds registered classes.
+2. **Done.** **Globals / Autoload.** `project.corbel.json` gains `autoload: { "Score": "res://score.ts" }`; the runner instantiates each under `/root/<Name>` before the main scene, access via `get_node("/root/Score")`; the editor manages the list under Project → Globals — Autoload….
+3. **Timer + SceneTree conveniences.** `Timer` node, `SceneTree.create_timer(seconds)` awaiting, `get_tree().change_scene_to_file(path)` with proper teardown, `process_mode` semantics (INHERIT/PAUSABLE/WHEN_PAUSED/ALWAYS).
 4. **PackedScene runtime.** `load("res://level.cscene")` returns a `PackedScene` with `instantiate()`; scripts can instance scenes; instanced scenes keep the `instance` meta the editor already writes.
 
 **Exit:** a demo project with an autoload music manager, a UI-lite HUD (see P4), change_scene between two levels, instanced sub-scenes.

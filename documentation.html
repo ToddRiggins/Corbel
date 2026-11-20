@@ -269,6 +269,20 @@
         </div>
       </section>
 
+      <section class="teal" id="globals">
+        <h2 id="doc-Globals" data-doc="Globals">Globals — Autoload, and the class registry</h2>
+        <div class="body">
+          <p>Godot's Globals feature: a script named in Project → <strong>Globals — Autoload…</strong> is created under <code id="doc-Globals-autoload" data-doc="autoload" data-owner="Globals">/root/&lt;Name&gt;</code> before the main scene, in the order the project lists them. Access it from any script with <code>get_node("/root/Score")</code>, the way Godot code calls an autoload by name. The singleton's <code>_ready</code> runs before any scene node's.</p>
+          <p>Godot's <code>class_name</code> registry: every project script's default export class registers under its own class name, so <code id="doc-Node-create_node" data-doc="create_node">create_node("MyNodeType")</code> builds custom node types in scenes, and the Add-node menu lists them. The list refreshes from the project's <code>.ts</code> scripts on load and on demand.</p>
+<pre><span class="kw">export default class</span> <span class="ty">Score</span> <span class="kw">extends</span> <span class="ty">Node</span> <span class="op">{</span>
+  <span class="vr">points</span> <span class="op">=</span> <span class="num">0</span><span class="op">;</span>
+<span class="op">}</span>
+
+<span class="cm">// from any script:</span>
+<span class="kw">const</span> <span class="vr">score</span> <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="call">get_node</span><span class="op">(</span><span class="st">"/root/Score"</span><span class="op">)</span> <span class="kw">as</span> <span class="ty">Score</span><span class="op">;</span></pre>
+        </div>
+      </section>
+
       <section class="stone" id="node">
         <h2 id="doc-Node" data-doc="Node">Node</h2>
         <div class="body">

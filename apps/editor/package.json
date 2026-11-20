@@ -19,7 +19,8 @@
     "@corbel/core": "0.0.0",
     "@lezer/highlight": "^1.2.5",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "@corbel/runtime": "0.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

@@ -147,6 +147,23 @@ box.has_point(box.get_center());</pre>
     </div>
   </section>
 
+  <section class="block stone">
+    <h2>Globals, autoload, and your own classes</h2>
+    <div class="body">
+      <p>A script can live for the whole game, the way Godot's Globals/Autoload works. Write the script, then add it under Project → <strong>Globals — Autoload…</strong>. Play creates it under <code>/root/&lt;Name&gt;</code> before the main scene, so a scene never destroys it.</p>
+      <pre>import { Node } from "@corbel/core";
+
+export default class Score extends Node {
+  points = 0;
+
+  override _ready(): void {
+    console.log("Score lives at /root/Score.");
+  }
+}</pre>
+      <p>Any script reaches it with <code>get_node("/root/Score")</code>, cast to the class. Every project script class also registers by its own class name — <code>create_node("Score")</code> builds one, the Add-node menu lists them, and saving a scene keeps the type</p>
+    </div>
+  </section>
+
   <section class="block green">
     <h2>Build a mesh in code</h2>
     <div class="body">

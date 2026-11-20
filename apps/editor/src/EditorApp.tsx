@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type P
 import { ScriptEditor, type ScriptEditorHandle } from "./script/ScriptEditor";
 import { scriptRoles } from "./script/roles";
 import { chooser_result, event_label, matches_filter, type ChooserState, type InputActionSpec, type InputEventSpec, KEYBOARD_KEYS, MOUSE_BUTTONS } from "./inputMap";
+import { registered_node_class_names, register_project_classes } from "@corbel/runtime";
 import {
   Node,
   Node3D,
@@ -52,13 +53,16 @@ export function EditorApp() {
   const [savePath, setSavePath] = useState("res://main.cscene");
   const [scriptFile, setScriptFile] = useState("res://Script.ts");
   const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [modal, setModal] = useState<null | "add" | "save" | "script" | "settings">(null);
+  const [modal, setModal] = useState<null | "add" | "save" | "script" | "settings" | "globals">(null);
   const [context, setContext] = useState<{ x: number; y: number; path: string } | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [imap, setImap] = useState<Array<{ action: string; deadzone: number; events: InputEventSpec[] }>>([]);
+  const [autoloads, setAutoloads] = useState<Array<{ singleton: string; script: string }>>([]);
+  const [projectClasses, setProjectClasses] = useState<string[]>([]);
   const [settingsFile, setSettingsFile] = useState<Record<string, unknown> | null>(null);
   const [chooser, setChooser] = useState<ChooserState | null>(null);
   const [newAction, setNewAction] = useState("");
+  const [globalsNew, setGlobalsNew] = useState("");
   const [menu, setMenu] = useState<null | "scene" | "project" | "help">(null);
   const [fontSize, setFontSize] = useState(() => {
     const saved = Number(localStorage.getItem("corbel.scriptFont"));
@@ -123,6 +127,7 @@ export function EditorApp() {
         setProject(name);
         await refreshFiles(name);
         await openMain(name);
+        await loadProjectClasses();
       } catch (error) {
         log(error instanceof Error ? error.message : String(error));
       }
@@ -202,6 +207,7 @@ export function EditorApp() {
     }
     await refreshFiles(name);
     await openMain(name);
+    await loadProjectClasses();
   }
 
   async function openPath(path: string): Promise<void> {
@@ -435,6 +441,47 @@ export function EditorApp() {
     setChooser(null);
   }
 
+  /** Loads project.corbel.json into the Globals editor. */
+  async function openGlobals(): Promise<void> {
+    setMenu(null);
+    try {
+      const text = await readFile(project, "res://project.corbel.json");
+      const data = JSON.parse(text) as Record<string, unknown>;
+      setSettingsFile(data);
+      const autoload = (data.autoload ?? {}) as Record<string, string>;
+      const rows = Object.entries(autoload).map(([singleton, script]) => ({ singleton, script }));
+      setAutoloads(rows);
+      log(`Globals: ${rows.length} autoload${rows.length === 1 ? "" : "s"}.`);
+    } catch {
+      setSettingsFile({ name: project });
+      setAutoloads([]);
+      log("No project settings yet. Save creates project.corbel.json.");
+    }
+    setModal("globals");
+  }
+
+  async function saveGlobals(): Promise<void> {
+    const autoload: Record<string, string> = {};
+    for (const row of autoloads) {
+      const key = row.singleton.trim();
+      if (!key || !row.script.trim()) {
+        continue;
+      }
+      autoload[key] = row.script.trim().startsWith("res://") ? row.script.trim() : `res://${row.script.trim()}`;
+    }
+    const merged = { ...(settingsFile ?? { name: project }), autoload };
+    await writeFile(project, "res://project.corbel.json", `${JSON.stringify(merged, null, 2)}\n`);
+    setModal(null);
+    await refreshFiles();
+    log("Saved globals. Play creates each autoload under /root before the scene.");
+  }
+
+  /** Registers the project's script classes and lists them in the Add menu. */
+  async function loadProjectClasses(): Promise<void> {
+    const names = await register_project_classes(project, log);
+    setProjectClasses(names);
+  }
+
   function jump(line: number): void {
     scriptRef.current?.jump(line);
   }
@@ -633,6 +680,7 @@ export function EditorApp() {
                 void switchProject(name);
               }] as [string, () => void]),
               ["Project settings…", () => { void openProjectSettings(); }],
+              ["Globals — Autoload…", () => { void openGlobals(); }],
             ]}
           />
           <Menu
@@ -673,7 +721,7 @@ export function EditorApp() {
           >
             <h2>Scene</h2>
             <div className="tools">
-              <button onClick={() => setModal("add")}>Add</button>
+              <button onClick={() => { void loadProjectClasses().then(() => setModal("add")); }}>Add</button>
               <button onClick={deleteSelected} disabled={!selected}>Delete</button>
             </div>
             <div className="body">
@@ -861,6 +909,9 @@ export function EditorApp() {
                 {NODE_TYPES.map((type) => (
                   <button key={type} onClick={() => { addNode(type); setModal(null); }}>{type}</button>
                 ))}
+                {projectClasses.filter((name) => !NODE_TYPES.includes(name)).map((name) => (
+                  <button key={name} className="project-class" onClick={() => { addNode(name); setModal(null); }}>{name}</button>
+                ))}
                 <button onClick={() => setModal(null)}>Cancel</button>
               </>
             ) : modal === "settings" ? (
@@ -971,6 +1022,52 @@ export function EditorApp() {
                   <button onClick={() => setModal(null)}>Cancel</button>
                 </div>
               </>
+            ) : modal === "globals" ? (
+              <>
+                <h3>Globals — Autoload</h3>
+                <p className="note">Each autoload script is created under <code>/root/&lt;Name&gt;</code> before the main scene. Access it from any script with <code>get_node("/root/&lt;Name&gt;")</code>.</p>
+                <div className="imap-list">
+                  <div className="imap-head">
+                    <span>Singleton</span>
+                    <span>Script</span>
+                  </div>
+                  {autoloads.map((row, index) => (
+                    <div className="imap-row" key={`${row.singleton}:${index}`}>
+                      <input
+                        className="imap-name"
+                        aria-label="Singleton name"
+                        placeholder="Music"
+                        value={row.singleton}
+                        onChange={(event) => setAutoloads((prev) => prev.map((entry, at) => (at === index ? { ...entry, singleton: event.target.value } : entry)))}
+                      />
+                      <input
+                        className="autoload-script"
+                        aria-label="Autoload script"
+                        placeholder="res://scripts/music.ts"
+                        value={row.script}
+                        onChange={(event) => setAutoloads((prev) => prev.map((entry, at) => (at === index ? { ...entry, script: event.target.value } : entry)))}
+                      />
+                      <button className="danger" title="Remove this autoload" onClick={() => setAutoloads((prev) => prev.filter((_, at) => at !== index))}>🗑</button>
+                    </div>
+                  ))}
+                  {autoloads.length === 0 ? <div className="empty">No autoloads yet.</div> : null}
+                </div>
+                <div className="bind-add">
+                  <input placeholder="Music" value={globalsNew} onChange={(event) => setGlobalsNew(event.target.value)} />
+                  <button onClick={() => {
+                    const name = globalsNew.trim();
+                    if (!name) {
+                      return;
+                    }
+                    setAutoloads((prev) => [...prev, { singleton: name, script: "" }]);
+                    setGlobalsNew("");
+                  }}>Add autoload</button>
+                </div>
+                <div className="imap-actions">
+                  <button onClick={() => { void saveGlobals(); }}>Save</button>
+                  <button onClick={() => setModal(null)}>Cancel</button>
+                </div>
+              </>
             ) : (
               <>
                 <h3>Save scene</h3>
@@ -997,7 +1094,7 @@ export function EditorApp() {
           {/* Later: Sub-Resources, Instantiate Child Scene, Cut, Copy, Duplicate,
               Extend Script, Change Type, Move Up, Move Down, Reparent, Make Scene Root,
               Save Branch as Scene, Access as Unique Name, Open Documentation. */}
-          <button onClick={() => { setContext(null); setModal("add"); }}>Add Child Node</button>
+          <button onClick={() => { setContext(null); void loadProjectClasses().then(() => setModal("add")); }}>Add Child Node</button>
           <button onClick={() => {
             setScriptFile(defaultScriptPath(contextNode));
             setContext(null);

@@ -7,8 +7,13 @@ import {
   SceneTree,
   Signal,
   Vector3,
+  create_node,
+  get_registered_node_class,
+  has_registered_node_class,
   import_tscn,
   pack_scene,
+  register_node_class,
+  registered_node_class_names,
   unpack_scene,
 } from "../src/index.js";
 
@@ -258,5 +263,26 @@ describe("script errors and pause", () => {
     tree.paused = false;
     tree.tick(0.1);
     expect(good.hits).toBe(1);
+  });
+});
+
+describe("node class registry", () => {
+  class Score extends Node {
+    points = 0;
+  }
+
+  it("create_node builds registered project classes by class_name", () => {
+    register_node_class("Score", Score);
+    const node = create_node("Score");
+    expect(node instanceof Score).toBe(true);
+    expect((node as Score).points).toBe(0);
+    expect(has_registered_node_class("Score")).toBe(true);
+    expect(registered_node_class_names()).toContain("Score");
+  });
+
+  it("built-in types win over a re-registered name, and bad names are rejected", () => {
+    expect(() => register_node_class("bad name", Score)).toThrow(/valid identifier/);
+    const node = create_node("Node3D");
+    expect(node instanceof Node3D).toBe(true);
   });
 });

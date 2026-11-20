@@ -3,9 +3,11 @@ import {
   InputEventKey,
   InputMap,
   InputEventMouseButton,
-  type Node,
+  Node,
   Node3D,
   ProjectSettings,
+  register_node_class,
+  registered_node_class_names,
   SceneTree,
   key_from_name,
   key_name_from_dom,
@@ -86,6 +88,29 @@ export class Player {
       Input._reset();
     }
 
+    // Project classes register by their class name, Godot's `class_name` style,
+    // so scenes can hold custom node types and scripts can access them.
+    await this.load_project_classes(log);
+
+    // Godot's Globals/Autoload: each entry instantiates under /root/Name
+    // before the main scene, with access through get_node("/root/Name").
+    const autoloads = (settings?.get("autoload") ?? {}) as Record<string, string>;
+    for (const [name, script] of Object.entries(autoloads)) {
+      try {
+        const module = await this.load_module(script);
+        const Ctor = module.default as (new () => Node) | undefined;
+        if (typeof Ctor !== "function") {
+          throw new Error("no default export class to instantiate.");
+        }
+        const singleton = new Ctor();
+        singleton.set_name(name);
+        tree.get_root().add_child(singleton);
+        log(`Autoload ${name}: ${script}.`);
+      } catch (error) {
+        this.log(`Autoload ${name} (${script}) did not load: ${error instanceof Error ? error.message : String(error)}`, "error");
+      }
+    }
+
     log(`Building ${scene.name} for play...`);
     const packed = pack_scene(scene);
     const runtime = unpack_scene(packed);
@@ -100,12 +125,22 @@ export class Player {
     walk(woven);
     this.detach_input = attach_input(canvas);
     await tree.init({ canvas, preference: "webgpu" });
+    this.debug_expose(tree);
     if (this.tree !== tree) {
       // Stop ran while init was in flight; the loop just started must end now.
       tree.close();
       return;
     }
     log(`Playing ${scene.name}. Renderer: ${tree.renderer_name}. Click the canvas, then use the binds.`);
+  }
+
+  /**
+   * Debug seam for the remote debugger and tests: the running tree on
+   * `globalThis.__CORBEL_SCENE__` of the window the runner started in.
+   */
+  private debug_expose(tree: SceneTree): void {
+    const holder = globalThis as { __CORBEL_SCENE__?: SceneTree };
+    holder.__CORBEL_SCENE__ = tree;
   }
 
   toggle_pause(): void {
@@ -178,20 +213,62 @@ export class Player {
     }
   }
 
+  /** Imports one project script through the dev server's TypeScript transform. */
+  private async load_module(script: string): Promise<{ default?: unknown }> {
+    const rel = script.replace(/^res:\/\//, "");
+    const url = `/@fs/${this.root}/projects/${this.project}/${rel}?run=${this.stamp}`;
+    return (await import(/* @vite-ignore */ url)) as { default?: unknown };
+  }
+
+  /**
+   * Godot's `class_name` registry: every project script's default export
+   * registers under the class's own name, so `create_node("Score")` builds
+   * custom node types and the editor can list them.
+   */
+  private async load_project_classes(log: PlayLog): Promise<void> {
+    await register_project_classes(this.project, log);
+  }
+
   /**
    * Imports the script through the dev server's TypeScript transform. The path
    * is a user-authored project file known only at play time, so a static
    * import is impossible; the cache-busting query re-reads edited scripts.
    */
   private async load_class(script: string): Promise<new () => Node> {
-    const rel = script.replace(/^res:\/\//, "");
-    const url = `/@fs/${this.root}/projects/${this.project}/${rel}?run=${this.stamp}`;
-    const module = (await import(/* @vite-ignore */ url)) as { default?: new () => Node };
+    const module = await this.load_module(script) as { default?: new () => Node };
     if (typeof module.default !== "function") {
       throw new Error("no default export class to instantiate.");
     }
     return module.default;
   }
+}
+
+/**
+ * Registers every project script's default export class by its class name,
+ * Godot's `class_name` style. Returns the names that registered. Safe to
+ * call repeatedly; the loader is used by the runner and the editor.
+ */
+export async function register_project_classes(project: string, log: PlayLog = () => {}): Promise<string[]> {
+  const scripts = await fetch(`/__project/scripts?project=${encodeURIComponent(project)}`)
+    .then(async (response) => (response.ok ? (await response.json() as { scripts?: string[] }).scripts ?? [] : []));
+  const root = await fetch("/__project/root")
+    .then(async (response) => (await response.json() as { root?: string }).root ?? "")
+    .then((root) => root.replace(/\\/g, "/"));
+  const stamp = Date.now();
+  const names: string[] = [];
+  for (const script of scripts) {
+    try {
+      const url = `/@fs/${root}/projects/${project}/${script.replace(/^res:\/\//, "")}?run=${stamp}`;
+      const candidate = (await import(/* @vite-ignore */ url) as { default?: unknown }).default;
+      if (typeof candidate === "function" && candidate.prototype instanceof Node && candidate.name) {
+        register_node_class(candidate.name, candidate as new () => Node);
+        names.push(candidate.name);
+      }
+    } catch (error) {
+      log(`Class from ${script} did not load: ${error instanceof Error ? error.message : String(error)}`, "error");
+    }
+  }
+  return names;
 }
 
 /** DOM events on the run canvas become Godot events for the play tree. */
@@ -261,3 +338,6 @@ function attach_input(canvas: HTMLCanvasElement): () => void {
     canvas.removeEventListener("mousemove", on_motion);
   };
 }
+
+/** Re-exported for the editor: project classes are registered under these names. */
+export { registered_node_class_names };
