@@ -41,6 +41,8 @@ export {
   BoxMesh,
   Camera3D,
   DirectionalLight3D,
+  OmniLight3D,
+  SpotLight3D,
   Environment,
   GeometryInstance3D,
   Material,

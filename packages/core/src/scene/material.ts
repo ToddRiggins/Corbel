@@ -28,6 +28,10 @@ export class ShaderMaterial extends Material {
     this._params.set(name, value);
   }
 
+  /**
+   * Godot 4 keeps textures in the same parameter map; a Texture2D value set on
+   * a name the Shader lists in `texture_params` binds on the GPU slot.
+   */
   get_shader_parameter(name: string): unknown {
     return this._params.get(name);
   }

@@ -63,6 +63,8 @@
         "Camera3D",
         "WorldEnvironment",
         "DirectionalLight3D",
+        "OmniLight3D",
+        "SpotLight3D",
         "MeshInstance3D",
         "GeometryInstance3D",
         "Timer"
@@ -423,7 +425,7 @@
     "DirectionalLight3D": {
       "brief": "A sun-style light that shines along the node's local -Z.",
       "inherits": "Node3D",
-      "description": "DirectionalLight3D shines along the node's local -Z, so an unrotated light points (0, 0, -1). The first DirectionalLight3D in tree order lights the scene. Rotate the node to aim the light, exactly like Godot's sun.",
+      "description": "DirectionalLight3D shines along the node's local -Z, so an unrotated light points (0, 0, -1). The frame keeps the first directional found as the primary (its light_dir and light_color ride the camera block) and adds it to the light list; DirectionalLight3D beyond the first contribute through the light list.",
       "properties": [
         {
           "name": "light_color",
@@ -748,7 +750,7 @@
     "ResourceLoader": {
       "brief": "Loads project resources by path: scenes, textures, scripts, materials.",
       "inherits": "Object",
-      "description": "The shared ResourceLoader resolves res:// paths by extension and caches by path. Built-in: .cscene loads as a PackedScene. Runtime-registered: .ts loads as the script class, .png/.jpg/.jpeg/.webp/.gif as a Texture2D, .cmaterial as a StandardMaterial3D with its texture loaded. New extensions register with set_loader(ext, handler).",
+      "description": "The shared ResourceLoader resolves res:// paths by extension and caches by path. Built-in: .cscene loads as a PackedScene. Runtime-registered: .ts loads as the script class, .png/.jpg/.jpeg/.webp/.gif as a Texture2D, .cmaterial as a StandardMaterial3D with every field the file carries (albedo, the five texture maps, channels, uv transform, emission). New extensions register with set_loader(ext, handler).",
       "properties": [
         {
           "name": "cache_limit",
@@ -939,7 +941,7 @@
     "StandardMaterial3D": {
       "brief": "The built-in lit material: albedo, textures, normal map, roughness and metallic maps, fog participation.",
       "inherits": "Material",
-      "description": "StandardMaterial3D is the built-in material the renderer's lit shader draws. The albedo color multiplies the albedo texture. A normal_texture reshapes shading through the mesh's tangents, pushed in and out by normal_scale. The roughness_texture and metallic_texture each read one color channel (TextureChannel.RED for roughness and TextureChannel.BLUE for metallic, the Godot defaults) and multiply the roughness and metallic scalars. uv1_scale and uv1_offset transform the UVs before every texture samples. vertex_color_use_as_albedo lets the mesh's own vertex colors into the albedo. Transparency comes from GeometryInstance3D.transparency.",
+      "description": "StandardMaterial3D is the built-in material the renderer's lit shader draws. The albedo color multiplies the albedo texture, whose alpha joins the alpha; a normal_texture reshapes shading through the mesh's tangents, pushed in and out by normal_scale. The roughness_texture and metallic_texture each read one color channel (TextureChannel.RED for roughness and TextureChannel.BLUE for metallic, the Godot defaults) and multiply the roughness and metallic scalars. uv1_scale and uv1_offset transform the UVs before every texture samples; vertex_color_use_as_albedo lets the mesh's own vertex colors into the albedo; emission adds an unlit color the way Godot's emission field does. Transparency comes from GeometryInstance3D.transparency. Materials load as .cmaterial JSON through load() and edit in the Inspector.",
       "properties": [
         {
           "name": "albedo",
@@ -997,6 +999,26 @@
           "desc": "Godot 4 metallic_texture_channel: TextureChannel.BLUE by default"
         },
         {
+          "name": "emission_enabled",
+          "type": "boolean",
+          "desc": "Godot 4 emission_enabled: the emission term joins the lit color"
+        },
+        {
+          "name": "emission",
+          "type": "Color",
+          "desc": "Godot 4 emission: the unlit color it adds"
+        },
+        {
+          "name": "emission_energy_multiplier",
+          "type": "number",
+          "desc": "Godot 4 emission_energy_multiplier: scales the emission color"
+        },
+        {
+          "name": "emission_texture",
+          "type": "Texture2D | null",
+          "desc": "Godot 4 emission_texture: an RGB mask on the emission color"
+        },
+        {
           "name": "uv1_scale",
           "type": "Vector2",
           "desc": "Godot 4 uv1_scale: UVs multiply this before every texture samples"
@@ -1008,10 +1030,6 @@
         }
       ],
       "not_built": [
-        {
-          "name": "emission (+texture), clearcoat, anisotropy, backscatter",
-          "why": "Emission next in P2; clearcoat later"
-        },
         {
           "name": "transparency (cull depth / alpha scissor) modes",
           "why": "GeometryInstance3D.transparency covers plain alpha today"
@@ -1027,38 +1045,43 @@
       ]
     },
     "ShaderMaterial": {
-      "brief": "A Shader plus values for its named uniform parameters.",
+      "brief": "A Shader plus values for its named uniforms, textures included.",
       "inherits": "Material",
-      "description": "ShaderMaterial pairs a Shader with values for the shader's named uniforms. Values arrive at the GPU in the Shader's own parameter order; the WGSL params are vec4, so colors, vectors, and scalars all coerce.",
+      "description": "The uniform parameters are vec4 (colors, vectors, and scalars coerce). A Texture2D set on a name the Shader carries in `texture_params` (Shader.lit's texture_uniforms list) binds a GPU texture slot; the shader body reads each as `texture_<name>` sampled at the uv1 transform. Four texture slots per material today. set_shader_parameter carries both vec4 and texture values, Godot's single-parameter API.",
       "properties": [
         {
           "name": "shader",
           "type": "Shader",
-          "desc": "The program pair this material draws with"
+          "desc": "The compiled program pair the material draws with"
+        },
+        {
+          "name": "texture_params",
+          "type": "readonly string[]",
+          "desc": "The Shader's texture names, set only on Shader.lit"
         }
       ],
       "methods": [
         {
           "name": "set_shader_parameter",
           "sig": "set_shader_parameter(name, value)",
-          "desc": "Store a uniform value"
+          "desc": "Set one uniform value; a Texture2D value on a texture param name binds the slot"
         },
         {
           "name": "get_shader_parameter",
           "sig": "get_shader_parameter(name)",
-          "desc": "The stored value, or null"
+          "desc": "The value, or null when unset"
         },
         {
           "name": "get_shader_parameter_list",
           "sig": "get_shader_parameter_list()",
-          "desc": "A copy of the values, keyed by name"
+          "desc": "A copy of every value, keyed by name"
         }
       ]
     },
     "Shader": {
-      "brief": "One program pair: a WGSL body for WebGPU and a GLSL body for WebGL2.",
+      "brief": "One program pair written twice: WGSL for WebGPU and GLSL for WebGL2.",
       "inherits": "Resource",
-      "description": "Shader.lit({ uniforms, webgpu_body, webgl_body }) builds one program pair. The uniforms are vec4 (colors, vectors, and scalars coerce). Both bodies see the same names: color, normal, albedo, light_dir, light_color, ambient, each parameter by its own name, and lighting(normal) (WGSL) or lighting() (GLSL). The body returns the final color.",
+      "description": "Shader.lit builds both programs from one body spec. Uniform parameters are vec4 names; texture_uniforms name `sampler2D` params (four slots per Shader today), and both bodies see shared names: color, normal, albedo, roughness, metallic, emission, uv, light_dir, light_color, ambient, plus lighting(normal) in WGSL and lighting() in GLSL. A body's final return vec4(...) is the lit color; fog, texture alpha, and transparency apply after it.",
       "properties": [
         {
           "name": "params",
@@ -1070,7 +1093,7 @@
         {
           "name": "lit",
           "sig": "lit(spec)",
-          "desc": "Build the program pair from uniform names and the two bodies"
+          "desc": "Build from {uniforms, texture_uniforms, webgpu_body, webgl_body}; each parameter is one vec4, each texture param one slot"
         }
       ]
     },
@@ -2018,6 +2041,50 @@
           "name": "indices",
           "type": "Uint32Array",
           "desc": "Triangle corners as vertex slots, counter-clockwise seen from outside"
+        }
+      ]
+    },
+    "OmniLight3D": {
+      "brief": "A light that radiates from its position with a smooth falloff over its range.",
+      "inherits": "Node3D",
+      "description": "OmniLight3D radiates in every direction from the node's position and fades to zero at range with Godot's quadratic shape: the reach is (1 - (distance / range)^2), sharpened by the attenuation exponent, so 1.0 keeps the plain curve. light_energy multiplies the light_color. The frame carries up to eight lights in tree order (the first DirectionalLight3D leads it) and both backends light every surface with the whole list.",
+      "properties": [
+        {
+          "name": "light_color",
+          "type": "Color",
+          "desc": "The light color each surface is tinted with"
+        },
+        {
+          "name": "range",
+          "type": "number",
+          "desc": "Godot 4 omni_range: world units the light reaches"
+        },
+        {
+          "name": "energy",
+          "type": "number",
+          "desc": "Godot 4 light_energy: multiplies the color"
+        },
+        {
+          "name": "attenuation",
+          "type": "number",
+          "desc": "Godot 4 omni_attenuation: exponent on the falloff, 1 keeps the plain quadratic curve"
+        }
+      ]
+    },
+    "SpotLight3D": {
+      "brief": "A light that shines from its position into its -Z inside a cone.",
+      "inherits": "OmniLight3D",
+      "description": "SpotLight3D is an omni light clipped to a cone: spot_angle is the half-angle in degrees around the node's local -Z (45 leaves a 90 degree cone), and spot_attenuation sharpens or softens the cone edge as a cosine exponent. Everything else works like OmniLight3D, range and quadratic falloff included.",
+      "properties": [
+        {
+          "name": "spot_angle",
+          "type": "number",
+          "desc": "Godot 4 spot_angle: half-angle in degrees; 45 gives a 90 degree cone"
+        },
+        {
+          "name": "spot_attenuation",
+          "type": "number",
+          "desc": "Godot 4 spot_attenuation: exponent on the cone edge"
         }
       ]
     }

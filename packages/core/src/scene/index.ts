@@ -3,6 +3,7 @@ export { pack_scene, unpack_scene } from "./cscene.js";
 export type { CSceneNode } from "./cscene.js";
 export { create_node, node_label } from "./create_node.js";
 export { DirectionalLight3D } from "./directional_light3d.js";
+export { OmniLight3D, SpotLight3D } from "./omni_light3d.js";
 export { ArrayMesh, ARRAY, BoxMesh, Mesh, PrimitiveType } from "./mesh.js";
 export type { SurfaceArrays } from "./mesh.js";
 export { GeometryInstance3D, MeshInstance3D } from "./mesh_instance3d.js";

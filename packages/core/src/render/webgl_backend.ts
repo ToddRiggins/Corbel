@@ -113,6 +113,25 @@ export class WebGL2RenderBackend implements RenderBackend {
       this.set_uniform(compiled, "u_light_color", (location) => gl.uniform4f(location, frame.light_color.r, frame.light_color.g, frame.light_color.b, 1));
       this.set_uniform(compiled, "u_ambient", (location) => gl.uniform4f(location, frame.ambient.r, frame.ambient.g, frame.ambient.b, 1));
       gl.uniform4f(this.location(compiled, "u_cam_pos"), CAM_POS.x, CAM_POS.y, CAM_POS.z, 0);
+      // The light list: kind/energy/attenuation/angle, position+range,
+      // color, direction+edge exponent — four vec4 per light.
+      gl.uniform4f(this.location(compiled, "u_light_count"), frame.lights.length, 0, 0, 0);
+      const light_uniform = this.location(compiled, "u_lights");
+      if (light_uniform) {
+        const lights_packed = this.light_scratch();
+        const kinds = ["directional", "omni", "spot"];
+        lights_packed.fill(0);
+        const count = Math.min(frame.lights.length, 8);
+        for (let i = 0; i < count; i += 1) {
+          const light = frame.lights[i];
+          const base = i * 16;
+          lights_packed.set([kinds.indexOf(light.kind), light.energy, light.attenuation, light.spot_angle * Math.PI / 180], base);
+          lights_packed.set([light.position.x, light.position.y, light.position.z, light.range], base + 4);
+          lights_packed.set([light.color.r, light.color.g, light.color.b, 0], base + 8);
+          lights_packed.set([light.direction.x, light.direction.y, light.direction.z, light.spot_attenuation], base + 12);
+        }
+        gl.uniform4fv(light_uniform, lights_packed);
+      }
       // Fog block; alpha 1 flags the shader to blend fog.
       const fog = frame.fog;
       if (fog) {
@@ -147,6 +166,12 @@ export class WebGL2RenderBackend implements RenderBackend {
       this.bind_map(compiled, gl.TEXTURE2, "u_roughness_texture", pair.roughness);
       this.bind_map(compiled, gl.TEXTURE3, "u_metallic_texture", pair.metallic);
       this.bind_map(compiled, gl.TEXTURE4, "u_emission_texture", pair.emission);
+      const shader_material = material instanceof ShaderMaterial ? material : null;
+      const texture_params = shader_material ? shader_material.shader.texture_params : [];
+      texture_params.forEach((name, i) => {
+        const value = shader_material?.get_shader_parameter(name);
+        this.bind_map(compiled, gl.TEXTURE5 + i, `u_tex_${name}`, value instanceof Texture2D ? value : null);
+      });
       gl.uniform4fv(this.location(compiled, "u_emission"), scratch.slice(52, 56));
       if (material instanceof ShaderMaterial) {
         const values = material.get_shader_parameter_list();
@@ -174,6 +199,11 @@ export class WebGL2RenderBackend implements RenderBackend {
   /** A scratch for the shared draw packing; one per call is fine at this scale. */
   private draw_scratch(): Float32Array {
     return new Float32Array(WGSL_DRAW_FLOATS);
+  }
+
+  /** The 8-light uniform array scratch: 128 vec4 floats. */
+  private light_scratch(): Float32Array {
+    return new Float32Array(32 * 4);
   }
 
   /** Binds one texture unit; the white dummy when the map is absent. */

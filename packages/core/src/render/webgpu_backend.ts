@@ -133,6 +133,14 @@ export class WebGPURenderBackend implements RenderBackend {
         { binding: 9, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
         { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
         { binding: 11, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 12, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 13, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 14, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 15, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 16, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 17, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 18, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 19, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
       ],
     });
     this.pipeline_layout = device.createPipelineLayout({ bindGroupLayouts: [camera_layout, draw_layout] });
@@ -185,7 +193,7 @@ export class WebGPURenderBackend implements RenderBackend {
       CAM_POS.y = 0;
       CAM_POS.z = 0;
     }
-    fill_camera(CAMERA_SCRATCH, this.view_proj, light_dir_for(frame), frame.light_color, frame.ambient, frame.fog, CAM_POS);
+    fill_camera(CAMERA_SCRATCH, this.view_proj, light_dir_for(frame), frame.light_color, frame.ambient, frame.fog, CAM_POS, frame.lights);
     this.device.queue.writeBuffer(this.camera_buffer, 0, CAMERA_SCRATCH);
 
     const encoder = this.device.createCommandEncoder();
@@ -274,26 +282,39 @@ export class WebGPURenderBackend implements RenderBackend {
     const roughness = this.texture_pair(pair.roughness);
     const metallic = this.texture_pair(pair.metallic);
     const emission = this.texture_pair(pair.emission);
-    const key = `${slot}:${id_of(material)}:${albedo.id}:${normal.id}:${roughness.id}:${metallic.id}:${emission.id}`;
+    // The Shader's texture params: the material's set_shader_parameter values,
+    // dummy-filled to the full four the layout carries.
+    const shader_textures = (material instanceof ShaderMaterial
+      ? material.shader.texture_params
+      : []
+    ).map((name) => {
+      const value = material instanceof ShaderMaterial ? material.get_shader_parameter(name) : null;
+      return this.texture_pair(value instanceof Texture2D ? value : null);
+    });
+    while (shader_textures.length < 4) {
+      shader_textures.push(this.texture_pair(null));
+    }
+    const key = `${slot}:${id_of(material)}:${albedo.id}:${normal.id}:${roughness.id}:${metallic.id}:${emission.id}:${shader_textures.map((pair_id) => pair_id.id).join("·")}`;
     let group = this.bind_groups.get(key);
     if (group === undefined) {
-      group = this.device.createBindGroup({
-        layout: this.draw_layout,
-        entries: [
-          { binding: 0, resource: { buffer: this.draw_uniform(slot) } },
-          { binding: 1, resource: { buffer: params } },
-          { binding: 2, resource: albedo.view },
-          { binding: 3, resource: albedo.sampler },
-          { binding: 4, resource: normal.view },
-          { binding: 5, resource: normal.sampler },
-          { binding: 6, resource: roughness.view },
-          { binding: 7, resource: roughness.sampler },
-          { binding: 8, resource: metallic.view },
-          { binding: 9, resource: metallic.sampler },
-          { binding: 10, resource: emission.view },
-          { binding: 11, resource: emission.sampler },
-        ],
+      const entries: GPUBindGroupEntry[] = [
+        { binding: 0, resource: { buffer: this.draw_uniform(slot) } },
+        { binding: 1, resource: { buffer: params } },
+        { binding: 2, resource: albedo.view },
+        { binding: 3, resource: albedo.sampler },
+        { binding: 4, resource: normal.view },
+        { binding: 5, resource: normal.sampler },
+        { binding: 6, resource: roughness.view },
+        { binding: 7, resource: roughness.sampler },
+        { binding: 8, resource: metallic.view },
+        { binding: 9, resource: metallic.sampler },
+        { binding: 10, resource: emission.view },
+        { binding: 11, resource: emission.sampler },
+      ];
+      shader_textures.forEach((tex, i) => {
+        entries.push({ binding: 12 + i * 2, resource: tex.view }, { binding: 13 + i * 2, resource: tex.sampler });
       });
+      group = this.device.createBindGroup({ layout: this.draw_layout, entries });
       this.bind_groups.set(key, group);
     }
     return group;

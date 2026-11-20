@@ -3,8 +3,8 @@ import { Basis } from "../src/math/basis.js";
 import { Color } from "../src/math/color.js";
 import { Transform3D } from "../src/math/transform3d.js";
 import { Vector3 } from "../src/math/vector3.js";
-import { CLEAR_COLOR } from "../src/render/frame.js";
-import { WGSL_DRAW_FLOATS, fill_draw } from "../src/render/shaders.js";
+import { CLEAR_COLOR, type RenderLight } from "../src/render/frame.js";
+import { WGSL_CAMERA_FLOATS, WGSL_DRAW_FLOATS, fill_camera, fill_draw } from "../src/render/shaders.js";
 import {
   basis_to_mat3,
   build_render_frame,
@@ -14,6 +14,7 @@ import {
 } from "../src/render/frame.js";
 import { Camera3D } from "../src/scene/camera3d.js";
 import { DirectionalLight3D } from "../src/scene/directional_light3d.js";
+import { OmniLight3D, SpotLight3D } from "../src/scene/omni_light3d.js";
 import { Environment } from "../src/scene/environment.js";
 import { BoxMesh } from "../src/scene/mesh.js";
 import { MeshInstance3D } from "../src/scene/mesh_instance3d.js";
@@ -212,6 +213,73 @@ describe("build_render_frame", () => {
 
     const frame_two = build_render_frame(tree_with(light("Key", sideways), light("Brim", Vector3.ZERO, new Color(0, 1, 0))), 800, 600);
     expect(frame_two.light_color.is_equal_approx(Color.WHITE)).toBe(true);
+  });
+
+  it("collects omni and spot lights into the frame list, spot first in tree order", () => {
+    const omni = new OmniLight3D();
+    omni.set_name("Lamp");
+    omni.light_color = Color.html("#ffb96b");
+    omni.range = 7;
+    omni.energy = 1.5;
+    omni.attenuation = 0.5;
+    omni.position = new Vector3(2, 3, -4);
+    const spot = new SpotLight3D();
+    spot.set_name("Beam");
+    spot.light_color = Color.html("#8fd8ff");
+    spot.range = 12;
+    spot.spot_angle = 30;
+    spot.spot_attenuation = 2;
+    spot.rotation = new Vector3(-Math.PI / 2, 0, 0); // points straight down
+    const frame = build_render_frame(tree_with(() => omni, () => spot), 800, 600);
+
+    expect(frame.lights.length).toBe(2);
+    expect(frame.lights[0].kind).toBe("omni");
+    expect(frame.lights[0].range).toBe(7);
+    expect(frame.lights[0].energy).toBe(1.5);
+    expect(frame.lights[0].attenuation).toBe(0.5);
+    // Omni: a directional default is not implied; no directional in the tree.
+    expect(frame.light_direction.is_equal_approx(Vector3.FORWARD.normalized())).toBe(true);
+    expect(frame.lights[1].kind).toBe("spot");
+    expect(frame.lights[1].spot_angle).toBe(30);
+    expect(frame.lights[1].spot_attenuation).toBe(2);
+    // +90 degrees about X turns -Z into -Y: straight down.
+    expect(frame.lights[1].direction.y).toBeCloseTo(-1);
+  });
+
+  it("the primary directional leads the light list, capped at eight", () => {
+    const key = light("Key", Vector3.ZERO);
+    const omnis: OmniLight3D[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const lamp = new OmniLight3D();
+      lamp.set_name(`Lamp${i}`);
+      omnis.push(lamp);
+    }
+    const frame = build_render_frame(tree_with(key, ...omnis.map((lamp) => () => lamp)), 800, 600);
+    expect(frame.lights.length).toBe(8);
+    expect(frame.lights[0].kind).toBe("directional");
+    expect(frame.lights[1].kind).toBe("omni");
+  });
+
+  it("fill_camera packs each light after the base block", () => {
+    const scratch = new Float32Array(WGSL_CAMERA_FLOATS);
+    const lamp = new OmniLight3D();
+    lamp.light_color = Color.html("#ffb96b");
+    lamp.range = 7;
+    lamp.energy = 1.5;
+    lamp.attenuation = 0.5;
+    lamp.position = new Vector3(2, 3, -4);
+    const frame_lights = [
+      { kind: "omni", color: lamp.light_color, position: lamp.position, direction: Vector3.DOWN, range: 7, energy: 1.5, attenuation: 0.5, spot_angle: 0, spot_attenuation: 1 } as RenderLight,
+    ];
+    fill_camera(scratch, new Float32Array(16), Vector3.FORWARD, Color.WHITE, Color.WHITE, null, { x: 0, y: 0, z: 0 }, frame_lights);
+    // light_count rides right after the base block.
+    expect(scratch[44]).toBe(1);
+    // Omni slot 0: kind 1, energy 1.5, attenuation 0.5; position 2,3,-4, range 7.
+    expect([...scratch.slice(48, 52)]).toEqual([1, 1.5, 0.5, 0]);
+    expect([...scratch.slice(52, 56)]).toEqual([2, 3, -4, 7]);
+    expect(scratch[56]).toBeCloseTo(Color.html("#ffb96b").r);
+    // Direction points down: -1 in y (direction vec4 at 60-63).
+    expect(scratch[61]).toBe(-1);
   });
 
   it("without a camera the frame still clears: camera null, draws kept", () => {

@@ -276,7 +276,26 @@ export class Player {
   }
 
   /** Builds a material from a `.cmaterial` JSON file, referenced textures included. */
-  private async load_material(data: { type?: string; albedo?: string; albedo_texture?: string; metallic?: number; roughness?: number }, path: string): Promise<StandardMaterial3D> {
+  private async load_material(data: {
+    type?: string;
+    albedo?: string;
+    albedo_texture?: string;
+    vertex_color_use_as_albedo?: boolean;
+    normal_texture?: string;
+    normal_scale?: number;
+    roughness?: number;
+    roughness_texture?: string;
+    roughness_texture_channel?: number;
+    metallic?: number;
+    metallic_texture?: string;
+    metallic_texture_channel?: number;
+    emission_enabled?: boolean;
+    emission?: string;
+    emission_energy_multiplier?: number;
+    emission_texture?: string;
+    uv1_scale?: [number, number];
+    uv1_offset?: [number, number];
+  }, path: string): Promise<StandardMaterial3D> {
     const material = new StandardMaterial3D();
     if (typeof data.albedo === "string") {
       material.albedo = Color.html(data.albedo);
@@ -287,10 +306,48 @@ export class Player {
     if (typeof data.roughness === "number") {
       material.roughness = data.roughness;
     }
-    if (typeof data.albedo_texture === "string") {
-      const texture = await resource_loader().load(data.albedo_texture);
+    if (data.vertex_color_use_as_albedo !== undefined) {
+      material.vertex_color_use_as_albedo = data.vertex_color_use_as_albedo;
+    }
+    if (typeof data.normal_scale === "number") {
+      material.normal_scale = data.normal_scale;
+    }
+    if (typeof data.roughness_texture_channel === "number") {
+      material.roughness_texture_channel = data.roughness_texture_channel;
+    }
+    if (typeof data.metallic_texture_channel === "number") {
+      material.metallic_texture_channel = data.metallic_texture_channel;
+    }
+    if (data.emission_enabled !== undefined) {
+      material.emission_enabled = data.emission_enabled;
+    }
+    if (typeof data.emission === "string") {
+      material.emission = Color.html(data.emission);
+    }
+    if (typeof data.emission_energy_multiplier === "number") {
+      material.emission_energy_multiplier = data.emission_energy_multiplier;
+    }
+    if (Array.isArray(data.uv1_scale) && data.uv1_scale.length === 2) {
+      material.uv1_scale = new Vector2(data.uv1_scale[0], data.uv1_scale[1]);
+    }
+    if (Array.isArray(data.uv1_offset) && data.uv1_offset.length === 2) {
+      material.uv1_offset = new Vector2(data.uv1_offset[0], data.uv1_offset[1]);
+    }
+    for (const [file_key, field_name] of [
+      ["albedo_texture", "albedo_texture"],
+      ["normal_texture", "normal_texture"],
+      ["roughness_texture", "roughness_texture"],
+      ["metallic_texture", "metallic_texture"],
+      ["emission_texture", "emission_texture"],
+    ] as const) {
+      const texture_path = data[file_key];
+      if (typeof texture_path !== "string" || texture_path.length === 0) {
+        continue;
+      }
+      const texture = await resource_loader().load(texture_path.startsWith("res://") ? texture_path : `res://${texture_path}`);
       if (texture instanceof Texture2D) {
-        material.albedo_texture = texture;
+        type Assignable = Partial<Record<(typeof field_name), Texture2D>>;
+        (material as unknown as Assignable)[field_name] = texture;
       }
     }
     return material;

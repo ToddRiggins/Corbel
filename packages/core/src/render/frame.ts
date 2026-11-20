@@ -4,6 +4,7 @@ import { Transform3D } from "../math/transform3d.js";
 import { Vector3 } from "../math/vector3.js";
 import { Camera3D } from "../scene/camera3d.js";
 import { DirectionalLight3D } from "../scene/directional_light3d.js";
+import { OmniLight3D, SpotLight3D } from "../scene/omni_light3d.js";
 import { WorldEnvironment, type Environment, type FogMode } from "../scene/environment.js";
 import type { Mesh, SurfaceArrays } from "../scene/mesh.js";
 import { MeshInstance3D } from "../scene/mesh_instance3d.js";
@@ -32,6 +33,29 @@ export interface RenderFog {
   height: number;
   height_density: number;
 }
+
+/** One light in the frame's list, in world space. */
+export interface RenderLight {
+  kind: "directional" | "omni" | "spot";
+  color: Color;
+  /** Directional lights ignore it; omni/spot radiate from here. */
+  position: Vector3;
+  /** Points where the light goes: local -Z transformed, unit length. */
+  direction: Vector3;
+  /** Omni/spot reach in world units. */
+  range: number;
+  /** Multiplies the color, Godot's light_energy. */
+  energy: number;
+  /** Omni attenuation exponent. */
+  attenuation: number;
+  /** Spot: half-angle degrees around the direction. */
+  spot_angle: number;
+  /** Spot: edge softening exponent. */
+  spot_attenuation: number;
+}
+
+/** Lights a frame carries at most; the walk keeps the first found in tree order. */
+export const MAX_LIGHTS = 8;
 
 /** One draw call's worth of scene data. */
 export interface RenderDraw {
@@ -64,6 +88,8 @@ export interface RenderFrame {
   ambient: Color;
   /** Fog from the tree's Environment, or null when fog is off. */
   fog: RenderFog | null;
+  /** Lights in tree order, directional first-come plus every omni/spot, capped. */
+  lights: RenderLight[];
   /** Opaque draws first, then transparent ones, each group in tree order. */
   draws: RenderDraw[];
 }
@@ -91,6 +117,7 @@ export function build_render_frame(
   let light: DirectionalLight3D | null = null;
   let environment: Environment | null = null;
   const draws: RenderDraw[] = [];
+  const lights: RenderLight[] = [];
 
   const walk = (node: Node): void => {
     if (node instanceof Camera3D) {
@@ -100,6 +127,17 @@ export function build_render_frame(
       }
     } else if (node instanceof WorldEnvironment && environment === null) {
       environment = node.environment;
+    } else if (node instanceof SpotLight3D) {
+      // SpotLight3D extends OmniLight3D; check the subtype first.
+      const global = node.get_global_transform();
+      if (lights.length < MAX_LIGHTS) {
+        lights.push(light_from_node(node, "spot", global));
+      }
+    } else if (node instanceof OmniLight3D) {
+      const global = node.get_global_transform();
+      if (lights.length < MAX_LIGHTS) {
+        lights.push(light_from_node(node, "omni", global));
+      }
     } else if (node instanceof DirectionalLight3D && light === null) {
       light = node;
     }
@@ -161,7 +199,31 @@ export function build_render_frame(
     light_color: chosen_light ? chosen_light.light_color : Color.WHITE,
     ambient: chosen_environment ? chosen_environment.ambient : ambient,
     fog,
+    // The primary directional leads the list; its light_dir/light_color
+    // uniforms keep carrying it for the frame's base directional term.
+    lights: [
+      ...(chosen_light
+        ? [light_from_node(chosen_light, "directional", (chosen_light as DirectionalLight3D).get_global_transform())]
+        : []),
+      ...lights,
+    ].slice(0, MAX_LIGHTS),
     draws: [...opaque, ...blended],
+  };
+}
+
+/** One light's world-space description, straight from the node. */
+function light_from_node(node: DirectionalLight3D | OmniLight3D | SpotLight3D, kind: RenderLight["kind"], global: Transform3D): RenderLight {
+  const directional = kind === "directional";
+  return {
+    kind,
+    color: node.light_color,
+    position: global.origin,
+    direction: global.basis.z.neg().normalized(),
+    range: directional ? 0 : node instanceof OmniLight3D ? node.range : 5,
+    energy: node instanceof OmniLight3D ? node.energy : 1,
+    attenuation: node instanceof OmniLight3D ? node.attenuation : 1,
+    spot_angle: node instanceof SpotLight3D ? node.spot_angle : 0,
+    spot_attenuation: node instanceof SpotLight3D ? node.spot_attenuation : 1,
   };
 }
 

@@ -57,6 +57,9 @@ export function EditorApp() {
   const [context, setContext] = useState<{ x: number; y: number; path: string } | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [imap, setImap] = useState<Array<{ action: string; deadzone: number; events: InputEventSpec[] }>>([]);
+  const [materialPath, setMaterialPath] = useState<string | null>(null);
+  const [materialText, setMaterialText] = useState("");
+  const [materialTick, setMaterialTick] = useState(0);
   const [autoloads, setAutoloads] = useState<Array<{ singleton: string; script: string }>>([]);
   const [projectClasses, setProjectClasses] = useState<string[]>([]);
   const [settingsFile, setSettingsFile] = useState<Record<string, unknown> | null>(null);
@@ -256,6 +259,13 @@ export function EditorApp() {
       setScriptPath(path);
       setScriptText(text);
       setWorkspace("script");
+      return;
+    }
+    if (path.endsWith(".cmaterial")) {
+      setMaterialPath(path);
+      setMaterialText(text);
+      setMaterialTick((value) => value + 1);
+      log(`Opened ${path}.`);
       return;
     }
     log(`${path} stays in the project folder. Scenes are .cscene files. Scripts are .ts files.`);
@@ -915,7 +925,16 @@ export function EditorApp() {
           <section className="dock" style={{ flex: 1 }}>
             <h2>Inspector</h2>
             <div className="body">
-              {selected ? (
+              {materialPath ? (
+                <MaterialInspector
+                  key={`${materialPath}:${materialTick}`}
+                  path={materialPath}
+                  text={materialText}
+                  project={project}
+                  files={files}
+                  onClose={() => { setMaterialPath(null); setMaterialText(""); }}
+                />
+              ) : selected ? (
                 <Inspector
                   key={`${nodePath(scene, selected)}:${tick}`}
                   node={selected}
@@ -1535,7 +1554,151 @@ function kindOf(file: ProjectFile): string {
   if (file.dir) return "other";
   if (file.name.endsWith(".cscene")) return "scene";
   if (file.name.endsWith(".ts")) return "script";
+  if (file.name.endsWith(".cmaterial")) return "material";
   return "other";
+}
+
+/** The editable form of one .cmaterial file — Godot's resource inspector on a .tres. */
+interface MaterialData {
+  type?: string;
+  albedo?: string;
+  albedo_texture?: string;
+  vertex_color_use_as_albedo?: boolean;
+  normal_texture?: string;
+  normal_scale?: number;
+  roughness?: number;
+  roughness_texture?: string;
+  roughness_texture_channel?: number;
+  metallic?: number;
+  metallic_texture?: string;
+  metallic_texture_channel?: number;
+  emission_enabled?: boolean;
+  emission?: string;
+  emission_energy_multiplier?: number;
+  emission_texture?: string;
+  uv1_scale?: [number, number];
+  uv1_offset?: [number, number];
+}
+
+const MATERIAL_TEXTURE_FIELDS: Array<[string, string]> = [
+  ["albedo_texture", "albedo texture"],
+  ["normal_texture", "normal map"],
+  ["roughness_texture", "roughness map"],
+  ["metallic_texture", "metallic map"],
+  ["emission_texture", "emission mask"],
+];
+
+function MaterialInspector(props: { path: string; text: string; project: string; files: ProjectFile[]; onClose: () => void }) {
+  const [data, setData] = useState<MaterialData>(() => {
+    try {
+      return JSON.parse(props.text) as MaterialData;
+    } catch {
+      return {};
+    }
+  });
+  const [dirty, setDirty] = useState(false);
+
+  const set = <K extends keyof MaterialData>(key: K, value: MaterialData[K]): void => {
+    setData((current) => ({ ...current, [key]: value }));
+    setDirty(true);
+  };
+
+  const save = async (): Promise<void> => {
+    try {
+      await writeFile(props.project, props.path, `${JSON.stringify({ type: data.type ?? "StandardMaterial3D", ...data }, null, 2)}\n`);
+      setDirty(false);
+    } catch (error) {
+      console.error(String(error));
+    }
+  };
+
+  const textures: string[] = props.files.filter((row) => !row.dir && /\.(png|jpg|jpeg|webp|gif)$/i.test(row.name)).map((row) => row.path);
+  return (
+    <div className="fields">
+      <label>
+        Resource
+        <input readOnly value={props.path} />
+      </label>
+      <label>
+        Type
+        <input readOnly value={data.type ?? "StandardMaterial3D"} />
+      </label>
+      <label>
+        Albedo (<code>#rrggbb</code> or <code>#rrggbbaa</code>)
+        <input value={data.albedo ?? "#ffffff"} onChange={(event) => set("albedo", event.target.value)} />
+      </label>
+      {MATERIAL_TEXTURE_FIELDS.map(([key, label]) => (
+        <label key={key}>
+          {label} (<code>res://</code>, empty is none)
+          <select value={data[key as keyof MaterialData] as string | undefined ?? ""} onChange={(event) => set(key as keyof MaterialData, event.target.value)}>
+            <option value="">none</option>
+            {textures.map((texture) => (
+              <option key={texture} value={texture}>{texture}</option>
+            ))}
+          </select>
+        </label>
+      ))}
+      <label>
+        Use vertex color as albedo
+        <input type="checkbox" checked={data.vertex_color_use_as_albedo === true} onChange={(event) => set("vertex_color_use_as_albedo", event.target.checked)} />
+      </label>
+      <label>
+        Normal scale
+        <input type="number" step="0.05" min="0" max="8" value={data.normal_scale ?? 1} onChange={(event) => set("normal_scale", Number(event.target.value))} />
+      </label>
+      <label>
+        Roughness (0 mirror, 1 matte)
+        <input type="number" step="0.05" min="0" max="1" value={data.roughness ?? 1} onChange={(event) => set("roughness", Number(event.target.value))} />
+      </label>
+      <label>
+        Roughness map channel (0 R, 1 G, 2 B, 3 A)
+        <input type="number" step="1" min="0" max="3" value={data.roughness_texture_channel ?? 0} onChange={(event) => set("roughness_texture_channel", Number(event.target.value))} />
+      </label>
+      <label>
+        Metallic (0 dielectric, 1 metal)
+        <input type="number" step="0.05" min="0" max="1" value={data.metallic ?? 0} onChange={(event) => set("metallic", Number(event.target.value))} />
+      </label>
+      <label>
+        Metallic map channel (0 R, 1 G, 2 B, 3 A)
+        <input type="number" step="1" min="0" max="3" value={data.metallic_texture_channel ?? 2} onChange={(event) => set("metallic_texture_channel", Number(event.target.value))} />
+      </label>
+      <label>
+        Emission enabled
+        <input type="checkbox" checked={data.emission_enabled === true} onChange={(event) => set("emission_enabled", event.target.checked)} />
+      </label>
+      <label>
+        Emission color
+        <input value={data.emission ?? "#000000"} onChange={(event) => set("emission", event.target.value)} />
+      </label>
+      <label>
+        Emission energy multiplier
+        <input type="number" step="0.1" min="0" max="8" value={data.emission_energy_multiplier ?? 1} onChange={(event) => set("emission_energy_multiplier", Number(event.target.value))} />
+      </label>
+      <label>
+        UV1 scale (x, y)
+        <input value={`${data.uv1_scale?.[0] ?? 1}, ${data.uv1_scale?.[1] ?? 1}`} onChange={(event) => {
+          const [sx, sy] = event.target.value.split(",").map((text) => Number(text.trim()));
+          if (Number.isFinite(sx) && Number.isFinite(sy)) {
+            set("uv1_scale", [sx, sy]);
+          }
+        }} />
+      </label>
+      <label>
+        UV1 offset (x, y)
+        <input value={`${data.uv1_offset?.[0] ?? 0}, ${data.uv1_offset?.[1] ?? 0}`} onChange={(event) => {
+          const [ox, oy] = event.target.value.split(",").map((text) => Number(text.trim()));
+          if (Number.isFinite(ox) && Number.isFinite(oy)) {
+            set("uv1_offset", [ox, oy]);
+          }
+        }} />
+      </label>
+      <div className="chooser-actions">
+        <button onClick={() => { void save(); }}>Save</button>
+        <button onClick={props.onClose}>Close</button>
+        <span className="note">{dirty ? "Unsaved changes." : ""}</span>
+      </div>
+    </div>
+  );
 }
 
 function formatNum(value: number): string {

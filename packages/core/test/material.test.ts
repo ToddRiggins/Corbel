@@ -71,4 +71,28 @@ describe("Shader.lit", () => {
   it("rejects malformed uniform names", () => {
     expect(() => Shader.lit({ uniforms: ["bad name"], webgpu_body: "", webgl_body: "" })).toThrow(/valid name/);
   });
+
+  it("texture params compile into both programs and cap at four", () => {
+    const shader = Shader.lit({
+      uniforms: ["Tint"],
+      texture_uniforms: ["Decal", "Emissive"],
+      webgpu_body: `  return vec4f(albedo * color * lighting(normal) * Tint.rgb + texture_Decal.rgb * texture_Emissive.rgb, 1.0);`,
+      webgl_body: `  return vec4(albedo * color * lighting() * Tint.rgb + texture_Decal.rgb * texture_Emissive.rgb, 1.0);`,
+    });
+    expect(shader.texture_params).toEqual(["Decal", "Emissive"]);
+    // WGSL: one texture+sampler pair per param on group 1, bindings 12..19.
+    expect(shader.webgpu).toContain("@group(1) @binding(12) var t_Decal : texture_2d<f32>;");
+    expect(shader.webgpu).toContain("@group(1) @binding(13) var s_Decal : sampler;");
+    expect(shader.webgpu).toContain("@group(1) @binding(14) var t_Emissive : texture_2d<f32>;");
+    expect(shader.webgpu).toContain("let texture_Decal = textureSampleLevel(t_Decal, s_Decal, uv, 0.0);");
+    // GLSL: one sampler per param, body sees vec4 texture_<Name>.
+    expect(shader.webgl.fragment).toContain("uniform sampler2D u_tex_Decal;");
+    expect(shader.webgl.fragment).toContain("vec4 texture_Decal = texture(u_tex_Decal, uv);");
+    expect(() => Shader.lit({
+      texture_uniforms: ["A", "B", "C", "D", "E"],
+      webgpu_body: "",
+      webgl_body: "",
+    })).toThrow(/4 texture params/);
+    expect(() => Shader.lit({ texture_uniforms: ["bad name"], webgpu_body: "", webgl_body: "" })).toThrow(/valid name/);
+  });
 });

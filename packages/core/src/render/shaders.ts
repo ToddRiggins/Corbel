@@ -1,7 +1,7 @@
 import { Color } from "../math/color.js";
 import { Vector3 } from "../math/vector3.js";
-import { mat4_mul, perspective_proj, transform_to_mat4, type RenderFog } from "./frame.js";
-export type { RenderFog } from "./frame.js";
+import { mat4_mul, perspective_proj, transform_to_mat4, type RenderFog, type RenderLight } from "./frame.js";
+export type { RenderFog, RenderLight } from "./frame.js";
 import type { Material } from "../scene/material.js";
 import { StandardMaterial3D } from "../scene/standard_material3d.js";
 import type { RenderFrame } from "./frame.js";
@@ -20,33 +20,58 @@ export class Shader {
   readonly webgl: { vertex: string; fragment: string };
   /** Parameter names, in the order the params uniform buffer carries them. */
   readonly params: readonly string[];
+  /** Texture uniform names, Godot's `uniform sampler2D` params. Body code reads each as `texture_<name>`, sampled at the transformed uv. */
+  readonly texture_params: readonly string[];
 
   private constructor(
     webgpu: string,
     webgl: { vertex: string; fragment: string },
     params: readonly string[],
+    texture_params: readonly string[],
   ) {
     this.webgpu = webgpu;
     this.webgl = webgl;
     this.params = params;
+    this.texture_params = texture_params;
   }
 
-  static lit(spec: { uniforms?: readonly string[]; webgpu_body: string; webgl_body: string }): Shader {
+  /** Godot's texture slots per ShaderMaterial: four on the GPU today. */
+  static readonly MAX_TEXTURE_PARAMS = 4;
+
+  static lit(spec: { uniforms?: readonly string[]; texture_uniforms?: readonly string[]; webgpu_body: string; webgl_body: string }): Shader {
     const uniforms = [...spec.uniforms ?? []];
     for (const param of uniforms) {
       if (!/^([A-Za-z_][A-Za-z0-9_]*)$/.test(param)) {
         throw new Error(`Shader uniform "${param}" is not a valid name.`);
       }
     }
-    return new Shader(build_wgsl(uniforms, spec.webgpu_body), build_glsl(uniforms, spec.webgl_body), uniforms);
+    const texture_uniforms = [...spec.texture_uniforms ?? []];
+    if (texture_uniforms.length > Shader.MAX_TEXTURE_PARAMS) {
+      throw new Error(`A Shader carries at most ${Shader.MAX_TEXTURE_PARAMS} texture params; got ${texture_uniforms.length}.`);
+    }
+    for (const param of texture_uniforms) {
+      if (!/^([A-Za-z_][A-Za-z0-9_]*)$/.test(param)) {
+        throw new Error(`Shader texture uniform "${param}" is not a valid name.`);
+      }
+    }
+    return new Shader(build_wgsl(uniforms, spec.webgpu_body, texture_uniforms), build_glsl(uniforms, spec.webgl_body, texture_uniforms), uniforms, texture_uniforms);
   }
 }
 
-/** WGSL group 0, binding 0, written once per frame: view_proj, light, fog, camera position. */
-export const WGSL_CAMERA_FLOATS = 44;
-
 /** WGSL group 1, binding 0, written once per draw: model, normal matrix, material and map data. */
 export const WGSL_DRAW_FLOATS = 56;
+
+/** Camera uniform float layout before the lights. */
+export const WGSL_CAMERA_BASE_FLOATS = 44;
+
+/** Per light: the Light struct — four vec4s (kind, position, color, direction). */
+export const WGSL_LIGHT_FLOATS = 16;
+
+/** Lights the uniform carries; MAX_LIGHTS caps the frame's list too. */
+export const WGSL_LIGHT_COUNT = 8;
+
+/** Camera uniform total: base block plus the light array and the count. */
+export const WGSL_CAMERA_FLOATS = WGSL_CAMERA_BASE_FLOATS + WGSL_LIGHT_FLOATS * WGSL_LIGHT_COUNT + 4;
 
 const WGSL_CAMERA = `
 struct Camera {
@@ -58,6 +83,20 @@ struct Camera {
   fog_data : vec4f,
   fog_data2 : vec4f,
   cam_pos : vec4f,
+  light_count : vec4f,
+  lights : array<Light, ${WGSL_LIGHT_COUNT}>,
+};
+
+struct Light {
+  // x kind (0 directional, 1 omni, 2 spot), y energy, z attenuation, w spot
+  // angle in radians.
+  kind : vec4f,
+  // position.xyz plus the omni/spot range in alpha.
+  position : vec4f,
+  // color.rgb, alpha zero.
+  color : vec4f,
+  // direction.xyz plus the spot edge exponent in w.
+  direction : vec4f,
 };
 
 struct Draw {
@@ -109,8 +148,8 @@ fn vs(@location(0) pos : vec3f, @location(1) normal_in : vec3f, @location(2) col
 
 `;
 
-/** Builds the WGSL module from a parameter list and the fragment body. */
-export function build_wgsl(params: readonly string[], body: string): string {
+/** Builds the WGSL module from a parameter list, texture params, and the fragment body. */
+export function build_wgsl(params: readonly string[], body: string, texture_params: readonly string[] = []): string {
   const params_block = params.length > 0
     ? `
 struct Params {
@@ -120,14 +159,45 @@ ${params.map((name) => `  ${name} : vec4f,`).join("\n")}
 `
     : "";
   const params_let = params.map((name) => `  let ${name} = p.${name};`).join("\n");
+  // Texture params: bindings 12..19, pairs of texture+sampler, four slots.
+  const textures_block = texture_params.map((name, i) => `@group(1) @binding(${12 + i * 2}) var t_${name} : texture_2d<f32>;
+@group(1) @binding(${13 + i * 2}) var s_${name} : sampler;`).join("\n");
+  const textures_let = texture_params.map((name) => `  let texture_${name} = textureSampleLevel(t_${name}, s_${name}, uv, 0.0);`).join("\n");
   // The body keeps its `return vec4f(...)` contract; the fragment captures it
   // as `lit` so fog and transparency apply after it without touching bodies.
   const captured_body = capture_lit(body);
   return `${WGSL_CAMERA}
+${textures_block}
 ${params_block}
 
 fn lighting(normal : vec3f) -> vec3f {
   return u.light_color.rgb * max(dot(normalize(normal), u.light_dir.xyz), 0.0) + u.ambient.rgb;
+}
+
+fn extra_lights(normal : vec3f, world : vec3f) -> vec3f {
+  var sum = vec3f(0.0, 0.0, 0.0);
+  for (var i = 0; i < i32(u.light_count.x); i += 1) {
+    let l = u.lights[i];
+    if (l.kind.x < 0.5) {
+      // Directional lights already in the list beyond the primary still contribute.
+      sum = sum + l.color.rgb * l.kind.y * max(dot(normal, l.direction.xyz), 0.0);
+      continue;
+    }
+    let to_source = l.position.xyz - world;
+    let distance = max(length(to_source), 0.0001);
+    let dir = to_source / distance;
+    var spot = 1.0;
+    if (l.kind.x > 1.5) {
+      // Spot: cosine half-angle cone, sharpened by the edge exponent.
+      let edge = clamp(dot(-dir, l.direction.xyz), 0.0, 1.0);
+      let cone = clamp((edge - cos(l.kind.w)) / max(1.0 - cos(l.kind.w), 0.0001), 0.0, 1.0);
+      spot = pow(cone, l.direction.w);
+    }
+    // Omni falloff, Godot's quadratic shape: (1 - (d/range)^2)^attenuation.
+    let reach = clamp(1.0 - pow(distance / max(l.position.w, 0.0001), 2.0), 0.0, 1.0);
+    sum = sum + l.color.rgb * l.kind.y * max(dot(normal, dir), 0.0) * pow(reach, l.kind.z) * spot;
+  }
+  return sum;
 }
 
 fn sample_channel(t : texture_2d<f32>, s : sampler, uv : vec2f, mask : vec4f) -> f32 {
@@ -168,12 +238,15 @@ fn fs(in : VertexOut) -> @location(0) vec4f {
   let light_dir = u.light_dir.xyz;
   let light_color = u.light_color.rgb;
   let ambient = u.ambient.rgb;
+${textures_block ? textures_let : ""}
 ${params_let}
 ${captured_body}
+  let extra_light = vec4f(albedo * color * extra_lights(normal, in.world), 0.0);
+  let lit_all = vec4f(lit.rgb + extra_light.rgb, lit.a);
   let fog = min(fog_amount(in.world) * height_fog(in.world), 1.0);
-  let fogged = mix(lit.rgb, u.fog_color.rgb, fog * u.fog_color.a);
+  let fogged = mix(lit_all.rgb, u.fog_color.rgb, fog * u.fog_color.a);
   // Texture alpha joins the albedo's own alpha; transparency thins what is left.
-  let lit_alpha = d.albedo.a * tex_albedo.a * (1.0 - d.maps.w) * lit.a;
+  let lit_alpha = d.albedo.a * tex_albedo.a * (1.0 - d.maps.w) * lit_all.a;
   return vec4f(fogged, lit_alpha);
 }
 `;
@@ -184,8 +257,8 @@ export function capture_lit(body: string, declaration = "let lit"): string {
   return body.replace(/return\s+([\s\S]*);?\s*$/, (_all, expr: string) => `  ${declaration} = ${expr.trimEnd().replace(/;$/, "")};`);
 }
 
-/** Builds the WebGL2 program pair from a parameter list and the fragment body. */
-export function build_glsl(params: readonly string[], body: string): { vertex: string; fragment: string } {
+/** Builds the WebGL2 program pair from a parameter list, texture params, and the fragment body. */
+export function build_glsl(params: readonly string[], body: string, texture_params: readonly string[] = []): { vertex: string; fragment: string } {
   const glsl_capture = (source: string): string => capture_lit(source, "vec4 lit");
   const vertex = `#version 300 es
 layout(location = 0) in vec3 a_position;
@@ -238,17 +311,46 @@ uniform vec4 u_fog_color;
 uniform vec4 u_fog_data;
 uniform vec4 u_fog_data2;
 uniform vec4 u_cam_pos;
+uniform vec4 u_light_count;
+uniform vec4 u_lights[32];
 uniform sampler2D u_albedo_texture;
 uniform sampler2D u_normal_texture;
 uniform sampler2D u_roughness_texture;
 uniform sampler2D u_metallic_texture;
 uniform sampler2D u_emission_texture;
+${texture_params.map((name) => `uniform sampler2D u_tex_${name};`).join("\n")}
 ${params_block}
 
 out vec4 out_color;
 
 vec3 lighting() {
   return u_light_color.rgb * max(dot(normalize(v_normal), u_light_dir.xyz), 0.0) + u_ambient.rgb;
+}
+
+vec3 extra_lights() {
+  vec3 sum = vec3(0.0);
+  for (int i = 0; i < int(u_light_count.x); i += 1) {
+    vec4 kind = u_lights[i * 4];
+    vec4 position = u_lights[i * 4 + 1];
+    vec4 color = u_lights[i * 4 + 2];
+    vec4 direction = u_lights[i * 4 + 3];
+    if (kind.x < 0.5) {
+      sum += color.rgb * kind.y * max(dot(normalize(v_normal), direction.xyz), 0.0);
+      continue;
+    }
+    vec3 to_source = position.xyz - v_world;
+    float distance = max(length(to_source), 0.0001);
+    vec3 dir = to_source / distance;
+    float spot = 1.0;
+    if (kind.x > 1.5) {
+      float edge = clamp(dot(-dir, direction.xyz), 0.0, 1.0);
+      float cone = clamp((edge - cos(kind.w)) / max(1.0 - cos(kind.w), 0.0001), 0.0, 1.0);
+      spot = pow(cone, direction.w);
+    }
+    float reach = clamp(1.0 - pow(distance / max(position.w, 0.0001), 2.0), 0.0, 1.0);
+    sum += color.rgb * kind.y * max(dot(normalize(v_normal), dir), 0.0) * pow(reach, kind.z) * spot;
+  }
+  return sum;
 }
 
 float channel(sampler2D tex, vec2 uv, vec4 mask) {
@@ -287,8 +389,11 @@ vec4 fs_fragment() {
   vec3 light_dir = u_light_dir.xyz;
   vec3 light_color = u_light_color.rgb;
   vec3 ambient = u_ambient.rgb;
+${texture_params.map((name) => `  vec4 texture_${name} = texture(u_tex_${name}, uv);`).join("\n")}
 ${glsl_capture(body)}
-  return vec4(lit.rgb, u_albedo.a * tex_albedo.a * (1.0 - u_maps.w) * lit.a);
+  vec3 extra = albedo * color * extra_lights();
+  vec4 lit_all = vec4(lit.rgb + extra, lit.a);
+  return vec4(lit_all.rgb, u_albedo.a * tex_albedo.a * (1.0 - u_maps.w) * lit_all.a);
 }
 
 void main() {
@@ -315,6 +420,8 @@ export function fill_camera(
   fog: RenderFog | null,
   /** Any x/y/z point, the camera position to measure fog distance from. */
   camera_position: { x: number; y: number; z: number },
+  /** The frame's light list, packed after the base camera block. */
+  lights: readonly RenderLight[] = [],
 ): void {
   scratch.fill(0);
   scratch.set(view_proj, 0);
@@ -344,6 +451,17 @@ export function fill_camera(
   scratch[40] = camera_position.x;
   scratch[41] = camera_position.y;
   scratch[42] = camera_position.z;
+  const count = Math.min(lights.length, WGSL_LIGHT_COUNT);
+  scratch[44] = count;
+  const kinds = ["directional", "omni", "spot"];
+  for (let i = 0; i < count; i += 1) {
+    const light = lights[i];
+    const base = WGSL_CAMERA_BASE_FLOATS + 4 + i * WGSL_LIGHT_FLOATS;
+    scratch.set([kinds.indexOf(light.kind), light.energy, light.attenuation, light.spot_angle * Math.PI / 180], base);
+    scratch.set([light.position.x, light.position.y, light.position.z, light.range], base + 4);
+    scratch.set([light.color.r, light.color.g, light.color.b, 0], base + 8);
+    scratch.set([light.direction.x, light.direction.y, light.direction.z, light.spot_attenuation], base + 12);
+  }
 }
 
 /** One-hot vec4 mask for a texture channel: 0 red, 1 green, 2 blue, 3 alpha. */
@@ -416,6 +534,11 @@ export function fill_draw(
       scratch[55] = material.emission_energy_multiplier;
     }
   } else {
+    // A ShaderMaterial's colors ride in its params; the albedo stays neutral so
+    // the body decides the color, and the alpha stays 1 unless a texture joins.
+    scratch[28] = 1;
+    scratch[29] = 1;
+    scratch[30] = 1;
     scratch[31] = 1;
     scratch[48] = has_tangents ? 1 : 0;
   }

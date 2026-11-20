@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniLight3D — Corbel Class Reference</title>
+  <style>
+    body { font-family: Georgia, "Times New Roman", serif; margin: 0; background: #121212; color: #e7e5e4; }
+    a { color: #fdba74; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.92rem; background: #2a2a2a; color: #fde68a; padding: 0.05rem 0.3rem; }
+    .layout { display: flex; min-height: 100vh; }
+    nav { width: 16.5rem; flex: none; background: #1a1a1a; border-right: 1px solid #333; padding: 1rem 0 2rem; overflow-y: auto; position: sticky; top: 0; height: 100vh; box-sizing: border-box; }
+    nav h1 { font-weight: normal; font-size: 1.05rem; margin: 0.7rem 0.9rem 0.4rem; }
+    nav input { width: calc(100% - 1.6rem); margin: 0 0.8rem 0.5rem; padding: 0.35rem 0.5rem; background: #2a2a2a; border: 1px solid #444; color: #e7e5e4; border-radius: 4px; font: 13px system-ui; box-sizing: border-box; }
+    nav .group-label { color: #a8a29e; font-size: 0.8rem; margin: 0.9rem 0.9rem 0.2rem; letter-spacing: 0.05em; }
+    .group { margin-top: 0.35rem; }
+    .group-toggle { display: flex; align-items: center; gap: 0.4rem; width: 100%; text-align: left; background: none; border: none; color: #fdba74; font: 600 0.8rem/2.1 Georgia, serif; letter-spacing: 0.05em; padding: 0 0.9rem; cursor: pointer; }
+    .group-toggle .arrow { display: inline-block; transition: transform 0.12s ease; color: #a8a29e; font-size: 0.75rem; width: 0.9rem; }
+    .group-toggle[aria-expanded="true"] .arrow { transform: rotate(90deg); }
+    .group-toggle:hover { background: #2a2a2a; }
+    .group-classes { padding-bottom: 0.2rem; }
+    .index-groups .group-toggle { font-size: 1rem; margin-top: 0.4rem; }
+    .index-groups .group-classes { padding-left: 1.1rem; }
+    nav button { display: block; width: 100%; text-align: left; background: none; border: none; color: #d6d3d1; padding: 0.22rem 0.9rem; font: 14px/1.5 Georgia, serif; cursor: pointer; }
+    nav button:hover { background: #2a2a2a; }
+    nav button.on { background: #3f3f46; color: #fff; }
+    main { flex: 1; padding: 2rem 2.4rem 4rem; max-width: 60rem; box-sizing: border-box; }
+    .crumbs { color: #a8a29e; font-size: 0.85rem; margin-bottom: 1.1rem; }
+    .crumbs a { color: #a8a29e; }
+    h1 { font-weight: normal; font-size: 2rem; margin: 0 0 0.35rem; }
+    .inherits { color: #a8a29e; font-size: 0.9rem; margin-bottom: 1.6rem; }
+    .inherits a { color: #fdba74; }
+    .brief { font-size: 1.12rem; color: #fde68a; margin: 0 0 1.4rem; }
+    h2 { font-weight: 600; font-size: 1.2rem; margin: 1.6rem 0 0.7rem; color: #fdba74; }
+    p { line-height: 1.6; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+    th { text-align: left; color: #aaa; font-weight: normal; padding: 0.35rem 0.6rem; border-bottom: 1px solid #444; }
+    td { padding: 0.32rem 0.6rem; border-bottom: 1px solid #2c2c2c; vertical-align: top; }
+    .soon { color: #a8a29e; font-style: italic; }
+    .note { color: #a8a29e; font-size: 0.9rem; }
+    @media (max-width: 800px) { .layout { display: block; } nav { position: static; height: auto; width: 100%; } }
+</style>
+  <script>
+    
+  function wireAccordion(root) {
+    root.querySelectorAll(".group-toggle").forEach((toggle) => {
+      toggle.addEventListener("click", () => {
+        const group = toggle.closest(".group");
+        const classes = group.querySelector(".group-classes");
+        const wasOpen = !classes.hidden;
+        document.querySelectorAll(".group").forEach((other) => {
+          const hidden = other.querySelector(".group-classes");
+          const head = other.querySelector(".group-toggle");
+          if (hidden) { hidden.hidden = true; }
+          if (head) { head.setAttribute("aria-expanded", "false"); }
+        });
+        if (!wasOpen) {
+          classes.hidden = false;
+          toggle.setAttribute("aria-expanded", "true");
+        }
+      });
+    });
+  }
+
+    window.addEventListener("load", () => {
+      const q = new URLSearchParams(window.location.search);
+      const member = q.get("m");
+      if (member) {
+        const row = document.getElementById(decodeURIComponent(member));
+        if (row) { row.style.outline = "2px solid #fdba74"; row.style.outlineOffset = "3px"; row.scrollIntoView({ block: "center" }); }
+      }
+      wireAccordion(document);
+      const input = document.getElementById("find");
+      const buttons = Array.from(document.querySelectorAll("nav button[data-name]"));
+      buttons.forEach((button) => { button.classList.toggle("on", button.dataset.name === "OmniLight3D"); });
+      input.addEventListener("input", () => {
+        const query = input.value.toLowerCase();
+        buttons.forEach((button) => { button.hidden = query.length > 0 && !button.dataset.name.toLowerCase().includes(query); });
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+    <h1><span style="color:#ff7085">Corbel</span> Engine</h1>
+    <input id="find" type="search" placeholder="Filter classes" aria-label="Filter classes">
+
+      <div id="class-list"><div class="group" data-group="Globals"><button class="group-toggle" type="button" aria-expanded="false"><span class="arrow">▸</span>Globals</button><div class="group-classes" hidden><button data-name="SceneTree" type="button" class="" onclick="window.location='class_SceneTree.html'">SceneTree</button><button data-name="Input" type="button" class="" onclick="window.location='class_Input.html'">Input</button><button data-name="InputMap" type="button" class="" onclick="window.location='class_InputMap.html'">InputMap</button><button data-name="ProjectSettings" type="button" class="" onclick="window.location='class_ProjectSettings.html'">ProjectSettings</button><button data-name="ResourceLoader" type="button" class="" onclick="window.location='class_ResourceLoader.html'">ResourceLoader</button></div></div><div class="group" data-group="Nodes"><button class="group-toggle" type="button" aria-expanded="true"><span class="arrow">▸</span>Nodes</button><div class="group-classes"><button data-name="Node" type="button" class="" onclick="window.location='class_Node.html'">Node</button><button data-name="Node3D" type="button" class="" onclick="window.location='class_Node3D.html'">Node3D</button><button data-name="Camera3D" type="button" class="" onclick="window.location='class_Camera3D.html'">Camera3D</button><button data-name="WorldEnvironment" type="button" class="" onclick="window.location='class_WorldEnvironment.html'">WorldEnvironment</button><button data-name="DirectionalLight3D" type="button" class="" onclick="window.location='class_DirectionalLight3D.html'">DirectionalLight3D</button><button data-name="OmniLight3D" type="button" class="on" onclick="window.location='class_OmniLight3D.html'">OmniLight3D</button><button data-name="SpotLight3D" type="button" class="" onclick="window.location='class_SpotLight3D.html'">SpotLight3D</button><button data-name="MeshInstance3D" type="button" class="" onclick="window.location='class_MeshInstance3D.html'">MeshInstance3D</button><button data-name="GeometryInstance3D" type="button" class="" onclick="window.location='class_GeometryInstance3D.html'">GeometryInstance3D</button><button data-name="Timer" type="button" class="" onclick="window.location='class_Timer.html'">Timer</button></div></div><div class="group" data-group="Resources"><button class="group-toggle" type="button" aria-expanded="false"><span class="arrow">▸</span>Resources</button><div class="group-classes" hidden><button data-name="PackedScene" type="button" class="" onclick="window.location='class_PackedScene.html'">PackedScene</button><button data-name="Mesh" type="button" class="" onclick="window.location='class_Mesh.html'">Mesh</button><button data-name="ArrayMesh" type="button" class="" onclick="window.location='class_ArrayMesh.html'">ArrayMesh</button><button data-name="BoxMesh" type="button" class="" onclick="window.location='class_BoxMesh.html'">BoxMesh</button><button data-name="SurfaceTool" type="button" class="" onclick="window.location='class_SurfaceTool.html'">SurfaceTool</button><button data-name="PrimitiveType" type="button" class="" onclick="window.location='class_PrimitiveType.html'">PrimitiveType</button><button data-name="Environment" type="button" class="" onclick="window.location='class_Environment.html'">Environment</button><button data-name="Material" type="button" class="" onclick="window.location='class_Material.html'">Material</button><button data-name="StandardMaterial3D" type="button" class="" onclick="window.location='class_StandardMaterial3D.html'">StandardMaterial3D</button><button data-name="ShaderMaterial" type="button" class="" onclick="window.location='class_ShaderMaterial.html'">ShaderMaterial</button><button data-name="Shader" type="button" class="" onclick="window.location='class_Shader.html'">Shader</button><button data-name="Texture2D" type="button" class="" onclick="window.location='class_Texture2D.html'">Texture2D</button></div></div><div class="group" data-group="Input"><button class="group-toggle" type="button" aria-expanded="false"><span class="arrow">▸</span>Input</button><div class="group-classes" hidden><button data-name="InputEvent" type="button" class="" onclick="window.location='class_InputEvent.html'">InputEvent</button><button data-name="InputEventKey" type="button" class="" onclick="window.location='class_InputEventKey.html'">InputEventKey</button><button data-name="InputEventMouseButton" type="button" class="" onclick="window.location='class_InputEventMouseButton.html'">InputEventMouseButton</button><button data-name="InputEventMouseMotion" type="button" class="" onclick="window.location='class_InputEventMouseMotion.html'">InputEventMouseMotion</button><button data-name="InputEventAction" type="button" class="" onclick="window.location='class_InputEventAction.html'">InputEventAction</button><button data-name="Key" type="button" class="" onclick="window.location='class_Key.html'">Key</button><button data-name="MouseButton" type="button" class="" onclick="window.location='class_MouseButton.html'">MouseButton</button></div></div><div class="group" data-group="Variant types"><button class="group-toggle" type="button" aria-expanded="false"><span class="arrow">▸</span>Variant types</button><div class="group-classes" hidden><button data-name="Vector2" type="button" class="" onclick="window.location='class_Vector2.html'">Vector2</button><button data-name="Vector3" type="button" class="" onclick="window.location='class_Vector3.html'">Vector3</button><button data-name="Vector3i" type="button" class="" onclick="window.location='class_Vector3i.html'">Vector3i</button><button data-name="Quaternion" type="button" class="" onclick="window.location='class_Quaternion.html'">Quaternion</button><button data-name="Basis" type="button" class="" onclick="window.location='class_Basis.html'">Basis</button><button data-name="Transform3D" type="button" class="" onclick="window.location='class_Transform3D.html'">Transform3D</button><button data-name="Plane" type="button" class="" onclick="window.location='class_Plane.html'">Plane</button><button data-name="AABB" type="button" class="" onclick="window.location='class_AABB.html'">AABB</button><button data-name="Color" type="button" class="" onclick="window.location='class_Color.html'">Color</button><button data-name="Dictionary" type="button" class="" onclick="window.location='class_Dictionary.html'">Dictionary</button><button data-name="Signal" type="button" class="" onclick="window.location='class_Signal.html'">Signal</button></div></div></div>
+    </nav>
+    <main>
+      <p class="crumbs">Corbel › Class Reference › Nodes</p>
+      <h1>OmniLight3D</h1>
+      <p class="inherits"><strong>Inherits:</strong> <a href="class_Node3D.html">Node3D</a> <strong>&lt;</strong> <a href="class_Node.html">Node</a> <strong>&lt;</strong> Object</p>
+      <p class="brief">A light that radiates from its position with a smooth falloff over its range.</p>
+      <h2>Description</h2>
+      <p>OmniLight3D radiates in every direction from the node's position and fades to zero at range with Godot's quadratic shape: the reach is (1 - (distance / range)^2), sharpened by the attenuation exponent, so 1.0 keeps the plain curve. light_energy multiplies the light_color. The frame carries up to eight lights in tree order (the first DirectionalLight3D leads it) and both backends light every surface with the whole list.</p>
+      <h2>Tutorials</h2>
+      <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
+      <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
+<tr id="OmniLight3D.light_color"><td><code>Color light_color</code></td><td><code>Color</code> The light color each surface is tinted with</td></tr>
+<tr id="OmniLight3D.range"><td><code>number range</code></td><td><code>number</code> Godot 4 omni_range: world units the light reaches</td></tr>
+<tr id="OmniLight3D.energy"><td><code>number energy</code></td><td><code>number</code> Godot 4 light_energy: multiplies the color</td></tr>
+<tr id="OmniLight3D.attenuation"><td><code>number attenuation</code></td><td><code>number</code> Godot 4 omni_attenuation: exponent on the falloff, 1 keeps the plain quadratic curve</td></tr>
+      </table>
+      
+      
+    </main>
+  </div>
+</body>
+</html>
