@@ -1,16 +1,46 @@
 {
   "format": 1,
   "site": {
-    "title": "Corbel — Engine documentation",
+    "title": "Corbel \u2014 Engine documentation",
     "sections": [
-      { "id": "about", "label": "About", "href": "documentation.html#about", "host": "documentation.html" },
-      { "id": "getting-started", "label": "Getting Started", "href": "documentation.html#getting-started", "host": "documentation.html" },
-      { "id": "manual", "label": "Manual", "href": "documentation.html#manual", "host": "documentation.html" },
-      { "id": "engine-details", "label": "Engine Details", "href": "documentation.html#engine-details", "host": "documentation.html" },
-      { "id": "class-reference", "label": "Class Reference", "href": "class_reference.html", "host": "class_reference.html" },
-      { "id": "community", "label": "Community", "href": "https://exodev.com", "host": "https://exodev.com" }
+      {
+        "id": "about",
+        "label": "About",
+        "href": "documentation.html#about",
+        "host": "documentation.html"
+      },
+      {
+        "id": "getting-started",
+        "label": "Getting Started",
+        "href": "documentation.html#getting-started",
+        "host": "documentation.html"
+      },
+      {
+        "id": "manual",
+        "label": "Manual",
+        "href": "documentation.html#manual",
+        "host": "documentation.html"
+      },
+      {
+        "id": "engine-details",
+        "label": "Engine Details",
+        "href": "documentation.html#engine-details",
+        "host": "documentation.html"
+      },
+      {
+        "id": "class-reference",
+        "label": "Class Reference",
+        "href": "class_reference.html",
+        "host": "class_reference.html"
+      },
+      {
+        "id": "community",
+        "label": "Community",
+        "href": "https://exodev.com",
+        "host": "https://exodev.com"
+      }
     ],
-    "community_note": "The Community section lives on ExoDev.Com — it will open there when the site launches, and stays empty on this page for now."
+    "community_note": "The Community section lives on ExoDev.Com \u2014 it will open there when the site launches, and stays empty on this page for now."
   },
   "groups": [
     {
@@ -32,7 +62,6 @@
         "Node3D",
         "Camera3D",
         "WorldEnvironment",
-        "Environment",
         "DirectionalLight3D",
         "MeshInstance3D",
         "GeometryInstance3D",
@@ -49,12 +78,12 @@
         "BoxMesh",
         "SurfaceTool",
         "PrimitiveType",
+        "Environment",
         "Material",
         "StandardMaterial3D",
         "ShaderMaterial",
         "Shader",
-        "Texture2D",
-        "EnvironmentResource"
+        "Texture2D"
       ]
     },
     {
@@ -94,38 +123,158 @@
       "inherits": "Object",
       "description": "Node is the base class for everything in a Corbel scene tree. A node has a name, an optional parent, children, an owner, and groups. The tree calls lifecycle methods in order: _enter_tree when the node joins the live tree, _ready after the children are ready (children run before the parent, like Godot), _process once per frame, _input on every event that the runner feeds the tree, and _exit_tree when the node leaves. queue_free removes the node at the end of the frame. Scripts get these hooks by overriding them with the same names in TypeScript: a class extends Node (or a subclass) and overrides _ready(). Throw nothing you cannot survive: a throw inside _ready or _process is reported through SceneTree.on_node_error and the frame keeps running.",
       "properties": [
-        { "name": "name", "type": "string", "desc": "The node's name. Throws if a sibling already has it. Cannot contain . / : @ %" },
-        { "name": "owner", "type": "Node | null", "desc": "The root of the saved scene this node belongs to, or null" },
-        { "name": "process_mode", "type": "ProcessMode", "desc": "Pause behavior under a paused tree: INHERIT (follows the parent), PAUSABLE, WHEN_PAUSED, ALWAYS, DISABLED" }
+        {
+          "name": "name",
+          "type": "string",
+          "desc": "The node's name. Throws if a sibling already has it. Cannot contain . / : @ %"
+        },
+        {
+          "name": "owner",
+          "type": "Node | null",
+          "desc": "The root of the saved scene this node belongs to, or null"
+        },
+        {
+          "name": "process_mode",
+          "type": "ProcessMode",
+          "desc": "Pause behavior under a paused tree: INHERIT (follows the parent), PAUSABLE, WHEN_PAUSED, ALWAYS, DISABLED"
+        }
       ],
       "methods": [
-        { "name": "get_class", "sig": "get_class()", "desc": "The class name, such as Node3D" },
-        { "name": "set_name", "sig": "set_name(name)", "desc": "Rename. Throws if a sibling already has it" },
-        { "name": "add_child", "sig": "add_child(node)", "desc": "Parent the node under this one" },
-        { "name": "remove_child", "sig": "remove_child(node)", "desc": "Detach a direct child" },
-        { "name": "reparent", "sig": "reparent(new_parent)", "desc": "Move this node under another parent" },
-        { "name": "get_child", "sig": "get_child(index)", "desc": "One child, by position" },
-        { "name": "get_children", "sig": "get_children()", "desc": "A copy of the child list" },
-        { "name": "get_child_count", "sig": "get_child_count()", "desc": "How many children" },
-        { "name": "get_parent", "sig": "get_parent()", "desc": "The parent, or null" },
-        { "name": "get_node", "sig": "get_node(path)", "desc": "A child by name, Body/Hand, .., or /root/... Throws if missing" },
-        { "name": "get_node_or_null", "sig": "get_node_or_null(path)", "desc": "The same lookup, or null" },
-        { "name": "find_child", "sig": "find_child(pattern)", "desc": "First matching descendant. * is a wildcard" },
-        { "name": "add_to_group", "sig": "add_to_group(group)", "desc": "Put this node in a named group" },
-        { "name": "remove_from_group", "sig": "remove_from_group(group)", "desc": "Take it out" },
-        { "name": "is_in_group", "sig": "is_in_group(group)", "desc": "True when it is in that group" },
-        { "name": "get_groups", "sig": "get_groups()", "desc": "The group names" },
-        { "name": "set_meta", "sig": "set_meta(key, value)", "desc": "Store an extra value. The editor uses script_path" },
-        { "name": "get_meta", "sig": "get_meta(key)", "desc": "Read that value" },
-        { "name": "has_meta", "sig": "has_meta(key)", "desc": "True when the key was set" },
-        { "name": "queue_free", "sig": "queue_free()", "desc": "Remove the node at the end of the frame" },
-        { "name": "is_queued_for_deletion", "sig": "is_queued_for_deletion()", "desc": "True after queue_free" },
-        { "name": "get_tree", "sig": "get_tree()", "desc": "The SceneTree this node lives in, or null outside the tree" },
-        { "name": "_enter_tree", "sig": "_enter_tree()", "desc": "Called when the node joins the live tree" },
-        { "name": "_ready", "sig": "_ready()", "desc": "Called after the children are ready; children run before the parent. Runs once" },
-        { "name": "_process", "sig": "_process(delta)", "desc": "Once per frame, unless paused per process_mode" },
-        { "name": "_input", "sig": "_input(event)", "desc": "Every event the runner feeds the tree, in tree order. Only called when a subclass overrides it" },
-        { "name": "_exit_tree", "sig": "_exit_tree()", "desc": "Called when the node leaves the tree" }
+        {
+          "name": "get_class",
+          "sig": "get_class()",
+          "desc": "The class name, such as Node3D"
+        },
+        {
+          "name": "set_name",
+          "sig": "set_name(name)",
+          "desc": "Rename. Throws if a sibling already has it"
+        },
+        {
+          "name": "add_child",
+          "sig": "add_child(node)",
+          "desc": "Parent the node under this one"
+        },
+        {
+          "name": "remove_child",
+          "sig": "remove_child(node)",
+          "desc": "Detach a direct child"
+        },
+        {
+          "name": "reparent",
+          "sig": "reparent(new_parent)",
+          "desc": "Move this node under another parent"
+        },
+        {
+          "name": "get_child",
+          "sig": "get_child(index)",
+          "desc": "One child, by position"
+        },
+        {
+          "name": "get_children",
+          "sig": "get_children()",
+          "desc": "A copy of the child list"
+        },
+        {
+          "name": "get_child_count",
+          "sig": "get_child_count()",
+          "desc": "How many children"
+        },
+        {
+          "name": "get_parent",
+          "sig": "get_parent()",
+          "desc": "The parent, or null"
+        },
+        {
+          "name": "get_node",
+          "sig": "get_node(path)",
+          "desc": "A child by name, Body/Hand, .., or /root/... Throws if missing"
+        },
+        {
+          "name": "get_node_or_null",
+          "sig": "get_node_or_null(path)",
+          "desc": "The same lookup, or null"
+        },
+        {
+          "name": "find_child",
+          "sig": "find_child(pattern)",
+          "desc": "First matching descendant. * is a wildcard"
+        },
+        {
+          "name": "add_to_group",
+          "sig": "add_to_group(group)",
+          "desc": "Put this node in a named group"
+        },
+        {
+          "name": "remove_from_group",
+          "sig": "remove_from_group(group)",
+          "desc": "Take it out"
+        },
+        {
+          "name": "is_in_group",
+          "sig": "is_in_group(group)",
+          "desc": "True when it is in that group"
+        },
+        {
+          "name": "get_groups",
+          "sig": "get_groups()",
+          "desc": "The group names"
+        },
+        {
+          "name": "set_meta",
+          "sig": "set_meta(key, value)",
+          "desc": "Store an extra value. The editor uses script_path"
+        },
+        {
+          "name": "get_meta",
+          "sig": "get_meta(key)",
+          "desc": "Read that value"
+        },
+        {
+          "name": "has_meta",
+          "sig": "has_meta(key)",
+          "desc": "True when the key was set"
+        },
+        {
+          "name": "queue_free",
+          "sig": "queue_free()",
+          "desc": "Remove the node at the end of the frame"
+        },
+        {
+          "name": "is_queued_for_deletion",
+          "sig": "is_queued_for_deletion()",
+          "desc": "True after queue_free"
+        },
+        {
+          "name": "get_tree",
+          "sig": "get_tree()",
+          "desc": "The SceneTree this node lives in, or null outside the tree"
+        },
+        {
+          "name": "_enter_tree",
+          "sig": "_enter_tree()",
+          "desc": "Called when the node joins the live tree"
+        },
+        {
+          "name": "_ready",
+          "sig": "_ready()",
+          "desc": "Called after the children are ready; children run before the parent. Runs once"
+        },
+        {
+          "name": "_process",
+          "sig": "_process(delta)",
+          "desc": "Once per frame, unless paused per process_mode"
+        },
+        {
+          "name": "_input",
+          "sig": "_input(event)",
+          "desc": "Every event the runner feeds the tree, in tree order. Only called when a subclass overrides it"
+        },
+        {
+          "name": "_exit_tree",
+          "sig": "_exit_tree()",
+          "desc": "Called when the node leaves the tree"
+        }
       ]
     },
     "Node3D": {
@@ -133,12 +282,36 @@
       "inherits": "Node",
       "description": "Node3D adds a place in 3D space. rotation is stored as a Basis and written back through rotation (radians) or rotation_degrees. transform composes both into a Transform3D. Every subclass that draws or moves inherits this class. The world is Y-up and right-handed; a camera looks down local -Z, so a node authored to face the camera points its +Z at it.",
       "properties": [
-        { "name": "position", "type": "Vector3", "desc": "Local translation" },
-        { "name": "rotation", "type": "Vector3", "desc": "Euler radians. Setting it replaces the basis" },
-        { "name": "rotation_degrees", "type": "Vector3", "desc": "The same rotation in degrees" },
-        { "name": "basis", "type": "Basis", "desc": "The rotation, stored as a Basis" },
-        { "name": "transform", "type": "Transform3D", "desc": "Basis plus position as a Transform3D" },
-        { "name": "visible", "type": "boolean", "desc": "true until something hides it" }
+        {
+          "name": "position",
+          "type": "Vector3",
+          "desc": "Local translation"
+        },
+        {
+          "name": "rotation",
+          "type": "Vector3",
+          "desc": "Euler radians. Setting it replaces the basis"
+        },
+        {
+          "name": "rotation_degrees",
+          "type": "Vector3",
+          "desc": "The same rotation in degrees"
+        },
+        {
+          "name": "basis",
+          "type": "Basis",
+          "desc": "The rotation, stored as a Basis"
+        },
+        {
+          "name": "transform",
+          "type": "Transform3D",
+          "desc": "Basis plus position as a Transform3D"
+        },
+        {
+          "name": "visible",
+          "type": "boolean",
+          "desc": "true until something hides it"
+        }
       ]
     },
     "Camera3D": {
@@ -146,10 +319,26 @@
       "inherits": "Node3D",
       "description": "Camera3D is the view. fov is vertical degrees, 75 like Godot. near and far clip it. current picks the camera: the last current camera in tree order draws, or the first camera when none is current. The camera looks down its local -Z.",
       "properties": [
-        { "name": "fov", "type": "number", "desc": "Vertical field of view in degrees. Default 75, like Godot" },
-        { "name": "near", "type": "number", "desc": "Near clip distance" },
-        { "name": "far", "type": "number", "desc": "Far clip distance" },
-        { "name": "current", "type": "boolean", "desc": "Marks this camera as the one the renderer draws through" }
+        {
+          "name": "fov",
+          "type": "number",
+          "desc": "Vertical field of view in degrees. Default 75, like Godot"
+        },
+        {
+          "name": "near",
+          "type": "number",
+          "desc": "Near clip distance"
+        },
+        {
+          "name": "far",
+          "type": "number",
+          "desc": "Far clip distance"
+        },
+        {
+          "name": "current",
+          "type": "boolean",
+          "desc": "Marks this camera as the one the renderer draws through"
+        }
       ]
     },
     "GeometryInstance3D": {
@@ -163,8 +352,16 @@
       "inherits": "GeometryInstance3D",
       "description": "MeshInstance3D draws its geometry when it holds a Mesh, and material_override carries the color or texture. It can be added, moved, hidden, and saved. The weave attaches project scripts to scene nodes by their script_path meta, so a saved MeshInstance3D can carry a .ts script.",
       "properties": [
-        { "name": "geometry", "type": "Mesh | null", "desc": "The mesh to draw. Nothing draws while it is null" },
-        { "name": "material_override", "type": "Material | null", "desc": "The material the surface draws with. StandardMaterial3D or ShaderMaterial" }
+        {
+          "name": "geometry",
+          "type": "Mesh | null",
+          "desc": "The mesh to draw. Nothing draws while it is null"
+        },
+        {
+          "name": "material_override",
+          "type": "Material | null",
+          "desc": "The material the surface draws with. StandardMaterial3D or ShaderMaterial"
+        }
       ]
     },
     "DirectionalLight3D": {
@@ -172,7 +369,11 @@
       "inherits": "Node3D",
       "description": "DirectionalLight3D shines along the node's local -Z, so an unrotated light points (0, 0, -1). The first DirectionalLight3D in tree order lights the scene. Rotate the node to aim the light, exactly like Godot's sun.",
       "properties": [
-        { "name": "light_color", "type": "Color", "desc": "The light's color. White by default" }
+        {
+          "name": "light_color",
+          "type": "Color",
+          "desc": "The light's color. White by default"
+        }
       ]
     },
     "WorldEnvironment": {
@@ -180,7 +381,11 @@
       "inherits": "Node",
       "description": "WorldEnvironment is a node that overrides the tree's look: assign it an Environment with background_color (what the canvas clears to) and ambient. The renderer picks the first WorldEnvironment in the tree; none means the default dark background and dim ambient.",
       "properties": [
-        { "name": "environment", "type": "Environment", "desc": "The Environment with background_color and ambient" }
+        {
+          "name": "environment",
+          "type": "Environment",
+          "desc": "The Environment with background_color and ambient"
+        }
       ]
     },
     "Environment": {
@@ -189,8 +394,16 @@
       "environment": false,
       "description": "Environment holds the tree's look data: background_color is what the canvas clears to, ambient is the ambient light color that lighting adds to every surface. WorldEnvironment carries this resource.",
       "properties": [
-        { "name": "background_color", "type": "Color", "desc": "The canvas clear color" },
-        { "name": "ambient", "type": "Color", "desc": "The ambient light color" }
+        {
+          "name": "background_color",
+          "type": "Color",
+          "desc": "The canvas clear color"
+        },
+        {
+          "name": "ambient",
+          "type": "Color",
+          "desc": "The ambient light color"
+        }
       ]
     },
     "Timer": {
@@ -198,16 +411,48 @@
       "inherits": "Node",
       "description": "Timer counts a wait_time every frame it is allowed to run and emits timeout when it crosses zero. start(time) begins counting, one_shot stops after a single timeout instead of repeating, autostart calls start on _ready. Pause behaves like Godot: a PAUSABLE Timer waits while the tree is paused and an ALWAYS Timer keeps counting.",
       "properties": [
-        { "name": "wait_time", "type": "number", "desc": "Seconds between the start and timeout" },
-        { "name": "one_shot", "type": "boolean", "desc": "Stop instead of repeating" },
-        { "name": "autostart", "type": "boolean", "desc": "Call start() on _ready" }
+        {
+          "name": "wait_time",
+          "type": "number",
+          "desc": "Seconds between the start and timeout"
+        },
+        {
+          "name": "one_shot",
+          "type": "boolean",
+          "desc": "Stop instead of repeating"
+        },
+        {
+          "name": "autostart",
+          "type": "boolean",
+          "desc": "Call start() on _ready"
+        }
       ],
       "methods": [
-        { "name": "start", "sig": "start(time_sec?)", "desc": "Begin counting, restarting from the top" },
-        { "name": "stop", "sig": "stop()", "desc": "Stop counting and clear the remainder" },
-        { "name": "is_stopped", "sig": "is_stopped()", "desc": "True while it is not counting" },
-        { "name": "get_time_left", "sig": "get_time_left()", "desc": "Seconds left until timeout. Negative while stopped" },
-        { "name": "timeout", "sig": "signal timeout", "desc": "Emitted when the wait_time crosses zero" }
+        {
+          "name": "start",
+          "sig": "start(time_sec?)",
+          "desc": "Begin counting, restarting from the top"
+        },
+        {
+          "name": "stop",
+          "sig": "stop()",
+          "desc": "Stop counting and clear the remainder"
+        },
+        {
+          "name": "is_stopped",
+          "sig": "is_stopped()",
+          "desc": "True while it is not counting"
+        },
+        {
+          "name": "get_time_left",
+          "sig": "get_time_left()",
+          "desc": "Seconds left until timeout. Negative while stopped"
+        },
+        {
+          "name": "timeout",
+          "sig": "signal timeout",
+          "desc": "Emitted when the wait_time crosses zero"
+        }
       ]
     },
     "SceneTree": {
@@ -215,23 +460,83 @@
       "inherits": "Object",
       "description": "new SceneTree() makes a hidden root named root. Add the scene's top node with get_root().add_child(scene). Call _process(delta) once per frame. init({ canvas, preference }) picks a renderer and starts the frame loop: _process in tree order, then a draw. timer support is built in, and change_scene swaps the current level at the end of the frame.",
       "properties": [
-        { "name": "paused", "type": "boolean", "desc": "Skip _process while it is true; the draw still happens" },
-        { "name": "on_node_error", "type": "callback | null", "desc": "Set a callback to receive _ready and _process errors with the node" },
-        { "name": "renderer_name", "type": "\"webgpu\" | \"webgl2\" | null", "desc": "Which backend the renderer picked" },
-        { "name": "current_scene", "type": "Node | null", "desc": "The scene the runner registered, or the latest change_scene node" }
+        {
+          "name": "paused",
+          "type": "boolean",
+          "desc": "Skip _process while it is true; the draw still happens"
+        },
+        {
+          "name": "on_node_error",
+          "type": "callback | null",
+          "desc": "Set a callback to receive _ready and _process errors with the node"
+        },
+        {
+          "name": "renderer_name",
+          "type": "\"webgpu\" | \"webgl2\" | null",
+          "desc": "Which backend the renderer picked"
+        },
+        {
+          "name": "current_scene",
+          "type": "Node | null",
+          "desc": "The scene the runner registered, or the latest change_scene node"
+        }
       ],
       "methods": [
-        { "name": "get_root", "sig": "get_root()", "desc": "The hidden root" },
-        { "name": "get_nodes_in_group", "sig": "get_nodes_in_group(group)", "desc": "Every node that joined that group" },
-        { "name": "tick", "sig": "tick(delta)", "desc": "One frame. Parent first, then children, then queued frees, then tree timers" },
-        { "name": "init", "sig": "init({ canvas, preference })", "desc": "Pick the renderer and start the frame loop" },
-        { "name": "create_timer", "sig": "create_timer(seconds, process_always)", "desc": "An awaitable timer independent of the tree: await timer.timeout. process_always keeps it running while paused (default true)" },
-        { "name": "change_scene_to_file", "sig": "change_scene_to_file(path)", "desc": "Load the .cscene at the path, weave it, and swap. Returns true on success" },
-        { "name": "change_scene_to_packed", "sig": "change_scene_to_packed(packed)", "desc": "Instantiate the PackedScene and swap. The old scene frees at the end of the frame; autoloads survive" },
-        { "name": "change_scene_to_node", "sig": "change_scene_to_node(node)", "desc": "Swap to a node you already built" },
-        { "name": "get_current_scene", "sig": "get_current_scene()", "desc": "The current scene node, or null" },
-        { "name": "push_input", "sig": "push_input(event)", "desc": "Dispatch one event to every node that overrides _input" },
-        { "name": "close", "sig": "close()", "desc": "Stop the loop and release the renderer" }
+        {
+          "name": "get_root",
+          "sig": "get_root()",
+          "desc": "The hidden root"
+        },
+        {
+          "name": "get_nodes_in_group",
+          "sig": "get_nodes_in_group(group)",
+          "desc": "Every node that joined that group"
+        },
+        {
+          "name": "tick",
+          "sig": "tick(delta)",
+          "desc": "One frame. Parent first, then children, then queued frees, then tree timers"
+        },
+        {
+          "name": "init",
+          "sig": "init({ canvas, preference })",
+          "desc": "Pick the renderer and start the frame loop"
+        },
+        {
+          "name": "create_timer",
+          "sig": "create_timer(seconds, process_always)",
+          "desc": "An awaitable timer independent of the tree: await timer.timeout. process_always keeps it running while paused (default true)"
+        },
+        {
+          "name": "change_scene_to_file",
+          "sig": "change_scene_to_file(path)",
+          "desc": "Load the .cscene at the path, weave it, and swap. Returns true on success"
+        },
+        {
+          "name": "change_scene_to_packed",
+          "sig": "change_scene_to_packed(packed)",
+          "desc": "Instantiate the PackedScene and swap. The old scene frees at the end of the frame; autoloads survive"
+        },
+        {
+          "name": "change_scene_to_node",
+          "sig": "change_scene_to_node(node)",
+          "desc": "Swap to a node you already built"
+        },
+        {
+          "name": "get_current_scene",
+          "sig": "get_current_scene()",
+          "desc": "The current scene node, or null"
+        },
+        {
+          "name": "push_input",
+          "sig": "push_input(event)",
+          "desc": "Dispatch one event to every node that overrides _input"
+        },
+        {
+          "name": "close",
+          "sig": "close()",
+          "desc": "Stop the loop and release the renderer"
+        }
       ]
     },
     "SceneTreeTimer": {
@@ -239,11 +544,23 @@
       "inherits": "Object",
       "description": "SceneTreeTimer counts down every frame it is allowed to run, then emits timeout. process_always (true by default) keeps it counting while the tree is paused. awaiting the timeout signal is the Godot idiom:",
       "properties": [
-        { "name": "time_left", "type": "number", "desc": "Seconds remaining" },
-        { "name": "process_always", "type": "boolean", "desc": "True it keeps counting while the tree is paused" }
+        {
+          "name": "time_left",
+          "type": "number",
+          "desc": "Seconds remaining"
+        },
+        {
+          "name": "process_always",
+          "type": "boolean",
+          "desc": "True it keeps counting while the tree is paused"
+        }
       ],
       "methods": [
-        { "name": "timeout", "sig": "signal timeout", "desc": "Emitted when the wait crosses zero" }
+        {
+          "name": "timeout",
+          "sig": "signal timeout",
+          "desc": "Emitted when the wait crosses zero"
+        }
       ]
     },
     "Signal": {
@@ -252,11 +569,31 @@
       "description": "A Signal is a list of callbacks. connect adds one, disconnect removes it, is_connected checks, emit calls them in connection order. Awaiting a Signal resolves on the next emit, which is how GDScript's await ports:",
       "properties": [],
       "methods": [
-        { "name": "connect", "sig": "connect(callback)", "desc": "Adds one" },
-        { "name": "disconnect", "sig": "disconnect(callback)", "desc": "Removes it" },
-        { "name": "is_connected", "sig": "is_connected(callback)", "desc": "True when it is in the list" },
-        { "name": "emit", "sig": "emit(...args)", "desc": "Calls them in the order they were connected" },
-        { "name": "once", "sig": "once()", "desc": "A promise that resolves with the emit arguments on the next emit" }
+        {
+          "name": "connect",
+          "sig": "connect(callback)",
+          "desc": "Adds one"
+        },
+        {
+          "name": "disconnect",
+          "sig": "disconnect(callback)",
+          "desc": "Removes it"
+        },
+        {
+          "name": "is_connected",
+          "sig": "is_connected(callback)",
+          "desc": "True when it is in the list"
+        },
+        {
+          "name": "emit",
+          "sig": "emit(...args)",
+          "desc": "Calls them in the order they were connected"
+        },
+        {
+          "name": "once",
+          "sig": "once()",
+          "desc": "A promise that resolves with the emit arguments on the next emit"
+        }
       ]
     },
     "PackedScene": {
@@ -265,10 +602,26 @@
       "description": "PackedScene holds saved scene data. instantiate builds a fresh tree each call; from_node packs a live tree; from_data wraps parsed .cscene JSON. Scene files save to .cscene and load back with load(\"res://level2.cscene\") through the ResourceLoader.",
       "properties": [],
       "methods": [
-        { "name": "instantiate", "sig": "instantiate()", "desc": "Builds a new tree; the loaded scene weaves project scripts" },
-        { "name": "from_node", "sig": "from_node(node)", "desc": "Packs a live node tree" },
-        { "name": "from_data", "sig": "from_data(data)", "desc": "Wraps parsed .cscene JSON" },
-        { "name": "get_name", "sig": "get_name()", "desc": "The scene root's name" }
+        {
+          "name": "instantiate",
+          "sig": "instantiate()",
+          "desc": "Builds a new tree; the loaded scene weaves project scripts"
+        },
+        {
+          "name": "from_node",
+          "sig": "from_node(node)",
+          "desc": "Packs a live node tree"
+        },
+        {
+          "name": "from_data",
+          "sig": "from_data(data)",
+          "desc": "Wraps parsed .cscene JSON"
+        },
+        {
+          "name": "get_name",
+          "sig": "get_name()",
+          "desc": "The scene root's name"
+        }
       ]
     },
     "ResourceLoader": {
@@ -277,10 +630,26 @@
       "description": "The shared ResourceLoader resolves res:// paths by extension and caches by path. Built-in: .cscene loads as a PackedScene. Runtime-registered: .ts loads as the script class, .png/.jpg/.jpeg/.webp/.gif as a Texture2D, .cmaterial as a StandardMaterial3D with its texture loaded. New extensions register with set_loader(ext, handler).",
       "properties": [],
       "methods": [
-        { "name": "load", "sig": "load(path)", "desc": "The cached resource, resolved by extension. Godot's load()" },
-        { "name": "set_loader", "sig": "set_loader(ext, handler)", "desc": "Register or replace the loader for one extension" },
-        { "name": "set_file_loader", "sig": "set_file_loader(loader)", "desc": "The read the loader uses for text files. The runtime wires this" },
-        { "name": "has_cached", "sig": "has_cached(path)", "desc": "True when the path already sits in the cache" }
+        {
+          "name": "load",
+          "sig": "load(path)",
+          "desc": "The cached resource, resolved by extension. Godot's load()"
+        },
+        {
+          "name": "set_loader",
+          "sig": "set_loader(ext, handler)",
+          "desc": "Register or replace the loader for one extension"
+        },
+        {
+          "name": "set_file_loader",
+          "sig": "set_file_loader(loader)",
+          "desc": "The read the loader uses for text files. The runtime wires this"
+        },
+        {
+          "name": "has_cached",
+          "sig": "has_cached(path)",
+          "desc": "True when the path already sits in the cache"
+        }
       ]
     },
     "Input": {
@@ -289,31 +658,99 @@
       "description": "The Input singleton reads the current state every frame. parse_input_event feeds one event: state updates and the tree calls _input. is_action_just_pressed and is_action_just_released hold for one frame; SceneTree.tick advances the frame.",
       "properties": [],
       "methods": [
-        { "name": "is_action_pressed", "sig": "is_action_pressed(action)", "desc": "True while the action is held, device bind or action event" },
-        { "name": "is_action_just_pressed", "sig": "is_action_just_pressed(action)", "desc": "True for the one frame it went down" },
-        { "name": "is_action_just_released", "sig": "is_action_just_released(action)", "desc": "True for the one frame it came up" },
-        { "name": "is_key_pressed", "sig": "is_key_pressed(key)", "desc": "Raw physical key state, with Godot Key values" },
-        { "name": "is_mouse_button_pressed", "sig": "is_mouse_button_pressed(button)", "desc": "MouseButton.LEFT and friends" },
-        { "name": "get_mouse_position", "sig": "get_mouse_position()", "desc": "Canvas pixels" },
-        { "name": "parse_input_event", "sig": "parse_input_event(event)", "desc": "Feed one event: state updates and _input dispatch" }
+        {
+          "name": "is_action_pressed",
+          "sig": "is_action_pressed(action)",
+          "desc": "True while the action is held, device bind or action event"
+        },
+        {
+          "name": "is_action_just_pressed",
+          "sig": "is_action_just_pressed(action)",
+          "desc": "True for the one frame it went down"
+        },
+        {
+          "name": "is_action_just_released",
+          "sig": "is_action_just_released(action)",
+          "desc": "True for the one frame it came up"
+        },
+        {
+          "name": "is_key_pressed",
+          "sig": "is_key_pressed(key)",
+          "desc": "Raw physical key state, with Godot Key values"
+        },
+        {
+          "name": "is_mouse_button_pressed",
+          "sig": "is_mouse_button_pressed(button)",
+          "desc": "MouseButton.LEFT and friends"
+        },
+        {
+          "name": "get_mouse_position",
+          "sig": "get_mouse_position()",
+          "desc": "Canvas pixels"
+        },
+        {
+          "name": "parse_input_event",
+          "sig": "parse_input_event(event)",
+          "desc": "Feed one event: state updates and _input dispatch"
+        }
       ]
     },
     "InputMap": {
       "brief": "Named actions bound to events, loaded from the project settings.",
       "inherits": "Object",
-      "description": "Godot 4 InputMap: actions map to input events. load_from_project installs every action from a parsed settings block. The editor edits them under Project → Project settings… Events match by kind: a physical bind matches the key's position, a layout bind matches what the current keyboard layout produces.",
+      "description": "Godot 4 InputMap: actions map to input events. load_from_project installs every action from a parsed settings block. The editor edits them under Project \u2192 Project settings\u2026 Events match by kind: a physical bind matches the key's position, a layout bind matches what the current keyboard layout produces.",
       "properties": [],
       "methods": [
-        { "name": "add_action", "sig": "add_action(name, deadzone)", "desc": "Start an action. Adding an existing name is a no-op, like Godot" },
-        { "name": "has_action", "sig": "has_action(name)", "desc": "True when the action exists" },
-        { "name": "get_actions", "sig": "get_actions()", "desc": "Every action name" },
-        { "name": "erase_action", "sig": "erase_action(name)", "desc": "Delete the action" },
-        { "name": "action_add_event", "sig": "action_add_event(action, event)", "desc": "Bind one event to an action" },
-        { "name": "action_get_events", "sig": "action_get_events(action)", "desc": "A copy of the action's binds" },
-        { "name": "action_erase_events", "sig": "action_erase_events(action)", "desc": "Unbind every event" },
-        { "name": "action_get_deadzone", "sig": "action_get_deadzone(name)", "desc": "The analog threshold stored with the action; keys ignore it" },
-        { "name": "event_is_action", "sig": "event_is_action(event, action)", "desc": "True when the event matches a bind" },
-        { "name": "load_from_project", "sig": "load_from_project(input)", "desc": "Replace every action from a settings block" }
+        {
+          "name": "add_action",
+          "sig": "add_action(name, deadzone)",
+          "desc": "Start an action. Adding an existing name is a no-op, like Godot"
+        },
+        {
+          "name": "has_action",
+          "sig": "has_action(name)",
+          "desc": "True when the action exists"
+        },
+        {
+          "name": "get_actions",
+          "sig": "get_actions()",
+          "desc": "Every action name"
+        },
+        {
+          "name": "erase_action",
+          "sig": "erase_action(name)",
+          "desc": "Delete the action"
+        },
+        {
+          "name": "action_add_event",
+          "sig": "action_add_event(action, event)",
+          "desc": "Bind one event to an action"
+        },
+        {
+          "name": "action_get_events",
+          "sig": "action_get_events(action)",
+          "desc": "A copy of the action's binds"
+        },
+        {
+          "name": "action_erase_events",
+          "sig": "action_erase_events(action)",
+          "desc": "Unbind every event"
+        },
+        {
+          "name": "action_get_deadzone",
+          "sig": "action_get_deadzone(name)",
+          "desc": "The analog threshold stored with the action; keys ignore it"
+        },
+        {
+          "name": "event_is_action",
+          "sig": "event_is_action(event, action)",
+          "desc": "True when the event matches a bind"
+        },
+        {
+          "name": "load_from_project",
+          "sig": "load_from_project(input)",
+          "desc": "Replace every action from a settings block"
+        }
       ]
     },
     "ProjectSettings": {
@@ -322,10 +759,26 @@
       "description": "ProjectSettings.load(data) holds the parsed project settings. Loading installs the Input Map and clears Input state. get(name) reads a top-level key such as window, main_scene, or autoload.",
       "properties": [],
       "methods": [
-        { "name": "load", "sig": "load(data)", "desc": "Parse a settings object; input installs the map" },
-        { "name": "get", "sig": "get(name, fallback)", "desc": "A top-level key value" },
-        { "name": "get_string", "sig": "get_string(name)", "desc": "A top-level string value, or the fallback" },
-        { "name": "has", "sig": "has(name)", "desc": "True when the key was in the file" }
+        {
+          "name": "load",
+          "sig": "load(data)",
+          "desc": "Parse a settings object; input installs the map"
+        },
+        {
+          "name": "get",
+          "sig": "get(name, fallback)",
+          "desc": "A top-level key value"
+        },
+        {
+          "name": "get_string",
+          "sig": "get_string(name)",
+          "desc": "A top-level string value, or the fallback"
+        },
+        {
+          "name": "has",
+          "sig": "has(name)",
+          "desc": "True when the key was in the file"
+        }
       ]
     },
     "Resource": {
@@ -345,10 +798,26 @@
       "inherits": "Material",
       "description": "StandardMaterial3D draws with the built-in lit shader on both backends. The albedo texture multiplies the albedo color, so a white material shows texture colors; a texture-less material samples a white 1x1 and the albedo color behaves exactly like the pre-texture engine.",
       "properties": [
-        { "name": "albedo", "type": "Color", "desc": "The base color. Multiplied by albedo_texture" },
-        { "name": "roughness", "type": "number", "desc": "Present for Godot compatibility; the foundation's lit shader ignores it today" },
-        { "name": "metallic", "type": "number", "desc": "Present for Godot compatibility; the foundation's lit shader ignores it today" },
-        { "name": "albedo_texture", "type": "Texture2D | null", "desc": "The color texture to sample once per UV square" }
+        {
+          "name": "albedo",
+          "type": "Color",
+          "desc": "The base color. Multiplied by albedo_texture"
+        },
+        {
+          "name": "roughness",
+          "type": "number",
+          "desc": "Present for Godot compatibility; the foundation's lit shader ignores it today"
+        },
+        {
+          "name": "metallic",
+          "type": "number",
+          "desc": "Present for Godot compatibility; the foundation's lit shader ignores it today"
+        },
+        {
+          "name": "albedo_texture",
+          "type": "Texture2D | null",
+          "desc": "The color texture to sample once per UV square"
+        }
       ]
     },
     "ShaderMaterial": {
@@ -356,12 +825,28 @@
       "inherits": "Material",
       "description": "ShaderMaterial pairs a Shader with values for the shader's named uniforms. Values arrive at the GPU in the Shader's own parameter order; the WGSL params are vec4, so colors, vectors, and scalars all coerce.",
       "properties": [
-        { "name": "shader", "type": "Shader", "desc": "The program pair this material draws with" }
+        {
+          "name": "shader",
+          "type": "Shader",
+          "desc": "The program pair this material draws with"
+        }
       ],
       "methods": [
-        { "name": "set_shader_parameter", "sig": "set_shader_parameter(name, value)", "desc": "Store a uniform value" },
-        { "name": "get_shader_parameter", "sig": "get_shader_parameter(name)", "desc": "The stored value, or null" },
-        { "name": "get_shader_parameter_list", "sig": "get_shader_parameter_list()", "desc": "A copy of the values, keyed by name" }
+        {
+          "name": "set_shader_parameter",
+          "sig": "set_shader_parameter(name, value)",
+          "desc": "Store a uniform value"
+        },
+        {
+          "name": "get_shader_parameter",
+          "sig": "get_shader_parameter(name)",
+          "desc": "The stored value, or null"
+        },
+        {
+          "name": "get_shader_parameter_list",
+          "sig": "get_shader_parameter_list()",
+          "desc": "A copy of the values, keyed by name"
+        }
       ]
     },
     "Shader": {
@@ -369,10 +854,18 @@
       "inherits": "Resource",
       "description": "Shader.lit({ uniforms, webgpu_body, webgl_body }) builds one program pair. The uniforms are vec4 (colors, vectors, and scalars coerce). Both bodies see the same names: color, normal, albedo, light_dir, light_color, ambient, each parameter by its own name, and lighting(normal) (WGSL) or lighting() (GLSL). The body returns the final color.",
       "properties": [
-        { "name": "params", "type": "readonly string[]", "desc": "Parameter names in the order the uniform buffer carries them" }
+        {
+          "name": "params",
+          "type": "readonly string[]",
+          "desc": "Parameter names in the order the uniform buffer carries them"
+        }
       ],
       "methods": [
-        { "name": "lit", "sig": "lit(spec)", "desc": "Build the program pair from uniform names and the two bodies" }
+        {
+          "name": "lit",
+          "sig": "lit(spec)",
+          "desc": "Build the program pair from uniform names and the two bodies"
+        }
       ]
     },
     "Mesh": {
@@ -386,7 +879,11 @@
       "inherits": "Mesh",
       "description": "ArrayMesh wraps one surface of arrays. Use SurfaceTool with PrimitiveType.TRIANGLES to build them one vertex at a time, or write the arrays directly. Triangles wind counter-clockwise seen from outside.",
       "properties": [
-        { "name": "arrays", "type": "SurfaceArrays", "desc": "The positions, normals, colors, uvs, tangents, and indices" }
+        {
+          "name": "arrays",
+          "type": "SurfaceArrays",
+          "desc": "The positions, normals, colors, uvs, tangents, and indices"
+        }
       ]
     },
     "BoxMesh": {
@@ -394,7 +891,11 @@
       "inherits": "Mesh",
       "description": "BoxMesh builds a 24-vertex, 36-index cube with outward normals, white vertex colors, and one 0-1 UV square per face. size controls the extent along each axis.",
       "properties": [
-        { "name": "size", "type": "Vector3", "desc": "The extent along each axis. 1x1x1 by default" }
+        {
+          "name": "size",
+          "type": "Vector3",
+          "desc": "The extent along each axis. 1x1x1 by default"
+        }
       ]
     },
     "Texture2D": {
@@ -402,8 +903,16 @@
       "inherits": "Resource",
       "description": "Texture2D is a decoded project image (PNG, JPG, GIF, WebP). load(\"res://textures/wall.png\") reads it, decodes it, and caches it by path. StandardMaterial3D.albedo_texture multiplies the albedo color; a texture-less material samples a white 1x1, so colors stay exact.",
       "properties": [
-        { "name": "width", "type": "number", "desc": "Decoded image width in pixels" },
-        { "name": "height", "type": "number", "desc": "Decoded image height in pixels" }
+        {
+          "name": "width",
+          "type": "number",
+          "desc": "Decoded image width in pixels"
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "desc": "Decoded image height in pixels"
+        }
       ]
     },
     "SurfaceTool": {
@@ -412,17 +921,61 @@
       "description": "SurfaceTool builds a mesh with triangles, vertices, normals, colors, UVs, and tangents, and commit hands back an ArrayMesh. begin(PrimitiveType.TRIANGLES), set per-vertex attributes, add_vertex to close each one. Pending attributes reset after every vertex. commit returns an ArrayMesh.",
       "properties": [],
       "methods": [
-        { "name": "begin", "sig": "begin(primitive)", "desc": "Start a surface. TRIANGLES is what the renderer draws" },
-        { "name": "set_normal", "sig": "set_normal(normal)", "desc": "The next vertex's normal" },
-        { "name": "set_uv", "sig": "set_uv(uv)", "desc": "The next vertex's UV" },
-        { "name": "set_color", "sig": "set_color(color)", "desc": "The next vertex's vertex color" },
-        { "name": "set_tangent", "sig": "set_tangent(plane)", "desc": "Tangent direction, binormal sign in plane.d" },
-        { "name": "add_vertex", "sig": "add_vertex(vertex)", "desc": "Closes the pending vertex. Attributes reset after it" },
-        { "name": "index", "sig": "index()", "desc": "Merge identical vertices and share them by index" },
-        { "name": "generate_normals", "sig": "generate_normals(flip)", "desc": "Smooth each triangle face normal onto its vertices" },
-        { "name": "generate_tangents", "sig": "generate_tangents()", "desc": "Fill the tangent from UVs; every vertex needs a UV" },
-        { "name": "clear", "sig": "clear()", "desc": "Start over" },
-        { "name": "commit", "sig": "commit()", "desc": "Finish into an ArrayMesh" }
+        {
+          "name": "begin",
+          "sig": "begin(primitive)",
+          "desc": "Start a surface. TRIANGLES is what the renderer draws"
+        },
+        {
+          "name": "set_normal",
+          "sig": "set_normal(normal)",
+          "desc": "The next vertex's normal"
+        },
+        {
+          "name": "set_uv",
+          "sig": "set_uv(uv)",
+          "desc": "The next vertex's UV"
+        },
+        {
+          "name": "set_color",
+          "sig": "set_color(color)",
+          "desc": "The next vertex's vertex color"
+        },
+        {
+          "name": "set_tangent",
+          "sig": "set_tangent(plane)",
+          "desc": "Tangent direction, binormal sign in plane.d"
+        },
+        {
+          "name": "add_vertex",
+          "sig": "add_vertex(vertex)",
+          "desc": "Closes the pending vertex. Attributes reset after it"
+        },
+        {
+          "name": "index",
+          "sig": "index()",
+          "desc": "Merge identical vertices and share them by index"
+        },
+        {
+          "name": "generate_normals",
+          "sig": "generate_normals(flip)",
+          "desc": "Smooth each triangle face normal onto its vertices"
+        },
+        {
+          "name": "generate_tangents",
+          "sig": "generate_tangents()",
+          "desc": "Fill the tangent from UVs; every vertex needs a UV"
+        },
+        {
+          "name": "clear",
+          "sig": "clear()",
+          "desc": "Start over"
+        },
+        {
+          "name": "commit",
+          "sig": "commit()",
+          "desc": "Finish into an ArrayMesh"
+        }
       ]
     },
     "PrimitiveType": {
@@ -430,7 +983,11 @@
       "inherits": "Object",
       "description": "POINT, LINES, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP. The renderer draws TRIANGLES surfaces only right now.",
       "properties": [
-        { "name": "TRIANGLES", "type": "number", "desc": "3. Three vertices per face" }
+        {
+          "name": "TRIANGLES",
+          "type": "number",
+          "desc": "3. Three vertices per face"
+        }
       ]
     },
     "Dictionary": {
@@ -439,20 +996,76 @@
       "description": "The Godot 4 Dictionary: keys are strings and numbers, compared by value, kept in the order they were set.",
       "properties": [],
       "methods": [
-        { "name": "size", "sig": "size()", "desc": "How many pairs" },
-        { "name": "is_empty", "sig": "is_empty()", "desc": "True with zero pairs" },
-        { "name": "clear", "sig": "clear()", "desc": "Remove every pair" },
-        { "name": "has", "sig": "has(key)", "desc": "True when the key exists" },
-        { "name": "has_all", "sig": "has_all(keys)", "desc": "True when every key exists" },
-        { "name": "get", "sig": "get(key, fallback)", "desc": "The value, or the fallback (null)" },
-        { "name": "set", "sig": "set(key, value)", "desc": "Store, in order" },
-        { "name": "get_or_add", "sig": "get_or_add(key, fallback)", "desc": "Read, storing the fallback first when missing" },
-        { "name": "erase", "sig": "erase(key)", "desc": "Remove. True when it was there" },
-        { "name": "keys", "sig": "keys()", "desc": "A copy of the key list" },
-        { "name": "values", "sig": "values()", "desc": "A copy of the value list" },
-        { "name": "merge", "sig": "merge(other, overwrite)", "desc": "Add another dictionary's pairs" },
-        { "name": "duplicate", "sig": "duplicate(deep)", "desc": "A copy; deep copies nested dictionaries and arrays" },
-        { "name": "find_key", "sig": "find_key(value)", "desc": "The first key with that value" }
+        {
+          "name": "size",
+          "sig": "size()",
+          "desc": "How many pairs"
+        },
+        {
+          "name": "is_empty",
+          "sig": "is_empty()",
+          "desc": "True with zero pairs"
+        },
+        {
+          "name": "clear",
+          "sig": "clear()",
+          "desc": "Remove every pair"
+        },
+        {
+          "name": "has",
+          "sig": "has(key)",
+          "desc": "True when the key exists"
+        },
+        {
+          "name": "has_all",
+          "sig": "has_all(keys)",
+          "desc": "True when every key exists"
+        },
+        {
+          "name": "get",
+          "sig": "get(key, fallback)",
+          "desc": "The value, or the fallback (null)"
+        },
+        {
+          "name": "set",
+          "sig": "set(key, value)",
+          "desc": "Store, in order"
+        },
+        {
+          "name": "get_or_add",
+          "sig": "get_or_add(key, fallback)",
+          "desc": "Read, storing the fallback first when missing"
+        },
+        {
+          "name": "erase",
+          "sig": "erase(key)",
+          "desc": "Remove. True when it was there"
+        },
+        {
+          "name": "keys",
+          "sig": "keys()",
+          "desc": "A copy of the key list"
+        },
+        {
+          "name": "values",
+          "sig": "values()",
+          "desc": "A copy of the value list"
+        },
+        {
+          "name": "merge",
+          "sig": "merge(other, overwrite)",
+          "desc": "Add another dictionary's pairs"
+        },
+        {
+          "name": "duplicate",
+          "sig": "duplicate(deep)",
+          "desc": "A copy; deep copies nested dictionaries and arrays"
+        },
+        {
+          "name": "find_key",
+          "sig": "find_key(value)",
+          "desc": "The first key with that value"
+        }
       ]
     },
     "Color": {
@@ -460,15 +1073,43 @@
       "inherits": "Object",
       "description": "Godot 4 Color. html(\"#rrggbb\") and to_html() go between web colors and components. r, g, b, a are plain 0-1 numbers.",
       "properties": [
-        { "name": "r", "type": "number", "desc": "Red, 0 to 1" },
-        { "name": "g", "type": "number", "desc": "Green, 0 to 1" },
-        { "name": "b", "type": "number", "desc": "Blue, 0 to 1" },
-        { "name": "a", "type": "number", "desc": "Alpha, 0 to 1" }
+        {
+          "name": "r",
+          "type": "number",
+          "desc": "Red, 0 to 1"
+        },
+        {
+          "name": "g",
+          "type": "number",
+          "desc": "Green, 0 to 1"
+        },
+        {
+          "name": "b",
+          "type": "number",
+          "desc": "Blue, 0 to 1"
+        },
+        {
+          "name": "a",
+          "type": "number",
+          "desc": "Alpha, 0 to 1"
+        }
       ],
       "methods": [
-        { "name": "html", "sig": "html(code)", "desc": "#rgb, #rrggbb, or #rrggbbaa, static" },
-        { "name": "to_html", "sig": "to_html(with_alpha)", "desc": "Back to a web color string" },
-        { "name": "is_equal_approx", "sig": "is_equal_approx(color)", "desc": "Godot-epsilon comparison" }
+        {
+          "name": "html",
+          "sig": "html(code)",
+          "desc": "#rgb, #rrggbb, or #rrggbbaa, static"
+        },
+        {
+          "name": "to_html",
+          "sig": "to_html(with_alpha)",
+          "desc": "Back to a web color string"
+        },
+        {
+          "name": "is_equal_approx",
+          "sig": "is_equal_approx(color)",
+          "desc": "Godot-epsilon comparison"
+        }
       ]
     },
     "Vector3": {
@@ -476,26 +1117,98 @@
       "inherits": "Object",
       "description": "Godot 4 Vector3. Operators are methods: a + b is a.add(b). Constants match Godot: FORWARD, BACK, UP, DOWN, LEFT, RIGHT, ZERO, and friends.",
       "properties": [
-        { "name": "x", "type": "number", "desc": "The first component" },
-        { "name": "y", "type": "number", "desc": "The second component" },
-        { "name": "z", "type": "number", "desc": "The third component" }
+        {
+          "name": "x",
+          "type": "number",
+          "desc": "The first component"
+        },
+        {
+          "name": "y",
+          "type": "number",
+          "desc": "The second component"
+        },
+        {
+          "name": "z",
+          "type": "number",
+          "desc": "The third component"
+        }
       ],
       "methods": [
-        { "name": "add", "sig": "add(v)", "desc": "a + b" },
-        { "name": "sub", "sig": "sub(v)", "desc": "a - b" },
-        { "name": "mul", "sig": "mul(v)", "desc": "By a vector (component-wise) or a number" },
-        { "name": "div", "sig": "div(v)", "desc": "By a vector or a number" },
-        { "name": "length", "sig": "length()", "desc": "The vector's length" },
-        { "name": "length_squared", "sig": "length_squared()", "desc": "Length without the sqrt" },
-        { "name": "normalized", "sig": "normalized()", "desc": "A copy with length 1" },
-        { "name": "normalize", "sig": "normalize()", "desc": "Scale this vector to length 1 in place" },
-        { "name": "dot", "sig": "dot(v)", "desc": "Dot product" },
-        { "name": "cross", "sig": "cross(v)", "desc": "Cross product" },
-        { "name": "lerp", "sig": "lerp(to, weight)", "desc": "Linear interpolation" },
-        { "name": "distance_to", "sig": "distance_to(to)", "desc": "Distance between the points" },
-        { "name": "direction_to", "sig": "direction_to(to)", "desc": "The unit direction toward another vector" },
-        { "name": "neg", "sig": "neg()", "desc": "Both directions negated" },
-        { "name": "clone", "sig": "clone()", "desc": "A value copy" }
+        {
+          "name": "add",
+          "sig": "add(v)",
+          "desc": "a + b"
+        },
+        {
+          "name": "sub",
+          "sig": "sub(v)",
+          "desc": "a - b"
+        },
+        {
+          "name": "mul",
+          "sig": "mul(v)",
+          "desc": "By a vector (component-wise) or a number"
+        },
+        {
+          "name": "div",
+          "sig": "div(v)",
+          "desc": "By a vector or a number"
+        },
+        {
+          "name": "length",
+          "sig": "length()",
+          "desc": "The vector's length"
+        },
+        {
+          "name": "length_squared",
+          "sig": "length_squared()",
+          "desc": "Length without the sqrt"
+        },
+        {
+          "name": "normalized",
+          "sig": "normalized()",
+          "desc": "A copy with length 1"
+        },
+        {
+          "name": "normalize",
+          "sig": "normalize()",
+          "desc": "Scale this vector to length 1 in place"
+        },
+        {
+          "name": "dot",
+          "sig": "dot(v)",
+          "desc": "Dot product"
+        },
+        {
+          "name": "cross",
+          "sig": "cross(v)",
+          "desc": "Cross product"
+        },
+        {
+          "name": "lerp",
+          "sig": "lerp(to, weight)",
+          "desc": "Linear interpolation"
+        },
+        {
+          "name": "distance_to",
+          "sig": "distance_to(to)",
+          "desc": "Distance between the points"
+        },
+        {
+          "name": "direction_to",
+          "sig": "direction_to(to)",
+          "desc": "The unit direction toward another vector"
+        },
+        {
+          "name": "neg",
+          "sig": "neg()",
+          "desc": "Both directions negated"
+        },
+        {
+          "name": "clone",
+          "sig": "clone()",
+          "desc": "A value copy"
+        }
       ]
     },
     "Vector2": {
@@ -503,17 +1216,53 @@
       "inherits": "Object",
       "description": "Godot 4 Vector2. Operators are methods, like Vector3. UP is (0, -1), toward the top of the screen.",
       "properties": [
-        { "name": "x", "type": "number", "desc": "The first component" },
-        { "name": "y", "type": "number", "desc": "The second component" }
+        {
+          "name": "x",
+          "type": "number",
+          "desc": "The first component"
+        },
+        {
+          "name": "y",
+          "type": "number",
+          "desc": "The second component"
+        }
       ],
       "methods": [
-        { "name": "add", "sig": "add(v)", "desc": "a + b" },
-        { "name": "sub", "sig": "sub(v)", "desc": "a - b" },
-        { "name": "length", "sig": "length()", "desc": "The vector's length" },
-        { "name": "normalized", "sig": "normalized()", "desc": "A copy with length 1" },
-        { "name": "dot", "sig": "dot(v)", "desc": "Dot product" },
-        { "name": "cross", "sig": "cross(v)", "desc": "The Z of the 3D cross product" },
-        { "name": "clone", "sig": "clone()", "desc": "A value copy" }
+        {
+          "name": "add",
+          "sig": "add(v)",
+          "desc": "a + b"
+        },
+        {
+          "name": "sub",
+          "sig": "sub(v)",
+          "desc": "a - b"
+        },
+        {
+          "name": "length",
+          "sig": "length()",
+          "desc": "The vector's length"
+        },
+        {
+          "name": "normalized",
+          "sig": "normalized()",
+          "desc": "A copy with length 1"
+        },
+        {
+          "name": "dot",
+          "sig": "dot(v)",
+          "desc": "Dot product"
+        },
+        {
+          "name": "cross",
+          "sig": "cross(v)",
+          "desc": "The Z of the 3D cross product"
+        },
+        {
+          "name": "clone",
+          "sig": "clone()",
+          "desc": "A value copy"
+        }
       ]
     },
     "Vector3i": {
@@ -521,9 +1270,21 @@
       "inherits": "Object",
       "description": "Godot 4 Vector3i. Truncates toward zero. Add Vector3i.UP to a cell to get the cell above.",
       "properties": [
-        { "name": "x", "type": "number", "desc": "The integer X" },
-        { "name": "y", "type": "number", "desc": "The integer Y" },
-        { "name": "z", "type": "number", "desc": "The integer Z" }
+        {
+          "name": "x",
+          "type": "number",
+          "desc": "The integer X"
+        },
+        {
+          "name": "y",
+          "type": "number",
+          "desc": "The integer Y"
+        },
+        {
+          "name": "z",
+          "type": "number",
+          "desc": "The integer Z"
+        }
       ]
     },
     "Basis": {
@@ -532,14 +1293,46 @@
       "description": "Godot 4 Basis. Rows are stored in memory; .x, .y, and .z are the columns, which are the local axes of the transform.",
       "properties": [],
       "methods": [
-        { "name": "from_euler", "sig": "from_euler(euler)", "desc": "Euler radians, Godot's YXZ order. Static" },
-        { "name": "from_columns", "sig": "from_columns(x, y, z)", "desc": "Build from three axis columns. Static" },
-        { "name": "looking_at", "sig": "looking_at(target, up, use_model_front)", "desc": "A basis that faces a direction. Static" },
-        { "name": "xform", "sig": "xform(v)", "desc": "Apply the basis to a vector" },
-        { "name": "inverse", "sig": "inverse()", "desc": "The reverse transformation" },
-        { "name": "transposed", "sig": "transposed()", "desc": "The transposed basis, for normal matrices" },
-        { "name": "get_euler", "sig": "get_euler()", "desc": "Euler radians, YXZ order" },
-        { "name": "get_column", "sig": "get_column(index)", "desc": "One local axis by 0, 1, or 2" }
+        {
+          "name": "from_euler",
+          "sig": "from_euler(euler)",
+          "desc": "Euler radians, Godot's YXZ order. Static"
+        },
+        {
+          "name": "from_columns",
+          "sig": "from_columns(x, y, z)",
+          "desc": "Build from three axis columns. Static"
+        },
+        {
+          "name": "looking_at",
+          "sig": "looking_at(target, up, use_model_front)",
+          "desc": "A basis that faces a direction. Static"
+        },
+        {
+          "name": "xform",
+          "sig": "xform(v)",
+          "desc": "Apply the basis to a vector"
+        },
+        {
+          "name": "inverse",
+          "sig": "inverse()",
+          "desc": "The reverse transformation"
+        },
+        {
+          "name": "transposed",
+          "sig": "transposed()",
+          "desc": "The transposed basis, for normal matrices"
+        },
+        {
+          "name": "get_euler",
+          "sig": "get_euler()",
+          "desc": "Euler radians, YXZ order"
+        },
+        {
+          "name": "get_column",
+          "sig": "get_column(index)",
+          "desc": "One local axis by 0, 1, or 2"
+        }
       ]
     },
     "Quaternion": {
@@ -547,10 +1340,26 @@
       "inherits": "Object",
       "description": "Godot 4 Quaternion, with multiplication, slerp, and conversions to and from Basis.",
       "properties": [
-        { "name": "x", "type": "number", "desc": "X component" },
-        { "name": "y", "type": "number", "desc": "Y component" },
-        { "name": "z", "type": "number", "desc": "Z component" },
-        { "name": "w", "type": "number", "desc": "W component" }
+        {
+          "name": "x",
+          "type": "number",
+          "desc": "X component"
+        },
+        {
+          "name": "y",
+          "type": "number",
+          "desc": "Y component"
+        },
+        {
+          "name": "z",
+          "type": "number",
+          "desc": "Z component"
+        },
+        {
+          "name": "w",
+          "type": "number",
+          "desc": "W component"
+        }
       ]
     },
     "Transform3D": {
@@ -558,16 +1367,48 @@
       "inherits": "Object",
       "description": "Godot 4 Transform3D. Basis plus origin. xform applies it to a point, looking_at returns a copy facing a target with the model-front option, and mul composes two transforms (a.mul(b) applies b first).",
       "properties": [
-        { "name": "basis", "type": "Basis", "desc": "The rotation and scale part" },
-        { "name": "origin", "type": "Vector3", "desc": "The translation part" }
+        {
+          "name": "basis",
+          "type": "Basis",
+          "desc": "The rotation and scale part"
+        },
+        {
+          "name": "origin",
+          "type": "Vector3",
+          "desc": "The translation part"
+        }
       ],
       "methods": [
-        { "name": "xform", "sig": "xform(point)", "desc": "Transform a point" },
-        { "name": "translated", "sig": "translated(offset)", "desc": "A copy moved by the offset" },
-        { "name": "looking_at", "sig": "looking_at(target, up, use_model_front)", "desc": "A copy that faces the target" },
-        { "name": "mul", "sig": "mul(t)", "desc": "Compose two transforms" },
-        { "name": "inverse", "sig": "inverse()", "desc": "The reverse transform" },
-        { "name": "is_equal_approx", "sig": "is_equal_approx(t)", "desc": "Godot-epsilon comparison" }
+        {
+          "name": "xform",
+          "sig": "xform(point)",
+          "desc": "Transform a point"
+        },
+        {
+          "name": "translated",
+          "sig": "translated(offset)",
+          "desc": "A copy moved by the offset"
+        },
+        {
+          "name": "looking_at",
+          "sig": "looking_at(target, up, use_model_front)",
+          "desc": "A copy that faces the target"
+        },
+        {
+          "name": "mul",
+          "sig": "mul(t)",
+          "desc": "Compose two transforms"
+        },
+        {
+          "name": "inverse",
+          "sig": "inverse()",
+          "desc": "The reverse transform"
+        },
+        {
+          "name": "is_equal_approx",
+          "sig": "is_equal_approx(t)",
+          "desc": "Godot-epsilon comparison"
+        }
       ]
     },
     "Plane": {
@@ -575,13 +1416,33 @@
       "inherits": "Object",
       "description": "Godot 4 Plane. distance_to is normal.dot(point) - d, and intersects_ray walks a ray onto the plane (returns null when the ray points away).",
       "properties": [
-        { "name": "normal", "type": "Vector3", "desc": "The plane's normal" },
-        { "name": "d", "type": "number", "desc": "The plane's offset" }
+        {
+          "name": "normal",
+          "type": "Vector3",
+          "desc": "The plane's normal"
+        },
+        {
+          "name": "d",
+          "type": "number",
+          "desc": "The plane's offset"
+        }
       ],
       "methods": [
-        { "name": "distance_to", "sig": "distance_to(point)", "desc": "Signed distance to the plane" },
-        { "name": "project", "sig": "project(point)", "desc": "The point projected onto the plane" },
-        { "name": "intersects_ray", "sig": "intersects_ray(from, dir)", "desc": "Where the ray crosses the plane, or null" }
+        {
+          "name": "distance_to",
+          "sig": "distance_to(point)",
+          "desc": "Signed distance to the plane"
+        },
+        {
+          "name": "project",
+          "sig": "project(point)",
+          "desc": "The point projected onto the plane"
+        },
+        {
+          "name": "intersects_ray",
+          "sig": "intersects_ray(from, dir)",
+          "desc": "Where the ray crosses the plane, or null"
+        }
       ]
     },
     "AABB": {
@@ -595,13 +1456,33 @@
       "inherits": "Object",
       "description": "InputEvent base: subclasses carry modifiers. shift_pressed, ctrl_pressed, alt_pressed, and meta_pressed are true, false, or null (this event does not say; binds treat null as any).",
       "properties": [
-        { "name": "shift_pressed", "type": "boolean | null", "desc": "Modifier state, or null when the event does not say" },
-        { "name": "ctrl_pressed", "type": "boolean | null", "desc": "Modifier state, or null" },
-        { "name": "alt_pressed", "type": "boolean | null", "desc": "Modifier state, or null" },
-        { "name": "meta_pressed", "type": "boolean | null", "desc": "Modifier state, or null" }
+        {
+          "name": "shift_pressed",
+          "type": "boolean | null",
+          "desc": "Modifier state, or null when the event does not say"
+        },
+        {
+          "name": "ctrl_pressed",
+          "type": "boolean | null",
+          "desc": "Modifier state, or null"
+        },
+        {
+          "name": "alt_pressed",
+          "type": "boolean | null",
+          "desc": "Modifier state, or null"
+        },
+        {
+          "name": "meta_pressed",
+          "type": "boolean | null",
+          "desc": "Modifier state, or null"
+        }
       ],
       "methods": [
-        { "name": "is_pressed", "sig": "is_pressed()", "desc": "True when the event is a press" }
+        {
+          "name": "is_pressed",
+          "sig": "is_pressed()",
+          "desc": "True when the event is a press"
+        }
       ]
     },
     "InputEventKey": {
@@ -609,14 +1490,38 @@
       "inherits": "InputEvent",
       "description": "A keyboard event with both codes: key_code is the layout-dependent code, physical_key_code is the position on the US QWERTY keyboard. A bind stores which kind it means; the code flag decides the matching.",
       "properties": [
-        { "name": "key_code", "type": "Key", "desc": "Layout code" },
-        { "name": "physical_key_code", "type": "Key", "desc": "Position on the US QWERTY keyboard" },
-        { "name": "physical", "type": "boolean | null", "desc": "Which kind this bind stores against, for binds" },
-        { "name": "echo", "type": "boolean", "desc": "True for auto-repeat keydowns" },
-        { "name": "unicode", "type": "string", "desc": "The typed character" }
+        {
+          "name": "key_code",
+          "type": "Key",
+          "desc": "Layout code"
+        },
+        {
+          "name": "physical_key_code",
+          "type": "Key",
+          "desc": "Position on the US QWERTY keyboard"
+        },
+        {
+          "name": "physical",
+          "type": "boolean | null",
+          "desc": "Which kind this bind stores against, for binds"
+        },
+        {
+          "name": "echo",
+          "type": "boolean",
+          "desc": "True for auto-repeat keydowns"
+        },
+        {
+          "name": "unicode",
+          "type": "string",
+          "desc": "The typed character"
+        }
       ],
       "methods": [
-        { "name": "is_echo", "sig": "is_echo()", "desc": "True for auto-repeat. Actions usually ignore it" }
+        {
+          "name": "is_echo",
+          "sig": "is_echo()",
+          "desc": "True for auto-repeat. Actions usually ignore it"
+        }
       ]
     },
     "InputEventMouseButton": {
@@ -624,8 +1529,16 @@
       "inherits": "InputEvent",
       "description": "A click. button_index is one of MouseButton.LEFT, RIGHT, MIDDLE, WHEEL_UP, WHEEL_DOWN. position is in canvas pixels from the top-left.",
       "properties": [
-        { "name": "button_index", "type": "MouseButton", "desc": "Which button" },
-        { "name": "position", "type": "Vector2", "desc": "Canvas pixels" }
+        {
+          "name": "button_index",
+          "type": "MouseButton",
+          "desc": "Which button"
+        },
+        {
+          "name": "position",
+          "type": "Vector2",
+          "desc": "Canvas pixels"
+        }
       ]
     },
     "InputEventMouseMotion": {
@@ -633,8 +1546,16 @@
       "inherits": "InputEvent",
       "description": "Pointer movement: position is the current spot, relative is the movement since the previous motion event. is_pressed is always false.",
       "properties": [
-        { "name": "position", "type": "Vector2", "desc": "Current canvas pixels" },
-        { "name": "relative", "type": "Vector2", "desc": "Movement since the previous motion" }
+        {
+          "name": "position",
+          "type": "Vector2",
+          "desc": "Current canvas pixels"
+        },
+        {
+          "name": "relative",
+          "type": "Vector2",
+          "desc": "Movement since the previous motion"
+        }
       ]
     },
     "InputEventAction": {
@@ -642,8 +1563,16 @@
       "inherits": "InputEvent",
       "description": "The InputEventAction.new() equivalent: action, pressed, strength. parse_input_event drives it without any device event.",
       "properties": [
-        { "name": "action", "type": "string", "desc": "The action name" },
-        { "name": "strength", "type": "number", "desc": "0 to 1" }
+        {
+          "name": "action",
+          "type": "string",
+          "desc": "The action name"
+        },
+        {
+          "name": "strength",
+          "type": "number",
+          "desc": "0 to 1"
+        }
       ]
     },
     "Key": {
@@ -651,12 +1580,36 @@
       "inherits": "Object",
       "description": "Godot 4 @GlobalScope.Key values: letters and digits are ASCII uppercase (Key.W is 87), specials start at Key.SPECIAL = 4194304, so Key.ESCAPE is 4194305 and Key.LEFT is 4194319. F1 through F12 continue from there.",
       "properties": [
-        { "name": "W", "type": "number", "desc": "87" },
-        { "name": "SPACE", "type": "number", "desc": "32" },
-        { "name": "ESCAPE", "type": "number", "desc": "4194305" },
-        { "name": "LEFT", "type": "number", "desc": "4194319" },
-        { "name": "SHIFT", "type": "number", "desc": "4194325" },
-        { "name": "CTRL", "type": "number", "desc": "4194326" }
+        {
+          "name": "W",
+          "type": "number",
+          "desc": "87"
+        },
+        {
+          "name": "SPACE",
+          "type": "number",
+          "desc": "32"
+        },
+        {
+          "name": "ESCAPE",
+          "type": "number",
+          "desc": "4194305"
+        },
+        {
+          "name": "LEFT",
+          "type": "number",
+          "desc": "4194319"
+        },
+        {
+          "name": "SHIFT",
+          "type": "number",
+          "desc": "4194325"
+        },
+        {
+          "name": "CTRL",
+          "type": "number",
+          "desc": "4194326"
+        }
       ]
     },
     "MouseButton": {
@@ -664,9 +1617,21 @@
       "inherits": "Object",
       "description": "Mouse buttons: LEFT = 1, RIGHT = 2, MIDDLE = 3, WHEEL_UP = 4, WHEEL_DOWN = 5.",
       "properties": [
-        { "name": "LEFT", "type": "number", "desc": "1" },
-        { "name": "RIGHT", "type": "number", "desc": "2" },
-        { "name": "MIDDLE", "type": "number", "desc": "3" }
+        {
+          "name": "LEFT",
+          "type": "number",
+          "desc": "1"
+        },
+        {
+          "name": "RIGHT",
+          "type": "number",
+          "desc": "2"
+        },
+        {
+          "name": "MIDDLE",
+          "type": "number",
+          "desc": "3"
+        }
       ]
     },
     "SurfaceArrays": {
@@ -674,12 +1639,36 @@
       "inherits": "Object",
       "description": "The arrays one surface hands to the renderer: positions, optional normals, colors, uvs, tangents (four floats: xyz plus the binormal sign), and indices. Triangles wind counter-clockwise seen from outside. Missing arrays fall back (white colors, +Z normals) so script-built meshes still render.",
       "properties": [
-        { "name": "positions", "type": "Float32Array", "desc": "Three floats per vertex" },
-        { "name": "normals", "type": "Float32Array", "desc": "Optional, three per vertex" },
-        { "name": "colors", "type": "Float32Array", "desc": "Optional, three per vertex" },
-        { "name": "uvs", "type": "Float32Array", "desc": "Optional, two per vertex" },
-        { "name": "tangents", "type": "Float32Array", "desc": "Optional, four per vertex" },
-        { "name": "indices", "type": "Uint32Array", "desc": "Triangle references" }
+        {
+          "name": "positions",
+          "type": "Float32Array",
+          "desc": "Three floats per vertex"
+        },
+        {
+          "name": "normals",
+          "type": "Float32Array",
+          "desc": "Optional, three per vertex"
+        },
+        {
+          "name": "colors",
+          "type": "Float32Array",
+          "desc": "Optional, three per vertex"
+        },
+        {
+          "name": "uvs",
+          "type": "Float32Array",
+          "desc": "Optional, two per vertex"
+        },
+        {
+          "name": "tangents",
+          "type": "Float32Array",
+          "desc": "Optional, four per vertex"
+        },
+        {
+          "name": "indices",
+          "type": "Uint32Array",
+          "desc": "Triangle references"
+        }
       ]
     }
   }

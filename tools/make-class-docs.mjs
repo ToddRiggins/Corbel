@@ -46,6 +46,14 @@ const css = `
     nav h1 { font-weight: normal; font-size: 1.05rem; margin: 0.7rem 0.9rem 0.4rem; }
     nav input { width: calc(100% - 1.6rem); margin: 0 0.8rem 0.5rem; padding: 0.35rem 0.5rem; background: #2a2a2a; border: 1px solid #444; color: #e7e5e4; border-radius: 4px; font: 13px system-ui; box-sizing: border-box; }
     nav .group-label { color: #a8a29e; font-size: 0.8rem; margin: 0.9rem 0.9rem 0.2rem; letter-spacing: 0.05em; }
+    .group { margin-top: 0.35rem; }
+    .group-toggle { display: flex; align-items: center; gap: 0.4rem; width: 100%; text-align: left; background: none; border: none; color: #fdba74; font: 600 0.8rem/2.1 Georgia, serif; letter-spacing: 0.05em; padding: 0 0.9rem; cursor: pointer; }
+    .group-toggle .arrow { display: inline-block; transition: transform 0.12s ease; color: #a8a29e; font-size: 0.75rem; width: 0.9rem; }
+    .group-toggle[aria-expanded="true"] .arrow { transform: rotate(90deg); }
+    .group-toggle:hover { background: #2a2a2a; }
+    .group-classes { padding-bottom: 0.2rem; }
+    .index-groups .group-toggle { font-size: 1rem; margin-top: 0.4rem; }
+    .index-groups .group-classes { padding-left: 1.1rem; }
     nav button { display: block; width: 100%; text-align: left; background: none; border: none; color: #d6d3d1; padding: 0.22rem 0.9rem; font: 14px/1.5 Georgia, serif; cursor: pointer; }
     nav button:hover { background: #2a2a2a; }
     nav button.on { background: #3f3f46; color: #fff; }
@@ -64,6 +72,29 @@ const css = `
     .soon { color: #a8a29e; font-style: italic; }
     .note { color: #a8a29e; font-size: 0.9rem; }
     @media (max-width: 800px) { .layout { display: block; } nav { position: static; height: auto; width: 100%; } }
+`;
+
+/** One section open at a time; arrows flip between the closed and open glyph. */
+const accordionJs = `
+  function wireAccordion(root) {
+    root.querySelectorAll(".group-toggle").forEach((toggle) => {
+      toggle.addEventListener("click", () => {
+        const group = toggle.closest(".group");
+        const classes = group.querySelector(".group-classes");
+        const wasOpen = !classes.hidden;
+        document.querySelectorAll(".group").forEach((other) => {
+          const hidden = other.querySelector(".group-classes");
+          const head = other.querySelector(".group-toggle");
+          if (hidden) { hidden.hidden = true; }
+          if (head) { head.setAttribute("aria-expanded", "false"); }
+        });
+        if (!wasOpen) {
+          classes.hidden = false;
+          toggle.setAttribute("aria-expanded", "true");
+        }
+      });
+    });
+  }
 `;
 
 const headerNav = `
@@ -89,6 +120,7 @@ function classPage(name) {
   <title>${esc(name)} — Corbel Class Reference</title>
   <style>${css}</style>
   <script>
+    ${accordionJs}
     window.addEventListener("load", () => {
       const q = new URLSearchParams(window.location.search);
       const member = q.get("m");
@@ -96,6 +128,7 @@ function classPage(name) {
         const row = document.getElementById(decodeURIComponent(member));
         if (row) { row.style.outline = "2px solid #fdba74"; row.style.outlineOffset = "3px"; row.scrollIntoView({ block: "center" }); }
       }
+      wireAccordion(document);
       const input = document.getElementById("find");
       const buttons = Array.from(document.querySelectorAll("nav button[data-name]"));
       buttons.forEach((button) => { button.classList.toggle("on", button.dataset.name === ${JSON.stringify(name)}); });
@@ -136,20 +169,20 @@ ${methods}
 function sidebarList(current) {
   let html = "";
   for (const group of data.groups ?? []) {
-    html += `<div class="group-label">${esc(group.label)}</div>`;
+    const open = current !== "" && (group.classes ?? []).includes(current);
+    html += `<div class="group" data-group="${esc(group.label)}">`;
+    html += `<button class="group-toggle" type="button" aria-expanded="${open}"><span class="arrow">▸</span>${esc(group.label)}</button>`;
+    html += `<div class="group-classes"${open ? "" : " hidden"}>`;
     for (const name of group.classes) {
-      html += `<button data-name="${esc(name)}" class="${name === current ? "on" : ""}" onclick="window.location='class_${name}.html'">${esc(name)}</button>`;
+      html += `<button data-name="${esc(name)}" type="button" class="${name === current ? "on" : ""}" onclick="window.location='class_${name}.html'">${esc(name)}</button>`;
     }
+    html += `</div></div>`;
   }
   return html;
 }
 
 /** The "All classes" index: Godot's classes/index.html shape. */
 function indexPage() {
-  const groups = (data.groups ?? []).map((group) => {
-    const names = group.classes.map((name) => `        <li><a href="class_${name}.html" style="color:#fdba74">${esc(name)}</a></li>`);
-    return `<div class="group-label" style="color:#a8a29e;font-size:0.9em;letter-spacing:0.05em;margin:0.8rem 0 0.2rem">${esc(group.label).toUpperCase()}</div>\n<ul style="list-style:none;padding-left:0;margin:0.2rem 0 0.6rem">\n${names.join("\n")}\n      </ul>`;
-  });
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,6 +192,18 @@ function indexPage() {
   <style>${css}
     main { max-width: 42rem; }
   </style>
+  <script>
+    ${accordionJs}
+    window.addEventListener("load", () => {
+      wireAccordion(document);
+      const input = document.getElementById("find");
+      const buttons = Array.from(document.querySelectorAll("nav button[data-name]"));
+      input.addEventListener("input", () => {
+        const query = input.value.toLowerCase();
+        buttons.forEach((button) => { button.hidden = query.length > 0 && !button.dataset.name.toLowerCase().includes(query); });
+      });
+    });
+  </script>
 </head>
 <body>
   <div class="layout">
@@ -168,9 +213,9 @@ function indexPage() {
     <main>
       <p class="crumbs">Corbel › Class Reference</p>
       <h1>All classes</h1>
-      <p class="note">${(data.groups ?? []).reduce((sum, group) => sum + group.classes.length, 0)} classes. Sections below group them the way Godot's ClassDB does.</p>
+      <p class="note">${(data.groups ?? []).reduce((sum, group) => sum + group.classes.length, 0)} classes. Sections below group them the way Godot's ClassDB does. One section open at a time.</p>
       <p class="note">Use the editor's Look up (right-click a script symbol) to jump straight to a class or member page.</p>
-${groups.join("\n")}
+      <div class="index-groups">${sidebarList("")}</div>
     </main>
   </div>
 </body>
