@@ -1,5 +1,7 @@
 # Corbel plan — full engine foundation, Godot-4 style
 
+> **Continuation state (keep updated):** P1 slices 1–3 done and pushed (registry, autoloads, timers/scene change). Next in P1: **slice 4 — PackedScene runtime** (`load("res://level.cscene")` → `instantiate()`). Then P2 resources/textures per the phases below. Both backends verified; docs live in documentation.html / tutorial.html / history.html and are part of every slice. Voxel picking parked until P1–P7 are done (~P7).
+
 Corbel grows past the foundation slices toward feature parity with Godot 4 (3D scope only, no 2D). Names, semantics, and scripts keep Godot 4 meanings so code ports between GDScript and TypeScript with small edits. 2D (sprites, TileMap, CanvasItem 2D rendering, 2D physics) is out of scope until a later decision. Voxel picking (`VoxelData`, `intersect_ray`) is parked until this plan is done.
 
 ## Where we are (done)
