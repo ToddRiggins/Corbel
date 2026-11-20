@@ -23,7 +23,7 @@ export default class Player extends Node3D {
 
   override _ready(): void {
     const body = this.get_node("Body") as MeshInstance3D;
-    body.geometry = new BoxMesh(new Vector3(1, 1, 1));
+    body.mesh = new BoxMesh(new Vector3(1, 1, 1));
     const material = new StandardMaterial3D();
     material.albedo = Color.html("#e07a26");
     // The texture arrives as a project resource; Godot's `load` idiom.

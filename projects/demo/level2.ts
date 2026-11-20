@@ -8,7 +8,7 @@ export default class Level2 extends Node3D {
 
   override _ready(): void {
     const portal = this.get_node("Portal") as MeshInstance3D;
-    portal.geometry = new BoxMesh(new Vector3(1.2, 2.2, 0.4));
+    portal.mesh = new BoxMesh(new Vector3(1.2, 2.2, 0.4));
     // The material file: albedo + albedo_texture as data, loaded by load().
     void load("res://textures/portal.cmaterial").then((resource) => {
       if (resource instanceof StandardMaterial3D) {
