@@ -54,7 +54,7 @@ function build_pyramid(): MeshInstance3D {
   tool.generate_normals();
   const body = new MeshInstance3D();
   body.set_name("Pyramid");
-  body.geometry = tool.commit();
+  body.mesh = tool.commit();
   // A user material: same names in both bodies, the tint arrives as a vec4.
   const pyramid_shader = Shader.lit({
     uniforms: ["Sides"],
@@ -79,7 +79,7 @@ class SpinCube extends MeshInstance3D {
 function build_demo(tree: SceneTree): void {
   const cube = new SpinCube();
   cube.set_name("Cube");
-  cube.geometry = new BoxMesh(new Vector3(1.6, 1.6, 1.6));
+  cube.mesh = new BoxMesh(new Vector3(1.6, 1.6, 1.6));
   const material = new StandardMaterial3D();
   material.albedo = new Color(0.9, 0.45, 0.15, 1);
   cube.material_override = material;

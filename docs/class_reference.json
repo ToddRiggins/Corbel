@@ -344,23 +344,79 @@
     "GeometryInstance3D": {
       "brief": "Base class for nodes a renderer can draw.",
       "inherits": "Node3D",
-      "description": "GeometryInstance3D is the base every draw node inherits from in Godot. In the foundation, MeshInstance3D is its only concrete subclass today.",
-      "properties": []
-    },
-    "MeshInstance3D": {
-      "brief": "A node that draws the mesh assigned to its geometry.",
-      "inherits": "GeometryInstance3D",
-      "description": "MeshInstance3D draws its geometry when it holds a Mesh, and material_override carries the color or texture. It can be added, moved, hidden, and saved. The weave attaches project scripts to scene nodes by their script_path meta, so a saved MeshInstance3D can carry a .ts script.",
+      "description": "GeometryInstance3D is every drawable node's base: MeshInstance3D today. material_override and transparency live here, as in Godot, so any geometry subclass carries them.",
       "properties": [
-        {
-          "name": "geometry",
-          "type": "Mesh | null",
-          "desc": "The mesh to draw. Nothing draws while it is null"
-        },
         {
           "name": "material_override",
           "type": "Material | null",
-          "desc": "The material the surface draws with. StandardMaterial3D or ShaderMaterial"
+          "desc": "Godot 4 material_override: replaces every surface's material, overrides a mesh's own"
+        },
+        {
+          "name": "transparency",
+          "type": "number",
+          "desc": "Godot 4 transparency: 0.0 draws solid, closer to 1.0 is see-through. Transparent draws blend and sort after opaque ones"
+        }
+      ],
+      "not_built": [
+        {
+          "name": "cast_shadow",
+          "why": "P3 shadow maps"
+        },
+        {
+          "name": "visibility_range_*",
+          "why": "Frustum culling and distance fades"
+        },
+        {
+          "name": "extra_cull_margin / custom_aabb",
+          "why": "Frustum culling"
+        },
+        {
+          "name": "lod_bias / material_overlay / gi_*",
+          "why": "LOD, multi-pass, and GI \u2014 later phases"
+        }
+      ]
+    },
+    "MeshInstance3D": {
+      "brief": "A node that draws the mesh assigned to its mesh property.",
+      "inherits": "GeometryInstance3D",
+      "description": "MeshInstance3D draws one Mesh. The mesh property is Godot's name. A surface override material (set_surface_override_material) wins, then material_override from GeometryInstance3D, then the mesh's own surface material; get_active_material answers the full chain the way Godot resolves it.",
+      "properties": [
+        {
+          "name": "mesh",
+          "type": "Mesh | null",
+          "desc": "Godot 4 mesh: what this node draws"
+        }
+      ],
+      "methods": [
+        {
+          "sig": "set_surface_override_material(surface: number, material: Material | null)",
+          "desc": "Godot 4 set_surface_override_material: one surface draws this material instead"
+        },
+        {
+          "sig": "get_surface_override_material(surface: number): Material | null",
+          "desc": "One surface's override, or null when it falls through"
+        },
+        {
+          "sig": "get_surface_override_material_count(): number",
+          "desc": "How many override slots exist"
+        },
+        {
+          "sig": "get_active_material(surface = 0): Material | null",
+          "desc": "Surface override, then material_override, then the mesh's material, then null"
+        }
+      ],
+      "not_built": [
+        {
+          "name": "skeleton / skin / blend shape methods",
+          "why": "Animation phase"
+        },
+        {
+          "name": "create_trimesh_collision / create_convex_collision",
+          "why": "Physics phases"
+        },
+        {
+          "name": "bake_mesh_from_current_*",
+          "why": "Sketch and baking tooling"
         }
       ]
     },
@@ -389,10 +445,10 @@
       ]
     },
     "Environment": {
-      "brief": "Resource holding the tree's background and ambient.",
+      "brief": "Holds the tree's look: background, ambient, and fog.",
       "inherits": "Resource",
       "environment": false,
-      "description": "Environment holds the tree's look data: background_color is what the canvas clears to, ambient is the ambient light color that lighting adds to every surface. WorldEnvironment carries this resource.",
+      "description": "Environment is the resource a WorldEnvironment node carries. background_color is what the canvas clears to and ambient is the light every surface gets. fog_enabled turns the fog block on: FOG_MODE_EXPONENTIAL thickens with the view distance (fog_density), FOG_MODE_DEPTH fades in from fog_depth_begin to fog_depth_end shaped by fog_depth_curve, and both thin out above fog_height at the fog_height_density rate, tinted by fog_light_color. Environment.from_data reads these out of a .cenv scene file.",
       "properties": [
         {
           "name": "background_color",
@@ -403,6 +459,71 @@
           "name": "ambient",
           "type": "Color",
           "desc": "The ambient light color"
+        },
+        {
+          "name": "fog_enabled",
+          "type": "boolean",
+          "desc": "Godot 4 fog_enabled"
+        },
+        {
+          "name": "fog_mode",
+          "type": "number",
+          "desc": "FogMode.EXPONENTIAL (0) or FogMode.DEPTH (1)"
+        },
+        {
+          "name": "fog_light_color",
+          "type": "Color",
+          "desc": "Godot 4 fog_light_color: what the fog tints toward"
+        },
+        {
+          "name": "fog_density",
+          "type": "number",
+          "desc": "Godot 4 fog_density: exponential mode thickness"
+        },
+        {
+          "name": "fog_depth_begin",
+          "type": "number",
+          "desc": "Godot 4 fog_depth_begin: depth mode fade start, world units"
+        },
+        {
+          "name": "fog_depth_end",
+          "type": "number",
+          "desc": "Godot 4 fog_depth_end: full fog at this distance"
+        },
+        {
+          "name": "fog_depth_curve",
+          "type": "number",
+          "desc": "Godot 4 fog_depth_curve: exponent on the depth fade"
+        },
+        {
+          "name": "fog_height",
+          "type": "number",
+          "desc": "Godot 4 fog_height: the world height the fog thins above"
+        },
+        {
+          "name": "fog_height_density",
+          "type": "number",
+          "desc": "Godot 4 fog_height_density: how fast it thins"
+        }
+      ],
+      "methods": [
+        {
+          "sig": "from_data(data): Environment",
+          "desc": "Build one from a .cenv file's values, including the fog block"
+        }
+      ],
+      "not_built": [
+        {
+          "name": "fog_sky_affect / fog_sun_scatter / fog_aerial_perspective",
+          "why": "Sky (P3) and particle sun scatter"
+        },
+        {
+          "name": "fog_mode depth + height already in; glow, tonemap, adjustment, volumetric fog, sky",
+          "why": "Later P2/P3 slices in Godot order"
+        },
+        {
+          "name": "background modes beyond BG_COLOR (sky, canvas, camera feed)",
+          "why": "With sky support"
         }
       ]
     },
@@ -790,33 +911,107 @@
     "Material": {
       "brief": "Base class for the way a surface draws.",
       "inherits": "Resource",
-      "description": "Material is the base class of StandardMaterial3D and ShaderMaterial. A renderer reads the concrete type per draw. Set a material on a MeshInstance3D with material_override.",
-      "properties": []
+      "description": "Material carries the properties every material shares: render_priority sorts overlapping transparent draws, and next_pass chains a second material to draw over this one. The concrete classes are StandardMaterial3D and ShaderMaterial.",
+      "properties": [
+        {
+          "name": "render_priority",
+          "type": "number",
+          "desc": "Godot 4 render_priority: higher draws later among transparent draws"
+        },
+        {
+          "name": "next_pass",
+          "type": "Material | null",
+          "desc": "Godot 4 next_pass: the material drawn after this one on the same surface"
+        }
+      ]
     },
     "StandardMaterial3D": {
-      "brief": "The built-in lit material: albedo, texture, roughness, metallic.",
+      "brief": "The built-in lit material: albedo, textures, normal map, roughness and metallic maps, fog participation.",
       "inherits": "Material",
-      "description": "StandardMaterial3D draws with the built-in lit shader on both backends. The albedo texture multiplies the albedo color, so a white material shows texture colors; a texture-less material samples a white 1x1 and the albedo color behaves exactly like the pre-texture engine.",
+      "description": "StandardMaterial3D is the built-in material the renderer's lit shader draws. The albedo color multiplies the albedo texture. A normal_texture reshapes shading through the mesh's tangents, pushed in and out by normal_scale. The roughness_texture and metallic_texture each read one color channel (TextureChannel.RED for roughness and TextureChannel.BLUE for metallic, the Godot defaults) and multiply the roughness and metallic scalars. uv1_scale and uv1_offset transform the UVs before every texture samples. vertex_color_use_as_albedo lets the mesh's own vertex colors into the albedo. Transparency comes from GeometryInstance3D.transparency.",
       "properties": [
         {
           "name": "albedo",
           "type": "Color",
-          "desc": "The base color. Multiplied by albedo_texture"
-        },
-        {
-          "name": "roughness",
-          "type": "number",
-          "desc": "Present for Godot compatibility; the foundation's lit shader ignores it today"
-        },
-        {
-          "name": "metallic",
-          "type": "number",
-          "desc": "Present for Godot compatibility; the foundation's lit shader ignores it today"
+          "desc": "The base color every texture multiplies"
         },
         {
           "name": "albedo_texture",
           "type": "Texture2D | null",
-          "desc": "The color texture to sample once per UV square"
+          "desc": "Godot 4 albedo_texture: multiplies the albedo color"
+        },
+        {
+          "name": "vertex_color_use_as_albedo",
+          "type": "boolean",
+          "desc": "Godot 4 vertex_color_use_as_albedo: vertex colors join the albedo"
+        },
+        {
+          "name": "normal_texture",
+          "type": "Texture2D | null",
+          "desc": "Godot 4 normal_texture: tangent-space normal map; the mesh needs tangents"
+        },
+        {
+          "name": "normal_scale",
+          "type": "number",
+          "desc": "Godot 4 normal_scale: strength of the normal map, 0 turns it off"
+        },
+        {
+          "name": "roughness",
+          "type": "number",
+          "desc": "Godot 4 roughness: 0 is a mirror, 1 is matte"
+        },
+        {
+          "name": "roughness_texture",
+          "type": "Texture2D | null",
+          "desc": "Godot 4 roughness_texture: per-pixel roughness on one channel"
+        },
+        {
+          "name": "roughness_texture_channel",
+          "type": "number",
+          "desc": "Godot 4 roughness_texture_channel: TextureChannel.RED by default"
+        },
+        {
+          "name": "metallic",
+          "type": "number",
+          "desc": "Godot 4 metallic: 0 is dielectric, 1 tints reflections with the albedo"
+        },
+        {
+          "name": "metallic_texture",
+          "type": "Texture2D | null",
+          "desc": "Godot 4 metallic_texture: per-pixel metallic on one channel"
+        },
+        {
+          "name": "metallic_texture_channel",
+          "type": "number",
+          "desc": "Godot 4 metallic_texture_channel: TextureChannel.BLUE by default"
+        },
+        {
+          "name": "uv1_scale",
+          "type": "Vector2",
+          "desc": "Godot 4 uv1_scale: UVs multiply this before every texture samples"
+        },
+        {
+          "name": "uv1_offset",
+          "type": "Vector2",
+          "desc": "Godot 4 uv1_offset: then add this"
+        }
+      ],
+      "not_built": [
+        {
+          "name": "emission (+texture), clearcoat, anisotropy, backscatter",
+          "why": "Emission next in P2; clearcoat later"
+        },
+        {
+          "name": "transparency (cull depth / alpha scissor) modes",
+          "why": "GeometryInstance3D.transparency covers plain alpha today"
+        },
+        {
+          "name": "heightmap, detail layers, uv2, triplanar",
+          "why": "After uv1 maps prove the pipeline"
+        },
+        {
+          "name": "texture_filter, msdf, billboard, shadow modes",
+          "why": "P3 shadow maps and sampler control"
         }
       ]
     },
@@ -869,32 +1064,169 @@
       ]
     },
     "Mesh": {
-      "brief": "Base class for draw geometry.",
+      "brief": "Base class for meshes: one or more surfaces of geometry plus materials.",
       "inherits": "Resource",
-      "description": "Mesh is the base every renderer-visible geometry inherits: ArrayMesh and BoxMesh today, with the SurfaceTool able to build any of them in code.",
-      "properties": []
+      "description": "Mesh holds draw geometry. A mesh carries one or more surfaces; each surface is a PrimitiveType plus its arrays, and can carry its own Material. BoxMesh and ArrayMesh are the concrete meshes today. get_faces returns the mesh as flat triangles and get_aabb wraps all of it. The ARRAY constants name the array slots the way Godot numbers them, so mesh data written in Godot reads the same here.",
+      "properties": [],
+      "methods": [
+        {
+          "sig": "get_surface_count(): number",
+          "desc": "How many surfaces the mesh holds"
+        },
+        {
+          "sig": "surface_get_arrays(surface: number): SurfaceArrays",
+          "desc": "The arrays of one surface. Surface 0 is the only surface today; the renderer draws it"
+        },
+        {
+          "sig": "surface_get_material(surface: number): Material | null",
+          "desc": "The material one surface draws with, or null"
+        },
+        {
+          "sig": "surface_set_material(surface: number, material: Material | null)",
+          "desc": "Set one surface's material. An ArrayMesh keeps it; BoxMesh ignores it"
+        },
+        {
+          "sig": "get_aabb(): AABB",
+          "desc": "The axis-aligned box that wraps every surface"
+        },
+        {
+          "sig": "get_faces(): Vector3[]",
+          "desc": "The mesh as a flat list of triangles: three corner points per face"
+        }
+      ],
+      "not_built": [
+        {
+          "name": "create_trimesh_shape / create_convex_shape",
+          "why": "Physics shapes \u2014 the physics phases"
+        },
+        {
+          "name": "create_outline",
+          "why": "Sweeps an outline shape; needs tessellation tooling"
+        },
+        {
+          "name": "generate_triangle_mesh",
+          "why": "Convenience over get_faces"
+        },
+        {
+          "name": "lightmap_size_hint",
+          "why": "Lightmap baking, not scheduled"
+        }
+      ]
     },
     "ArrayMesh": {
-      "brief": "A mesh built from raw arrays: positions, normals, colors, uvs, indices.",
+      "brief": "A mesh that holds a mutable list of surfaces built at runtime.",
       "inherits": "Mesh",
-      "description": "ArrayMesh wraps one surface of arrays. Use SurfaceTool with PrimitiveType.TRIANGLES to build them one vertex at a time, or write the arrays directly. Triangles wind counter-clockwise seen from outside.",
+      "description": "ArrayMesh keeps surfaces you add yourself. add_surface_from_arrays appends one surface (PrimitiveType plus its SurfaceArrays), surface_get_primitive_type, surface_get_name / surface_set_name and surface_get_material / surface_set_material read or change the surface's settings, and surface_remove or clear_surfaces take them away. Indices must point at real vertices, or building throws. custom_aabb shrinks the measured AABB when set. A constructor that gets SurfaceArrays builds the same single TRIANGLES surface as before.",
       "properties": [
         {
-          "name": "arrays",
-          "type": "SurfaceArrays",
-          "desc": "The positions, normals, colors, uvs, tangents, and indices"
+          "name": "custom_aabb",
+          "type": "AABB | null",
+          "desc": "Godot 4 custom_aabb: overrides the measured AABB when set"
+        }
+      ],
+      "methods": [
+        {
+          "sig": "add_surface_from_arrays(primitive: number, arrays: SurfaceArrays)",
+          "desc": "Append one surface. Throws when positions are ragged or an index is out of range"
+        },
+        {
+          "sig": "surface_remove(surface: number)",
+          "desc": "Take one surface away, Godot 4 surface_remove"
+        },
+        {
+          "sig": "clear_surfaces()",
+          "desc": "Remove every surface"
+        },
+        {
+          "sig": "surface_get_primitive_type(surface: number): number",
+          "desc": "The PrimitiveType one surface builds with"
+        },
+        {
+          "sig": "surface_get_name(surface: number): string",
+          "desc": "The surface's name, empty when unset"
+        },
+        {
+          "sig": "surface_set_name(surface: number, name: string)",
+          "desc": "Name one surface"
+        },
+        {
+          "sig": "get_surface_count(): number",
+          "desc": "How many surfaces the mesh holds"
+        },
+        {
+          "sig": "surface_get_arrays(surface: number): SurfaceArrays",
+          "desc": "One surface's arrays"
+        },
+        {
+          "sig": "surface_get_material(surface: number): Material | null",
+          "desc": "One surface's material"
+        },
+        {
+          "sig": "surface_set_material(surface: number, material: Material | null)",
+          "desc": "Set one surface's material"
+        },
+        {
+          "sig": "get_aabb(): AABB",
+          "desc": "custom_aabb when set, otherwise the box all surfaces fit in"
+        }
+      ],
+      "not_built": [
+        {
+          "name": "blend shapes (add_blend_shape, get_blend_shape_*)",
+          "why": "Animation phase"
+        },
+        {
+          "name": "regen_normal_maps / lightmap_unwrap",
+          "why": "Editor tooling and baking"
+        },
+        {
+          "name": "shadow_mesh",
+          "why": "P3 shadow maps"
+        },
+        {
+          "name": "surface_update_vertex_region",
+          "why": "GPU streaming edits"
         }
       ]
     },
     "BoxMesh": {
-      "brief": "A cube centered on the origin.",
+      "brief": "A box mesh: every face carries the full 0 to 1 UV square and out-facing normals.",
       "inherits": "Mesh",
-      "description": "BoxMesh builds a 24-vertex, 36-index cube with outward normals, white vertex colors, and one 0-1 UV square per face. size controls the extent along each axis.",
+      "description": "BoxMesh builds six axis-aligned faces centered on the origin, winded counter-clockwise seen from outside, one full texture square per face, and a tangent on every vertex that follows the face's first grid axis. size sets the full length on each axis. subdivide_width, subdivide_height, and subdivide_depth split the matching face pairs into a grid the way Godot numbers them: width splits the faces normal to Z and Y, height splits those normal to Z and X, and depth splits those normal to Y and X. The default is one, the plain quad faces.",
       "properties": [
         {
           "name": "size",
           "type": "Vector3",
-          "desc": "The extent along each axis. 1x1x1 by default"
+          "desc": "Full length on each axis"
+        },
+        {
+          "name": "subdivide_width",
+          "type": "number",
+          "desc": "Splits along each face's width direction; 1 keeps one quad"
+        },
+        {
+          "name": "subdivide_height",
+          "type": "number",
+          "desc": "Splits along each face's height direction"
+        },
+        {
+          "name": "subdivide_depth",
+          "type": "number",
+          "desc": "Splits along each face's depth direction"
+        }
+      ],
+      "methods": [
+        {
+          "sig": "surface_get_arrays(surface: number): SurfaceArrays",
+          "desc": "The box grids. BoxMesh always answers surface 0"
+        },
+        {
+          "sig": "get_aabb(): AABB",
+          "desc": "The box the mesh fills"
+        },
+        {
+          "sig": "get_faces(): Vector3[]",
+          "desc": "The 12 triangles as corner points"
         }
       ]
     },
@@ -922,59 +1254,70 @@
       "properties": [],
       "methods": [
         {
-          "name": "begin",
           "sig": "begin(primitive)",
           "desc": "Start a surface. TRIANGLES is what the renderer draws"
         },
         {
-          "name": "set_normal",
           "sig": "set_normal(normal)",
           "desc": "The next vertex's normal"
         },
         {
-          "name": "set_uv",
           "sig": "set_uv(uv)",
           "desc": "The next vertex's UV"
         },
         {
-          "name": "set_color",
           "sig": "set_color(color)",
           "desc": "The next vertex's vertex color"
         },
         {
-          "name": "set_tangent",
           "sig": "set_tangent(plane)",
           "desc": "Tangent direction, binormal sign in plane.d"
         },
         {
-          "name": "add_vertex",
           "sig": "add_vertex(vertex)",
           "desc": "Closes the pending vertex. Attributes reset after it"
         },
         {
-          "name": "index",
           "sig": "index()",
           "desc": "Merge identical vertices and share them by index"
         },
         {
-          "name": "generate_normals",
           "sig": "generate_normals(flip)",
           "desc": "Smooth each triangle face normal onto its vertices"
         },
         {
-          "name": "generate_tangents",
           "sig": "generate_tangents()",
           "desc": "Fill the tangent from UVs; every vertex needs a UV"
         },
         {
-          "name": "clear",
           "sig": "clear()",
           "desc": "Start over"
         },
         {
-          "name": "commit",
           "sig": "commit()",
           "desc": "Finish into an ArrayMesh"
+        }
+      ],
+      "not_built": [
+        {
+          "name": "set_custom / set_custom_format",
+          "why": "Godot custom channels, when a consumer exists"
+        },
+        {
+          "name": "set_bones / set_weights / set_skin_weight_count",
+          "why": "Animation phase"
+        },
+        {
+          "name": "deindex / optimize_indices_for_cache / generate_lod",
+          "why": "LOD phase"
+        },
+        {
+          "name": "append_from / create_from / create_from_arrays / commit_to_arrays",
+          "why": "With mesh imports"
+        },
+        {
+          "name": "add_index / set_material / get_aabb",
+          "why": "Cheap \u2014 arriving with the next mesh slice"
         }
       ]
     },
@@ -1637,37 +1980,37 @@
     "SurfaceArrays": {
       "brief": "The arrays one mesh surface carries.",
       "inherits": "Object",
-      "description": "The arrays one surface hands to the renderer: positions, optional normals, colors, uvs, tangents (four floats: xyz plus the binormal sign), and indices. Triangles wind counter-clockwise seen from outside. Missing arrays fall back (white colors, +Z normals) so script-built meshes still render.",
+      "description": "The typed arrays one surface hands to the renderer. positions and indices are required; normals, colors, uvs, and tangents are optional and fall back inside the renderer. Tangents are four floats per vertex \u2014 xyz plus the binormal sign \u2014 the layout Godot's Mesh.ARRAY_TANGENT carries; normal maps need them, and BoxMesh builds them in.",
       "properties": [
         {
           "name": "positions",
           "type": "Float32Array",
-          "desc": "Three floats per vertex"
+          "desc": "Three floats per vertex, x y z"
         },
         {
           "name": "normals",
           "type": "Float32Array",
-          "desc": "Optional, three per vertex"
+          "desc": "Three floats per vertex; defaults face +Z"
         },
         {
           "name": "colors",
           "type": "Float32Array",
-          "desc": "Optional, three per vertex"
+          "desc": "Three floats per vertex; defaults white"
         },
         {
           "name": "uvs",
           "type": "Float32Array",
-          "desc": "Optional, two per vertex"
+          "desc": "Two floats per vertex; defaults 0,0"
         },
         {
           "name": "tangents",
           "type": "Float32Array",
-          "desc": "Optional, four per vertex"
+          "desc": "Four floats per vertex: tangent xyz plus the binormal sign"
         },
         {
           "name": "indices",
           "type": "Uint32Array",
-          "desc": "Triangle references"
+          "desc": "Triangle corners as vertex slots, counter-clockwise seen from outside"
         }
       ]
     }

@@ -9,7 +9,7 @@ import { PrimitiveType, SurfaceTool } from "../src/scene/surface_tool.js";
 describe("SurfaceTool", () => {
   it("rebuilds the BoxMesh vertex for vertex", () => {
     const size = new Vector3(2, 4, 6);
-    const expected = new BoxMesh(size).surface();
+    const expected = new BoxMesh(size).surface_get_arrays(0);
 
     const tool = new SurfaceTool();
     tool.begin(PrimitiveType.TRIANGLES);
@@ -27,13 +27,16 @@ describe("SurfaceTool", () => {
       new Vector3(Math.abs(axis.x) * half.x, Math.abs(axis.y) * half.y, Math.abs(axis.z) * half.z);
     for (const [n, a, b] of faces) {
       const center = n.mul(1).mul(along(n));
-      for (const [i, j] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) {
-        tool.set_normal(n);
-        tool.set_color(new Color(1, 1, 1, 1));
-        tool.add_vertex(center.add(a.mul(i * along(a).dot(a.abs()))).add(b.mul(j * along(b).dot(b.abs()))));
+      // Row-major grid like BoxMesh: b (rows) outside, a (columns) inside.
+      for (const j of [-1, 1] as const) {
+        for (const i of [-1, 1] as const) {
+          tool.set_normal(n);
+          tool.set_color(new Color(1, 1, 1, 1));
+          tool.add_vertex(center.add(a.mul(i * along(a).dot(a.abs()))).add(b.mul(j * along(b).dot(b.abs()))));
+        }
       }
     }
-    const built = tool.commit().surface();
+    const built = tool.commit().surface_get_arrays(0);
 
     expect([...built.positions]).toEqual([...expected.positions]);
     expect([...built.colors ?? []]).toEqual([...expected.colors ?? []]);
@@ -61,7 +64,7 @@ describe("SurfaceTool", () => {
     tool.add_vertex(new Vector3(1, 0, 0)); // No color set: stays without one.
     tool.add_vertex(new Vector3(0, 1, 0));
 
-    const surface = tool.commit().surface();
+    const surface = tool.commit().surface_get_arrays(0);
     // The color array exists once one vertex set a color; unset vertices use white.
     expect([...(surface.colors ?? [])]).toEqual([1, 0, 0, 1, 1, 1, 1, 1, 1]);
   });
@@ -78,7 +81,7 @@ describe("SurfaceTool", () => {
     tool.add_vertex(new Vector3(0, 1, 0));
     tool.generate_normals();
 
-    const surface = tool.commit().surface();
+    const surface = tool.commit().surface_get_arrays(0);
     const normals = surface.normals ?? [];
     for (let i = 0; i < 6; i += 1) {
       expect(normals[i * 3]).toBeCloseTo(0);
@@ -102,7 +105,7 @@ describe("SurfaceTool", () => {
       tool.add_vertex(point);
     }
     tool.index();
-    const surface = tool.commit().surface();
+    const surface = tool.commit().surface_get_arrays(0);
     expect(surface.positions.length / 3).toBe(4);
     expect([...surface.indices]).toEqual([0, 1, 2, 0, 2, 3]);
   });
@@ -123,7 +126,7 @@ describe("SurfaceTool", () => {
       tool.add_vertex(point);
     }
     tool.generate_tangents();
-    const surface = tool.commit().surface();
+    const surface = tool.commit().surface_get_arrays(0);
     const tangents = surface.tangents ?? [];
     expect(tangents.length).toBe(surface.positions.length / 3 * 4);
     // UVs increase along +X, so every tangent is +X with a positive sign.

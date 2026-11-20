@@ -34,7 +34,7 @@ function xform_point(m: Float32Array, p: Vector3): Vector3 {
 
 describe("BoxMesh", () => {
   it("builds six CCW faces with outward normals", () => {
-    const surface = new BoxMesh(new Vector3(2, 4, 6)).surface();
+    const surface = new BoxMesh(new Vector3(2, 4, 6)).surface_get_arrays(0);
     expect(surface.positions.length).toBe(24 * 3);
     expect(surface.indices.length).toBe(36);
 
@@ -144,7 +144,7 @@ describe("build_render_frame", () => {
   function box(): () => MeshInstance3D {
     return () => {
       const node = new MeshInstance3D();
-      node.geometry = new BoxMesh();
+      node.mesh = new BoxMesh();
       return node;
     };
   }
@@ -163,9 +163,9 @@ describe("build_render_frame", () => {
     const world = new Node3D();
     world.position = new Vector3(1, 0, 0);
     const mesh_a = new MeshInstance3D();
-    mesh_a.geometry = new BoxMesh();
+    mesh_a.mesh = new BoxMesh();
     const mesh_b = new MeshInstance3D();
-    mesh_b.geometry = new BoxMesh();
+    mesh_b.mesh = new BoxMesh();
     mesh_b.visible = false;
     world.add_child(mesh_a);
     world.add_child(mesh_b);
@@ -177,7 +177,7 @@ describe("build_render_frame", () => {
     const frame = build_render_frame(tree, 1280, 720);
     expect(frame.camera?.name).toBe("Camera3D");
     expect(frame.draws.length).toBe(1);
-    expect(frame.draws[0].mesh).toBe(mesh_a.geometry);
+    expect(frame.draws[0].mesh).toBe(mesh_a.mesh);
     // mesh_a's origin composes with its world parent.
     const origin = xform_point(frame.draws[0].transform, Vector3.ZERO);
     expect(origin.x).toBeCloseTo(1);
@@ -246,4 +246,49 @@ describe("build_render_frame environment", () => {
     const without = build_render_frame(tree_with([() => new Node()]), 800, 600);
     expect(without.background.is_equal_approx(CLEAR_COLOR)).toBe(true);
   });
+
+  it("an enabled fog Environment hands the renderer the fog block", () => {
+    // A fog-free environment: no fog in the frame.
+    const off_tree = tree_with([() => new WorldEnvironment()]);
+    expect(build_render_frame(off_tree, 800, 600).fog).toBeNull();
+
+    const env = new Environment();
+    env.fog_enabled = true;
+    env.fog_light_color = Color.html("#c0d8ff");
+    env.fog_density = 0.05;
+    env.fog_depth_end = 40;
+    const env_node = new WorldEnvironment();
+    env_node.environment = env;
+    const fog_tree = tree_with([() => env_node]);
+
+    const frame = build_render_frame(fog_tree, 800, 600);
+    expect(frame.fog?.density).toBe(0.05);
+    expect(frame.fog?.color.is_equal_approx(Color.html("#c0d8ff"))).toBe(true);
+    expect(frame.fog?.mode).toBe(0);
+    expect(frame.fog?.depth_end).toBe(40);
+  });
+
+  it("transparent draws land after opaque ones, both in tree order", () => {
+    const a = new MeshInstance3D();
+    a.mesh = new BoxMesh();
+    a.set_name("A");
+    const b = new MeshInstance3D();
+    b.mesh = new BoxMesh();
+    b.transparency = 0.6;
+    b.set_name("B");
+    const c = new MeshInstance3D();
+    c.mesh = new BoxMesh();
+    c.set_name("C");
+    const tree = new SceneTree();
+    tree.get_root().add_child(a);
+    tree.get_root().add_child(b);
+    tree.get_root().add_child(c);
+    tree.get_root().add_child(new Camera3D());
+
+    const frame = build_render_frame(tree, 800, 600);
+    expect(frame.draws.length).toBe(3);
+    // B is third in the tree but draws last.
+    expect(frame.draws.map((draw) => draw.transparency)).toEqual([0, 0, 0.6]);
+  });
 });
+

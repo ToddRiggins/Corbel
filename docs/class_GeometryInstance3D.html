@@ -95,11 +95,22 @@
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Node3D.html">Node3D</a> <strong>&lt;</strong> <a href="class_Node.html">Node</a> <strong>&lt;</strong> Object</p>
       <p class="brief">Base class for nodes a renderer can draw.</p>
       <h2>Description</h2>
-      <p>GeometryInstance3D is the base every draw node inherits from in Godot. In the foundation, MeshInstance3D is its only concrete subclass today.</p>
+      <p>GeometryInstance3D is every drawable node's base: MeshInstance3D today. material_override and transparency live here, as in Godot, so any geometry subclass carries them.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
+      <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
+<tr id="GeometryInstance3D.material_override"><td><code>Material | null material_override</code></td><td><code>Material | null</code> Godot 4 material_override: replaces every surface's material, overrides a mesh's own</td></tr>
+<tr id="GeometryInstance3D.transparency"><td><code>number transparency</code></td><td><code>number</code> Godot 4 transparency: 0.0 draws solid, closer to 1.0 is see-through. Transparent draws blend and sort after opaque ones</td></tr>
+      </table>
       
-      
+      <h2>Not yet built</h2>
+      <p class="note">Godot names this class carries that the engine has not built yet. Each says where it waits.</p>
+      <table><tr><th>Godot name</th><th>Waits for</th></tr>
+<tr><td><code>cast_shadow</code></td><td>P3 shadow maps</td></tr>
+<tr><td><code>visibility_range_*</code></td><td>Frustum culling and distance fades</td></tr>
+<tr><td><code>extra_cull_margin / custom_aabb</code></td><td>Frustum culling</td></tr>
+<tr><td><code>lod_bias / material_overlay / gi_*</code></td><td>LOD, multi-pass, and GI — later phases</td></tr>
+      </table>
     </main>
   </div>
 </body>

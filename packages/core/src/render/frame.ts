@@ -4,7 +4,7 @@ import { Transform3D } from "../math/transform3d.js";
 import { Vector3 } from "../math/vector3.js";
 import { Camera3D } from "../scene/camera3d.js";
 import { DirectionalLight3D } from "../scene/directional_light3d.js";
-import { WorldEnvironment, type Environment } from "../scene/environment.js";
+import { WorldEnvironment, type Environment, type FogMode } from "../scene/environment.js";
 import type { Mesh, SurfaceArrays } from "../scene/mesh.js";
 import { MeshInstance3D } from "../scene/mesh_instance3d.js";
 import type { Material } from "../scene/material.js";
@@ -21,6 +21,19 @@ export const DEFAULT_AMBIENT = new Color(0.3, 0.3, 0.3, 1.0);
 /** Shared default so a mesh without a material stays white; treat as read-only. */
 export const DEFAULT_MATERIAL = new StandardMaterial3D();
 
+/** The fog block a frame carries when the tree's Environment enabled it. */
+export interface RenderFog {
+  mode: FogMode;
+  color: Color;
+  density: number;
+  depth_begin: number;
+  depth_end: number;
+  depth_curve: number;
+  height: number;
+  height_density: number;
+}
+
+/** One draw call's worth of scene data. */
 export interface RenderDraw {
   mesh: Mesh;
   /** Model matrix, column-major 4x4. */
@@ -28,6 +41,8 @@ export interface RenderDraw {
   /** World-space normal matrix, column-major 3x3. */
   normal_matrix: Float32Array;
   material: Material;
+  /** The GeometryInstance3D transparency; 0 means opaque. */
+  transparency: number;
 }
 
 /**
@@ -47,6 +62,9 @@ export interface RenderFrame {
   light_direction: Vector3;
   light_color: Color;
   ambient: Color;
+  /** Fog from the tree's Environment, or null when fog is off. */
+  fog: RenderFog | null;
+  /** Opaque draws first, then transparent ones, each group in tree order. */
   draws: RenderDraw[];
 }
 
@@ -85,13 +103,14 @@ export function build_render_frame(
     } else if (node instanceof DirectionalLight3D && light === null) {
       light = node;
     }
-    if (node instanceof MeshInstance3D && node.visible && node.geometry !== null) {
+    if (node instanceof MeshInstance3D && node.visible && node.mesh !== null) {
       const global = node.get_global_transform();
       draws.push({
-        mesh: node.geometry,
+        mesh: node.mesh,
         transform: transform_to_mat4(global),
         normal_matrix: basis_to_mat3(global.basis.inverse().transposed()),
-        material: node.material_override ?? DEFAULT_MATERIAL,
+        material: node.get_active_material() ?? DEFAULT_MATERIAL,
+        transparency: node.transparency,
       });
     }
     for (const child of node.get_children()) {
@@ -110,6 +129,23 @@ export function build_render_frame(
 
   const chosen_environment = environment as Environment | null;
 
+  const fog: RenderFog | null = chosen_environment && chosen_environment.fog_enabled
+    ? {
+        mode: chosen_environment.fog_mode,
+        color: chosen_environment.fog_light_color,
+        density: chosen_environment.fog_density,
+        depth_begin: chosen_environment.fog_depth_begin,
+        depth_end: chosen_environment.fog_depth_end,
+        depth_curve: chosen_environment.fog_depth_curve,
+        height: chosen_environment.fog_height,
+        height_density: chosen_environment.fog_height_density,
+      }
+    : null;
+
+  // Opaque first, transparent after; each group keeps tree order.
+  const opaque = draws.filter((draw) => draw.transparency <= 0);
+  const blended = draws.filter((draw) => draw.transparency > 0);
+
   return {
     width,
     height,
@@ -120,7 +156,8 @@ export function build_render_frame(
     light_direction,
     light_color: chosen_light ? chosen_light.light_color : Color.WHITE,
     ambient: chosen_environment ? chosen_environment.ambient : ambient,
-    draws,
+    fog,
+    draws: [...opaque, ...blended],
   };
 }
 
@@ -141,11 +178,23 @@ export function transform_to_mat4(t: Transform3D, out = new Float32Array(16)): F
  * missing normals point +Z, missing colors are white, missing UVs are zero,
  * so a mesh a script built without them still renders.
  */
-export function surface_attribs(surface: SurfaceArrays): { count: number; normals: Float32Array; colors: Float32Array; uvs: Float32Array } {
+export function surface_attribs(surface: SurfaceArrays): { count: number; normals: Float32Array; colors: Float32Array; uvs: Float32Array; tangents: Float32Array; has_tangents: boolean } {
   const count = surface.positions.length / 3;
   const normals = surface.normals ?? forward_normals(count);
   const colors = surface.colors ?? white_colors(count);
-  return { count, normals, colors, uvs: surface.uvs ?? zero_uvs(count) };
+  const has_tangents = surface.tangents !== undefined && surface.tangents.length === count * 4;
+  // Default tangent follows +X with binormal sign 1; real data is preferred.
+  const tangents = surface.tangents ?? identity_tangents(count);
+  return { count, normals, colors, uvs: surface.uvs ?? zero_uvs(count), tangents, has_tangents };
+}
+
+function identity_tangents(count: number): Float32Array {
+  const out = new Float32Array(count * 4);
+  for (let i = 0; i < count; i += 1) {
+    out[i * 4] = 1;
+    out[i * 4 + 3] = 1;
+  }
+  return out;
 }
 
 function forward_normals(count: number): Float32Array {

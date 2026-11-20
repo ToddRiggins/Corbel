@@ -3,17 +3,10 @@ import type { Color } from "../math/color.js";
 import { Plane } from "../math/plane.js";
 import { Vector2 } from "../math/vector2.js";
 import { Vector3 } from "../math/vector3.js";
-import { ArrayMesh, type SurfaceArrays } from "./mesh.js";
+import { ArrayMesh, PrimitiveType, type SurfaceArrays } from "./mesh.js";
 
-/** Godot 4 `Mesh.PrimitiveType`. The renderer draws TRIANGLES today. */
-export const PrimitiveType = {
-  POINTS: 0,
-  LINES: 1,
-  LINE_STRIP: 2,
-  TRIANGLES: 3,
-  TRIANGLE_STRIP: 4,
-} as const;
-export type PrimitiveType = number;
+/** Godot 4 `Mesh.PrimitiveType`, re-exported from `Mesh` where Godot keeps it. */
+export { PrimitiveType };
 
 /** One vertex: where it is plus the attributes the script set for it. */
 interface VertexRecord {

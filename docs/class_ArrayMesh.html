@@ -93,15 +93,35 @@
       <p class="crumbs">Corbel › Class Reference › Resources</p>
       <h1>ArrayMesh</h1>
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Mesh.html">Mesh</a> <strong>&lt;</strong> <a href="class_Resource.html">Resource</a> <strong>&lt;</strong> Object</p>
-      <p class="brief">A mesh built from raw arrays: positions, normals, colors, uvs, indices.</p>
+      <p class="brief">A mesh that holds a mutable list of surfaces built at runtime.</p>
       <h2>Description</h2>
-      <p>ArrayMesh wraps one surface of arrays. Use SurfaceTool with PrimitiveType.TRIANGLES to build them one vertex at a time, or write the arrays directly. Triangles wind counter-clockwise seen from outside.</p>
+      <p>ArrayMesh keeps surfaces you add yourself. add_surface_from_arrays appends one surface (PrimitiveType plus its SurfaceArrays), surface_get_primitive_type, surface_get_name / surface_set_name and surface_get_material / surface_set_material read or change the surface's settings, and surface_remove or clear_surfaces take them away. Indices must point at real vertices, or building throws. custom_aabb shrinks the measured AABB when set. A constructor that gets SurfaceArrays builds the same single TRIANGLES surface as before.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
-<tr id="ArrayMesh.arrays"><td><code>SurfaceArrays arrays</code></td><td><code>SurfaceArrays</code> The positions, normals, colors, uvs, tangents, and indices</td></tr>
+<tr id="ArrayMesh.custom_aabb"><td><code>AABB | null custom_aabb</code></td><td><code>AABB | null</code> Godot 4 custom_aabb: overrides the measured AABB when set</td></tr>
       </table>
-      
+      <h2>Methods</h2><table><tr><th>Signature</th><th>Description</th></tr>
+<tr id="ArrayMesh.add_surface_from_arrays"><td><code>add_surface_from_arrays(primitive: number, arrays: SurfaceArrays)</code></td><td>Append one surface. Throws when positions are ragged or an index is out of range</td></tr>
+<tr id="ArrayMesh.surface_remove"><td><code>surface_remove(surface: number)</code></td><td>Take one surface away, Godot 4 surface_remove</td></tr>
+<tr id="ArrayMesh.clear_surfaces"><td><code>clear_surfaces()</code></td><td>Remove every surface</td></tr>
+<tr id="ArrayMesh.surface_get_primitive_type"><td><code>surface_get_primitive_type(surface: number): number</code></td><td>The PrimitiveType one surface builds with</td></tr>
+<tr id="ArrayMesh.surface_get_name"><td><code>surface_get_name(surface: number): string</code></td><td>The surface's name, empty when unset</td></tr>
+<tr id="ArrayMesh.surface_set_name"><td><code>surface_set_name(surface: number, name: string)</code></td><td>Name one surface</td></tr>
+<tr id="ArrayMesh.get_surface_count"><td><code>get_surface_count(): number</code></td><td>How many surfaces the mesh holds</td></tr>
+<tr id="ArrayMesh.surface_get_arrays"><td><code>surface_get_arrays(surface: number): SurfaceArrays</code></td><td>One surface's arrays</td></tr>
+<tr id="ArrayMesh.surface_get_material"><td><code>surface_get_material(surface: number): Material | null</code></td><td>One surface's material</td></tr>
+<tr id="ArrayMesh.surface_set_material"><td><code>surface_set_material(surface: number, material: Material | null)</code></td><td>Set one surface's material</td></tr>
+<tr id="ArrayMesh.get_aabb"><td><code>get_aabb(): AABB</code></td><td>custom_aabb when set, otherwise the box all surfaces fit in</td></tr>
+      </table>
+      <h2>Not yet built</h2>
+      <p class="note">Godot names this class carries that the engine has not built yet. Each says where it waits.</p>
+      <table><tr><th>Godot name</th><th>Waits for</th></tr>
+<tr><td><code>blend shapes (add_blend_shape, get_blend_shape_*)</code></td><td>Animation phase</td></tr>
+<tr><td><code>regen_normal_maps / lightmap_unwrap</code></td><td>Editor tooling and baking</td></tr>
+<tr><td><code>shadow_mesh</code></td><td>P3 shadow maps</td></tr>
+<tr><td><code>surface_update_vertex_region</code></td><td>GPU streaming edits</td></tr>
+      </table>
     </main>
   </div>
 </body>

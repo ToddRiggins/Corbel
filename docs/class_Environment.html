@@ -93,16 +93,34 @@
       <p class="crumbs">Corbel › Class Reference › Resources</p>
       <h1>Environment</h1>
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Resource.html">Resource</a> <strong>&lt;</strong> Object</p>
-      <p class="brief">Resource holding the tree's background and ambient.</p>
+      <p class="brief">Holds the tree's look: background, ambient, and fog.</p>
       <h2>Description</h2>
-      <p>Environment holds the tree's look data: background_color is what the canvas clears to, ambient is the ambient light color that lighting adds to every surface. WorldEnvironment carries this resource.</p>
+      <p>Environment is the resource a WorldEnvironment node carries. background_color is what the canvas clears to and ambient is the light every surface gets. fog_enabled turns the fog block on: FOG_MODE_EXPONENTIAL thickens with the view distance (fog_density), FOG_MODE_DEPTH fades in from fog_depth_begin to fog_depth_end shaped by fog_depth_curve, and both thin out above fog_height at the fog_height_density rate, tinted by fog_light_color. Environment.from_data reads these out of a .cenv scene file.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
 <tr id="Environment.background_color"><td><code>Color background_color</code></td><td><code>Color</code> The canvas clear color</td></tr>
 <tr id="Environment.ambient"><td><code>Color ambient</code></td><td><code>Color</code> The ambient light color</td></tr>
+<tr id="Environment.fog_enabled"><td><code>boolean fog_enabled</code></td><td><code>boolean</code> Godot 4 fog_enabled</td></tr>
+<tr id="Environment.fog_mode"><td><code>number fog_mode</code></td><td><code>number</code> FogMode.EXPONENTIAL (0) or FogMode.DEPTH (1)</td></tr>
+<tr id="Environment.fog_light_color"><td><code>Color fog_light_color</code></td><td><code>Color</code> Godot 4 fog_light_color: what the fog tints toward</td></tr>
+<tr id="Environment.fog_density"><td><code>number fog_density</code></td><td><code>number</code> Godot 4 fog_density: exponential mode thickness</td></tr>
+<tr id="Environment.fog_depth_begin"><td><code>number fog_depth_begin</code></td><td><code>number</code> Godot 4 fog_depth_begin: depth mode fade start, world units</td></tr>
+<tr id="Environment.fog_depth_end"><td><code>number fog_depth_end</code></td><td><code>number</code> Godot 4 fog_depth_end: full fog at this distance</td></tr>
+<tr id="Environment.fog_depth_curve"><td><code>number fog_depth_curve</code></td><td><code>number</code> Godot 4 fog_depth_curve: exponent on the depth fade</td></tr>
+<tr id="Environment.fog_height"><td><code>number fog_height</code></td><td><code>number</code> Godot 4 fog_height: the world height the fog thins above</td></tr>
+<tr id="Environment.fog_height_density"><td><code>number fog_height_density</code></td><td><code>number</code> Godot 4 fog_height_density: how fast it thins</td></tr>
       </table>
-      
+      <h2>Methods</h2><table><tr><th>Signature</th><th>Description</th></tr>
+<tr id="Environment.from_data"><td><code>from_data(data): Environment</code></td><td>Build one from a .cenv file's values, including the fog block</td></tr>
+      </table>
+      <h2>Not yet built</h2>
+      <p class="note">Godot names this class carries that the engine has not built yet. Each says where it waits.</p>
+      <table><tr><th>Godot name</th><th>Waits for</th></tr>
+<tr><td><code>fog_sky_affect / fog_sun_scatter / fog_aerial_perspective</code></td><td>Sky (P3) and particle sun scatter</td></tr>
+<tr><td><code>fog_mode depth + height already in; glow, tonemap, adjustment, volumetric fog, sky</code></td><td>Later P2/P3 slices in Godot order</td></tr>
+<tr><td><code>background modes beyond BG_COLOR (sky, canvas, camera feed)</code></td><td>With sky support</td></tr>
+      </table>
     </main>
   </div>
 </body>

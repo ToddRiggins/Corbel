@@ -2,7 +2,12 @@ import { Dictionary } from "../dictionary.js";
 import type { Shader } from "../render/shaders.js";
 
 /** Godot 4 Material base. The renderer reads the concrete type per draw. */
-export abstract class Material {}
+export abstract class Material {
+  /** Godot 4 `render_priority`: sorts overlapping transparent draws. */
+  render_priority = 0;
+  /** Godot 4 `next_pass`: a second material drawn over this one. */
+  next_pass: Material | null = null;
+}
 
 /**
  * Godot 4 ShaderMaterial: a Shader plus values for its named uniforms.

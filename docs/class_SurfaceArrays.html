@@ -95,17 +95,18 @@
       <p class="inherits"><strong>Inherits:</strong> Object</p>
       <p class="brief">The arrays one mesh surface carries.</p>
       <h2>Description</h2>
-      <p>The arrays one surface hands to the renderer: positions, optional normals, colors, uvs, tangents (four floats: xyz plus the binormal sign), and indices. Triangles wind counter-clockwise seen from outside. Missing arrays fall back (white colors, +Z normals) so script-built meshes still render.</p>
+      <p>The typed arrays one surface hands to the renderer. positions and indices are required; normals, colors, uvs, and tangents are optional and fall back inside the renderer. Tangents are four floats per vertex — xyz plus the binormal sign — the layout Godot's Mesh.ARRAY_TANGENT carries; normal maps need them, and BoxMesh builds them in.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
-<tr id="SurfaceArrays.positions"><td><code>Float32Array positions</code></td><td><code>Float32Array</code> Three floats per vertex</td></tr>
-<tr id="SurfaceArrays.normals"><td><code>Float32Array normals</code></td><td><code>Float32Array</code> Optional, three per vertex</td></tr>
-<tr id="SurfaceArrays.colors"><td><code>Float32Array colors</code></td><td><code>Float32Array</code> Optional, three per vertex</td></tr>
-<tr id="SurfaceArrays.uvs"><td><code>Float32Array uvs</code></td><td><code>Float32Array</code> Optional, two per vertex</td></tr>
-<tr id="SurfaceArrays.tangents"><td><code>Float32Array tangents</code></td><td><code>Float32Array</code> Optional, four per vertex</td></tr>
-<tr id="SurfaceArrays.indices"><td><code>Uint32Array indices</code></td><td><code>Uint32Array</code> Triangle references</td></tr>
+<tr id="SurfaceArrays.positions"><td><code>Float32Array positions</code></td><td><code>Float32Array</code> Three floats per vertex, x y z</td></tr>
+<tr id="SurfaceArrays.normals"><td><code>Float32Array normals</code></td><td><code>Float32Array</code> Three floats per vertex; defaults face +Z</td></tr>
+<tr id="SurfaceArrays.colors"><td><code>Float32Array colors</code></td><td><code>Float32Array</code> Three floats per vertex; defaults white</td></tr>
+<tr id="SurfaceArrays.uvs"><td><code>Float32Array uvs</code></td><td><code>Float32Array</code> Two floats per vertex; defaults 0,0</td></tr>
+<tr id="SurfaceArrays.tangents"><td><code>Float32Array tangents</code></td><td><code>Float32Array</code> Four floats per vertex: tangent xyz plus the binormal sign</td></tr>
+<tr id="SurfaceArrays.indices"><td><code>Uint32Array indices</code></td><td><code>Uint32Array</code> Triangle corners as vertex slots, counter-clockwise seen from outside</td></tr>
       </table>
+      
       
     </main>
   </div>

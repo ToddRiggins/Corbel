@@ -93,16 +93,27 @@
       <p class="crumbs">Corbel › Class Reference › Nodes</p>
       <h1>MeshInstance3D</h1>
       <p class="inherits"><strong>Inherits:</strong> <a href="class_GeometryInstance3D.html">GeometryInstance3D</a> <strong>&lt;</strong> <a href="class_Node3D.html">Node3D</a> <strong>&lt;</strong> <a href="class_Node.html">Node</a> <strong>&lt;</strong> Object</p>
-      <p class="brief">A node that draws the mesh assigned to its geometry.</p>
+      <p class="brief">A node that draws the mesh assigned to its mesh property.</p>
       <h2>Description</h2>
-      <p>MeshInstance3D draws its geometry when it holds a Mesh, and material_override carries the color or texture. It can be added, moved, hidden, and saved. The weave attaches project scripts to scene nodes by their script_path meta, so a saved MeshInstance3D can carry a .ts script.</p>
+      <p>MeshInstance3D draws one Mesh. The mesh property is Godot's name. A surface override material (set_surface_override_material) wins, then material_override from GeometryInstance3D, then the mesh's own surface material; get_active_material answers the full chain the way Godot resolves it.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
-<tr id="MeshInstance3D.geometry"><td><code>Mesh | null geometry</code></td><td><code>Mesh | null</code> The mesh to draw. Nothing draws while it is null</td></tr>
-<tr id="MeshInstance3D.material_override"><td><code>Material | null material_override</code></td><td><code>Material | null</code> The material the surface draws with. StandardMaterial3D or ShaderMaterial</td></tr>
+<tr id="MeshInstance3D.mesh"><td><code>Mesh | null mesh</code></td><td><code>Mesh | null</code> Godot 4 mesh: what this node draws</td></tr>
       </table>
-      
+      <h2>Methods</h2><table><tr><th>Signature</th><th>Description</th></tr>
+<tr id="MeshInstance3D.set_surface_override_material"><td><code>set_surface_override_material(surface: number, material: Material | null)</code></td><td>Godot 4 set_surface_override_material: one surface draws this material instead</td></tr>
+<tr id="MeshInstance3D.get_surface_override_material"><td><code>get_surface_override_material(surface: number): Material | null</code></td><td>One surface's override, or null when it falls through</td></tr>
+<tr id="MeshInstance3D.get_surface_override_material_count"><td><code>get_surface_override_material_count(): number</code></td><td>How many override slots exist</td></tr>
+<tr id="MeshInstance3D.get_active_material"><td><code>get_active_material(surface = 0): Material | null</code></td><td>Surface override, then material_override, then the mesh's material, then null</td></tr>
+      </table>
+      <h2>Not yet built</h2>
+      <p class="note">Godot names this class carries that the engine has not built yet. Each says where it waits.</p>
+      <table><tr><th>Godot name</th><th>Waits for</th></tr>
+<tr><td><code>skeleton / skin / blend shape methods</code></td><td>Animation phase</td></tr>
+<tr><td><code>create_trimesh_collision / create_convex_collision</code></td><td>Physics phases</td></tr>
+<tr><td><code>bake_mesh_from_current_*</code></td><td>Sketch and baking tooling</td></tr>
+      </table>
     </main>
   </div>
 </body>

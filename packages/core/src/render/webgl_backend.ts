@@ -7,14 +7,29 @@ import { Texture2D } from "../scene/texture.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
 import { CLEAR_COLOR, surface_attribs } from "./frame.js";
 import { Shader, coerce_vec4, light_dir_for, view_proj_for_backend } from "./shaders.js";
-import { LIT_SHADER } from "./shaders.js";
+import { LIT_SHADER, WGSL_DRAW_FLOATS, fill_draw } from "./shaders.js";
 
-const WHITE_ALBEDO = new Color(1, 1, 1, 1);
+const CAM_POS = { x: 0, y: 0, z: 0 };
+
+/** The four texture maps a material carries, all null when it is not standard. */
+function map_pair_of(material: Material): { albedo: Texture2D | null; normal: Texture2D | null; roughness: Texture2D | null; metallic: Texture2D | null } {
+  if (material instanceof StandardMaterial3D) {
+    return {
+      albedo: material.albedo_texture,
+      normal: material.normal_texture,
+      roughness: material.roughness_texture,
+      metallic: material.metallic_texture,
+    };
+  }
+  return { albedo: null, normal: null, roughness: null, metallic: null };
+}
 
 interface UploadedMesh {
   vertex: WebGLBuffer;
   indices: WebGLBuffer;
   count: number;
+  /** The surface carried real tangents (not the identity default). */
+  has_tangents: boolean;
 }
 
 
@@ -74,37 +89,62 @@ export class WebGL2RenderBackend implements RenderBackend {
     if (!frame.camera || !frame.camera_transform || frame.draws.length === 0) {
       return;
     }
+    {
+      const origin = frame.camera_transform.origin;
+      CAM_POS.x = origin.x;
+      CAM_POS.y = origin.y;
+      CAM_POS.z = origin.z;
+    }
     const dir = light_dir_for(frame);
 
+    view_proj_for_backend(frame, false, this.view_proj);
     for (let slot = 0; slot < frame.draws.length; slot += 1) {
       const draw = frame.draws[slot];
       const material = draw.material;
+      const transparent = draw.transparency > 0;
       const shader = material instanceof ShaderMaterial ? material.shader : LIT_SHADER;
       const compiled = this.shader_for(shader);
       const uploaded = this.mesh_for(draw.mesh);
 
       gl.useProgram(compiled.program);
-      view_proj_for_backend(frame, false, this.view_proj);
       this.set_uniform(compiled, "u_view_proj", (location) => gl.uniformMatrix4fv(location, false, this.view_proj));
       this.set_uniform(compiled, "u_light_dir", (location) => gl.uniform4f(location, dir.x, dir.y, dir.z, 0));
       this.set_uniform(compiled, "u_light_color", (location) => gl.uniform4f(location, frame.light_color.r, frame.light_color.g, frame.light_color.b, 1));
       this.set_uniform(compiled, "u_ambient", (location) => gl.uniform4f(location, frame.ambient.r, frame.ambient.g, frame.ambient.b, 1));
-
-      const albedo = material instanceof StandardMaterial3D ? material.albedo : WHITE_ALBEDO;
+      gl.uniform4f(this.location(compiled, "u_cam_pos"), CAM_POS.x, CAM_POS.y, CAM_POS.z, 0);
+      // Fog block; alpha 1 flags the shader to blend fog.
+      const fog = frame.fog;
+      if (fog) {
+        gl.uniform4f(this.location(compiled, "u_fog_color"), fog.color.r, fog.color.g, fog.color.b, 1);
+        gl.uniform4f(this.location(compiled, "u_fog_data"), fog.density, fog.mode, fog.depth_begin, fog.depth_end);
+        gl.uniform4f(this.location(compiled, "u_fog_data2"), fog.height, fog.height_density, fog.depth_curve, 0);
+      } else {
+        gl.uniform4f(this.location(compiled, "u_fog_color"), 0, 0, 0, 0);
+        gl.uniform4f(this.location(compiled, "u_fog_data"), 0, 0, 0, 0);
+        gl.uniform4f(this.location(compiled, "u_fog_data2"), 0, 0, 0, 0);
+      }
+      const scratch = this.draw_scratch();
+      fill_draw(scratch, draw.transform, draw.normal_matrix, material, draw.transparency, uploaded.has_tangents);
       gl.bindBuffer(gl.ARRAY_BUFFER, uploaded.vertex);
-      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 44, 0);
-      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 44, 12);
-      gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 44, 24);
-      gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 44, 36);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 60, 0);
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 60, 12);
+      gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 60, 24);
+      gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 60, 36);
+      gl.vertexAttribPointer(4, 4, gl.FLOAT, false, 60, 44);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, uploaded.indices);
       gl.uniformMatrix4fv(this.location(compiled, "u_model"), false, draw.transform);
       gl.uniformMatrix3fv(this.location(compiled, "u_normal_mat"), false, draw.normal_matrix);
-      gl.uniform4f(this.location(compiled, "u_albedo"), albedo.r, albedo.g, albedo.b, 1);
-      // The albedo texture: unit 0, or the white dummy when the material has none.
-      const albedo_texture = material instanceof StandardMaterial3D ? material.albedo_texture : null;
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.albedo_gpu_texture(albedo_texture));
-      gl.uniform1i(this.location(compiled, "u_albedo_texture"), 0);
+      gl.uniform4fv(this.location(compiled, "u_albedo"), scratch.slice(28, 32));
+      gl.uniform4fv(this.location(compiled, "u_maps"), scratch.slice(32, 36));
+      gl.uniform4fv(this.location(compiled, "u_uv_transform"), scratch.slice(36, 40));
+      gl.uniform4fv(this.location(compiled, "u_roughness_channel"), scratch.slice(40, 44));
+      gl.uniform4fv(this.location(compiled, "u_metallic_channel"), scratch.slice(44, 48));
+      gl.uniform4fv(this.location(compiled, "u_flags"), scratch.slice(48, 52));
+      const pair = map_pair_of(material);
+      this.bind_map(compiled, gl.TEXTURE0, pair.albedo, false);
+      this.bind_map(compiled, gl.TEXTURE1, pair.normal, true);
+      this.bind_map(compiled, gl.TEXTURE2, pair.roughness, false);
+      this.bind_map(compiled, gl.TEXTURE3, pair.metallic, false);
       if (material instanceof ShaderMaterial) {
         const values = material.get_shader_parameter_list();
         for (const name of shader.params) {
@@ -112,8 +152,36 @@ export class WebGL2RenderBackend implements RenderBackend {
           gl.uniform4f(this.location(compiled, name), r, g, b, a);
         }
       }
+      // Transparent draws blend and stop writing depth, so opaque surfaces behind stay visible.
+      if (transparent) {
+        gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.depthMask(false);
+      } else {
+        gl.disable(gl.BLEND);
+        gl.depthMask(true);
+      }
       gl.drawElements(gl.TRIANGLES, uploaded.count, gl.UNSIGNED_INT, 0);
+      if (transparent) {
+        gl.depthMask(true);
+      }
     }
+  }
+
+  /** A scratch for the shared draw packing; one per call is fine at this scale. */
+  private draw_scratch(): Float32Array {
+    return new Float32Array(WGSL_DRAW_FLOATS);
+  }
+
+  /** Binds one texture unit; the white dummy when the map is absent. */
+  private bind_map(compiled: CompiledShader, unit: number, texture: Texture2D | null, normal: boolean): void {
+    const gl = this.gl;
+    const name = normal ? "u_normal_texture" : unit === gl.TEXTURE0
+      ? "u_albedo_texture"
+      : unit === gl.TEXTURE2 ? "u_roughness_texture" : "u_metallic_texture";
+    gl.activeTexture(unit);
+    gl.bindTexture(gl.TEXTURE_2D, this.gpu_texture(texture));
+    gl.uniform1i(this.location(compiled, name), unit - gl.TEXTURE0);
   }
 
   private shader_for(shader: Shader): CompiledShader {
@@ -132,8 +200,8 @@ export class WebGL2RenderBackend implements RenderBackend {
   private dummy_texture: WebGLTexture | null = null;
   private dummy_uploaded = false;
 
-  /** Uploads (once) the albedo texture; no texture binds the white 1x1. */
-  private albedo_gpu_texture(texture: Texture2D | null): WebGLTexture {
+  /** Uploads (once) any texture; no texture binds the white 1x1 dummy. */
+  private gpu_texture(texture: Texture2D | null): WebGLTexture {
     const gl = this.gl;
     if (texture === null) {
       if (!this.dummy_uploaded) {
@@ -189,9 +257,9 @@ export class WebGL2RenderBackend implements RenderBackend {
     if (cached) {
       return cached;
     }
-    const surface = mesh.surface();
-    const { count, normals, colors, uvs } = surface_attribs(surface);
-    const interleaved = new Float32Array(count * 11);
+    const surface = mesh.surface_get_arrays(0);
+    const { count, normals, colors, uvs, tangents, has_tangents } = surface_attribs(surface);
+    const interleaved = new Float32Array(count * 15);
     for (let i = 0; i < count; i += 1) {
       interleaved.set(
         [
@@ -206,8 +274,12 @@ export class WebGL2RenderBackend implements RenderBackend {
           colors[i * 3 + 2],
           uvs[i * 2],
           uvs[i * 2 + 1],
+          tangents[i * 4],
+          tangents[i * 4 + 1],
+          tangents[i * 4 + 2],
+          tangents[i * 4 + 3],
         ],
-        i * 11,
+        i * 15,
       );
     }
     const gl = this.gl;
@@ -217,12 +289,13 @@ export class WebGL2RenderBackend implements RenderBackend {
     gl.enableVertexAttribArray(0);
     gl.enableVertexAttribArray(1);
     gl.enableVertexAttribArray(2);
+    gl.enableVertexAttribArray(4);
 
     const indices = gl.createBuffer()!;
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, surface.indices, gl.STATIC_DRAW);
 
-    const uploaded = { vertex, indices, count: surface.indices.length };
+    const uploaded = { vertex, indices, count: surface.indices.length, has_tangents };
     this.meshes.set(mesh, uploaded);
     return uploaded;
   }

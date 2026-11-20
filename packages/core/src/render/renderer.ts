@@ -52,7 +52,7 @@ export class Renderer {
     const frame = build_render_frame(tree, this.canvas.width, this.canvas.height);
     if (debug.enabled && debug.log.length < 8) {
       debug.log.push(frame.draws.map((draw) => draw.mesh.constructor.name +
-        " v=" + (draw.mesh.surface().positions.length / 3) +
+        " v=" + (draw.mesh.surface_get_arrays(0).positions.length / 3) +
         " at=" + [draw.transform[12], draw.transform[13], draw.transform[14]].map((n) => Math.round(n * 10) / 10).join(",")
       ).join("; "));
     }

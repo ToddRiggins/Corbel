@@ -18,7 +18,7 @@ import {
   view_proj_for_backend,
 } from "./shaders.js";
 
-const VERTEX_FLOATS = 11; // position 3 + normal 3 + color 3 + uv 2
+const VERTEX_FLOATS = 15; // position 3 + normal 3 + color 3 + uv 2 + tangent 4
 const VERTEX_LAYOUT: GPUVertexBufferLayout = {
   arrayStride: VERTEX_FLOATS * 4,
   attributes: [
@@ -26,17 +26,48 @@ const VERTEX_LAYOUT: GPUVertexBufferLayout = {
     { shaderLocation: 1, format: "float32x3", offset: 12 },
     { shaderLocation: 2, format: "float32x3", offset: 24 },
     { shaderLocation: 3, format: "float32x2", offset: 36 },
+    { shaderLocation: 4, format: "float32x4", offset: 44 },
   ],
 };
 
 const DRAW_SCRATCH = new Float32Array(WGSL_DRAW_FLOATS);
 const CAMERA_SCRATCH = new Float32Array(WGSL_CAMERA_FLOATS);
+const CAM_POS = { x: 0, y: 0, z: 0 };
 const WHITE_ALBEDO = new Color(1, 1, 1, 1);
+
+/** Standard alpha blend: src alpha, one minus src alpha per channel. */
+const BLEND_ALPHA: GPUBlendState = {
+  color: {
+    operation: "add",
+    srcFactor: "src-alpha",
+    dstFactor: "one-minus-src-alpha",
+  },
+  alpha: {
+    operation: "add",
+    srcFactor: "one",
+    dstFactor: "one-minus-src-alpha",
+  },
+};
 
 interface UploadedMesh {
   vertex: GPUBuffer;
   indices: GPUBuffer;
   count: number;
+  /** The surface carried real tangents (not the identity default). */
+  has_tangents: boolean;
+}
+
+/** The four texture maps a material carries, all null when it is not standard. */
+function map_pair_of(material: Material): { albedo: Texture2D | null; normal: Texture2D | null; roughness: Texture2D | null; metallic: Texture2D | null } {
+  if (material instanceof StandardMaterial3D) {
+    return {
+      albedo: material.albedo_texture,
+      normal: material.normal_texture,
+      roughness: material.roughness_texture,
+      metallic: material.metallic_texture,
+    };
+  }
+  return { albedo: null, normal: null, roughness: null, metallic: null };
 }
 
 export function material_id(): (material: Material) => number {
@@ -72,7 +103,7 @@ export class WebGPURenderBackend implements RenderBackend {
   private readonly textures = new Map<Texture2D, { texture: GPUTexture; sampler: GPUSampler }>();
 
   /** One pipeline per Shader, one draw uniform per draw slot, one bind group per slot-and-material. */
-  private readonly pipelines = new Map<Shader, GPURenderPipeline>();
+  private readonly pipelines = new Map<string, GPURenderPipeline>();
   private readonly draw_buffers: GPUBuffer[] = [];
   private readonly bind_groups = new Map<string, GPUBindGroup>();
   private readonly materials = new Map<ShaderMaterial, GPUBuffer>();
@@ -93,6 +124,12 @@ export class WebGPURenderBackend implements RenderBackend {
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: {} },
         { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
         { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 5, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 7, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 8, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 9, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
       ],
     });
     this.pipeline_layout = device.createPipelineLayout({ bindGroupLayouts: [camera_layout, draw_layout] });
@@ -135,8 +172,17 @@ export class WebGPURenderBackend implements RenderBackend {
     const depth = this.depth_view_for(frame.width, frame.height);
     if (frame.camera && frame.camera_transform) {
       view_proj_for_backend(frame, true, this.view_proj);
+      const origin = frame.camera_transform.origin;
+      CAM_POS.x = origin.x;
+      CAM_POS.y = origin.y;
+      CAM_POS.z = origin.z;
+    } else {
+      this.view_proj.fill(0);
+      CAM_POS.x = 0;
+      CAM_POS.y = 0;
+      CAM_POS.z = 0;
     }
-    fill_camera(CAMERA_SCRATCH, this.view_proj, light_dir_for(frame), frame.light_color, frame.ambient);
+    fill_camera(CAMERA_SCRATCH, this.view_proj, light_dir_for(frame), frame.light_color, frame.ambient, frame.fog, CAM_POS);
     this.device.queue.writeBuffer(this.camera_buffer, 0, CAMERA_SCRATCH);
 
     const encoder = this.device.createCommandEncoder();
@@ -158,16 +204,16 @@ export class WebGPURenderBackend implements RenderBackend {
     for (let slot = 0; slot < frame.draws.length; slot += 1) {
       const draw = frame.draws[slot];
       const material = draw.material;
+      const transparent = draw.transparency > 0;
       const uploaded = this.mesh_for(draw.mesh);
-      const albedo = material instanceof StandardMaterial3D ? material.albedo : WHITE_ALBEDO;
-      fill_draw(DRAW_SCRATCH, draw.transform, draw.normal_matrix, albedo);
+      fill_draw(DRAW_SCRATCH, draw.transform, draw.normal_matrix, material, draw.transparency, uploaded.has_tangents);
       const draw_buffer = this.draw_uniform(slot);
       this.device.queue.writeBuffer(draw_buffer, 0, DRAW_SCRATCH);
       const group = this.draw_bind_group(slot, material);
       if (material instanceof ShaderMaterial) {
         this.device.queue.writeBuffer(this.params_buffer(material), 0, this.param_scratch(material));
       }
-      pass.setPipeline(this.pipeline_for(material));
+      pass.setPipeline(this.pipeline_for(material, transparent));
       pass.setBindGroup(0, this.camera_group);
       pass.setBindGroup(1, group);
       pass.setVertexBuffer(0, uploaded.vertex);
@@ -179,9 +225,10 @@ export class WebGPURenderBackend implements RenderBackend {
     this.device.queue.submit([encoder.finish()]);
   }
 
-  private pipeline_for(material: Material): GPURenderPipeline {
+  private pipeline_for(material: Material, transparent: boolean): GPURenderPipeline {
     const shader = material instanceof ShaderMaterial ? material.shader : LIT_SHADER;
-    let pipeline = this.pipelines.get(shader);
+    const key = transparent ? `${id_of(material)}:blend` : `${id_of(material)}:opaque`;
+    let pipeline = this.pipelines.get(key);
     if (pipeline === undefined) {
       const module = this.device.createShaderModule({ code: shader.webgpu });
       pipeline = this.device.createRenderPipeline({
@@ -191,12 +238,16 @@ export class WebGPURenderBackend implements RenderBackend {
           module,
           entryPoint: "fs",
           // The preferred surface format, read at configure time.
-          targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }],
+          targets: [{
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            // Transparent draws blend; opaque target keeps a solid alpha.
+            blend: transparent ? BLEND_ALPHA : undefined,
+          }],
         },
         primitive: { topology: "triangle-list", cullMode: "back" },
-        depthStencil: { format: "depth24plus", depthWriteEnabled: true, depthCompare: "less" },
+        depthStencil: { format: "depth24plus", depthWriteEnabled: !transparent, depthCompare: "less" },
       });
-      this.pipelines.set(shader, pipeline);
+      this.pipelines.set(key, pipeline);
     }
     return pipeline;
   }
@@ -214,8 +265,12 @@ export class WebGPURenderBackend implements RenderBackend {
 
   private draw_bind_group(slot: number, material: Material): GPUBindGroup {
     const params = material instanceof ShaderMaterial ? this.params_buffer(material) : this.dummy_params;
-    const texture_pair = this.albedo_texture_pair(material);
-    const key = `${slot}:${id_of(material)}:${texture_pair.id}`;
+    const pair = map_pair_of(material);
+    const albedo = this.texture_pair(pair.albedo);
+    const normal = this.texture_pair(pair.normal);
+    const roughness = this.texture_pair(pair.roughness);
+    const metallic = this.texture_pair(pair.metallic);
+    const key = `${slot}:${id_of(material)}:${albedo.id}:${normal.id}:${roughness.id}:${metallic.id}`;
     let group = this.bind_groups.get(key);
     if (group === undefined) {
       group = this.device.createBindGroup({
@@ -223,8 +278,14 @@ export class WebGPURenderBackend implements RenderBackend {
         entries: [
           { binding: 0, resource: { buffer: this.draw_uniform(slot) } },
           { binding: 1, resource: { buffer: params } },
-          { binding: 2, resource: texture_pair.view },
-          { binding: 3, resource: texture_pair.sampler },
+          { binding: 2, resource: albedo.view },
+          { binding: 3, resource: albedo.sampler },
+          { binding: 4, resource: normal.view },
+          { binding: 5, resource: normal.sampler },
+          { binding: 6, resource: roughness.view },
+          { binding: 7, resource: roughness.sampler },
+          { binding: 8, resource: metallic.view },
+          { binding: 9, resource: metallic.sampler },
         ],
       });
       this.bind_groups.set(key, group);
@@ -232,9 +293,8 @@ export class WebGPURenderBackend implements RenderBackend {
     return group;
   }
 
-  /** Uploads (once) the material's albedo texture; no texture means white. */
-  private albedo_texture_pair(material: Material): { view: GPUTextureView; sampler: GPUSampler; id: number } {
-    const texture = material instanceof StandardMaterial3D ? material.albedo_texture : null;
+  /** Uploads (once) any texture map; no texture means the white 1x1 dummy. */
+  private texture_pair(texture: Texture2D | null): { view: GPUTextureView; sampler: GPUSampler; id: number } {
     if (texture === null) {
       return { view: this.dummy_texture.createView(), sampler: this.dummy_sampler, id: 0 };
     }
@@ -336,8 +396,8 @@ export class WebGPURenderBackend implements RenderBackend {
     if (cached) {
       return cached;
     }
-    const surface = mesh.surface();
-    const { count, normals, colors, uvs } = surface_attribs(surface);
+    const surface = mesh.surface_get_arrays(0);
+    const { count, normals, colors, uvs, tangents, has_tangents } = surface_attribs(surface);
     const interleaved = new Float32Array(count * VERTEX_FLOATS);
     for (let i = 0; i < count; i += 1) {
       interleaved.set(
@@ -353,6 +413,10 @@ export class WebGPURenderBackend implements RenderBackend {
           colors[i * 3 + 2],
           uvs[i * 2],
           uvs[i * 2 + 1],
+          tangents[i * 4],
+          tangents[i * 4 + 1],
+          tangents[i * 4 + 2],
+          tangents[i * 4 + 3],
         ],
         i * VERTEX_FLOATS,
       );
@@ -373,7 +437,7 @@ export class WebGPURenderBackend implements RenderBackend {
     new Uint32Array(indices.getMappedRange()).set(surface.indices);
     indices.unmap();
 
-    const uploaded = { vertex, indices, count: surface.indices.length };
+    const uploaded = { vertex, indices, count: surface.indices.length, has_tangents };
     this.meshes.set(mesh, uploaded);
     return uploaded;
   }

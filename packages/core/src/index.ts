@@ -36,6 +36,7 @@ export {
 } from "./input/index.js";
 export type { ProjectActionSpec, ProjectEventSpec } from "./input/index.js";
 export {
+  ARRAY,
   ArrayMesh,
   BoxMesh,
   Camera3D,
@@ -53,6 +54,7 @@ export {
   resource_loader,
   resource_cached,
   ResourceLoader,
+  TextureChannel,
   PrimitiveType,
   ProcessMode,
   SceneTree,

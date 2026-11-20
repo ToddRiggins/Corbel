@@ -93,13 +93,28 @@
       <p class="crumbs">Corbel › Class Reference › Resources</p>
       <h1>Mesh</h1>
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Resource.html">Resource</a> <strong>&lt;</strong> Object</p>
-      <p class="brief">Base class for draw geometry.</p>
+      <p class="brief">Base class for meshes: one or more surfaces of geometry plus materials.</p>
       <h2>Description</h2>
-      <p>Mesh is the base every renderer-visible geometry inherits: ArrayMesh and BoxMesh today, with the SurfaceTool able to build any of them in code.</p>
+      <p>Mesh holds draw geometry. A mesh carries one or more surfaces; each surface is a PrimitiveType plus its arrays, and can carry its own Material. BoxMesh and ArrayMesh are the concrete meshes today. get_faces returns the mesh as flat triangles and get_aabb wraps all of it. The ARRAY constants name the array slots the way Godot numbers them, so mesh data written in Godot reads the same here.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       
-      
+      <h2>Methods</h2><table><tr><th>Signature</th><th>Description</th></tr>
+<tr id="Mesh.get_surface_count"><td><code>get_surface_count(): number</code></td><td>How many surfaces the mesh holds</td></tr>
+<tr id="Mesh.surface_get_arrays"><td><code>surface_get_arrays(surface: number): SurfaceArrays</code></td><td>The arrays of one surface. Surface 0 is the only surface today; the renderer draws it</td></tr>
+<tr id="Mesh.surface_get_material"><td><code>surface_get_material(surface: number): Material | null</code></td><td>The material one surface draws with, or null</td></tr>
+<tr id="Mesh.surface_set_material"><td><code>surface_set_material(surface: number, material: Material | null)</code></td><td>Set one surface's material. An ArrayMesh keeps it; BoxMesh ignores it</td></tr>
+<tr id="Mesh.get_aabb"><td><code>get_aabb(): AABB</code></td><td>The axis-aligned box that wraps every surface</td></tr>
+<tr id="Mesh.get_faces"><td><code>get_faces(): Vector3[]</code></td><td>The mesh as a flat list of triangles: three corner points per face</td></tr>
+      </table>
+      <h2>Not yet built</h2>
+      <p class="note">Godot names this class carries that the engine has not built yet. Each says where it waits.</p>
+      <table><tr><th>Godot name</th><th>Waits for</th></tr>
+<tr><td><code>create_trimesh_shape / create_convex_shape</code></td><td>Physics shapes — the physics phases</td></tr>
+<tr><td><code>create_outline</code></td><td>Sweeps an outline shape; needs tessellation tooling</td></tr>
+<tr><td><code>generate_triangle_mesh</code></td><td>Convenience over get_faces</td></tr>
+<tr><td><code>lightmap_size_hint</code></td><td>Lightmap baking, not scheduled</td></tr>
+      </table>
     </main>
   </div>
 </body>

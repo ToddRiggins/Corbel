@@ -93,18 +93,35 @@
       <p class="crumbs">Corbel › Class Reference › Resources</p>
       <h1>StandardMaterial3D</h1>
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Material.html">Material</a> <strong>&lt;</strong> <a href="class_Resource.html">Resource</a> <strong>&lt;</strong> Object</p>
-      <p class="brief">The built-in lit material: albedo, texture, roughness, metallic.</p>
+      <p class="brief">The built-in lit material: albedo, textures, normal map, roughness and metallic maps, fog participation.</p>
       <h2>Description</h2>
-      <p>StandardMaterial3D draws with the built-in lit shader on both backends. The albedo texture multiplies the albedo color, so a white material shows texture colors; a texture-less material samples a white 1x1 and the albedo color behaves exactly like the pre-texture engine.</p>
+      <p>StandardMaterial3D is the built-in material the renderer's lit shader draws. The albedo color multiplies the albedo texture. A normal_texture reshapes shading through the mesh's tangents, pushed in and out by normal_scale. The roughness_texture and metallic_texture each read one color channel (TextureChannel.RED for roughness and TextureChannel.BLUE for metallic, the Godot defaults) and multiply the roughness and metallic scalars. uv1_scale and uv1_offset transform the UVs before every texture samples. vertex_color_use_as_albedo lets the mesh's own vertex colors into the albedo. Transparency comes from GeometryInstance3D.transparency.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
-<tr id="StandardMaterial3D.albedo"><td><code>Color albedo</code></td><td><code>Color</code> The base color. Multiplied by albedo_texture</td></tr>
-<tr id="StandardMaterial3D.roughness"><td><code>number roughness</code></td><td><code>number</code> Present for Godot compatibility; the foundation's lit shader ignores it today</td></tr>
-<tr id="StandardMaterial3D.metallic"><td><code>number metallic</code></td><td><code>number</code> Present for Godot compatibility; the foundation's lit shader ignores it today</td></tr>
-<tr id="StandardMaterial3D.albedo_texture"><td><code>Texture2D | null albedo_texture</code></td><td><code>Texture2D | null</code> The color texture to sample once per UV square</td></tr>
+<tr id="StandardMaterial3D.albedo"><td><code>Color albedo</code></td><td><code>Color</code> The base color every texture multiplies</td></tr>
+<tr id="StandardMaterial3D.albedo_texture"><td><code>Texture2D | null albedo_texture</code></td><td><code>Texture2D | null</code> Godot 4 albedo_texture: multiplies the albedo color</td></tr>
+<tr id="StandardMaterial3D.vertex_color_use_as_albedo"><td><code>boolean vertex_color_use_as_albedo</code></td><td><code>boolean</code> Godot 4 vertex_color_use_as_albedo: vertex colors join the albedo</td></tr>
+<tr id="StandardMaterial3D.normal_texture"><td><code>Texture2D | null normal_texture</code></td><td><code>Texture2D | null</code> Godot 4 normal_texture: tangent-space normal map; the mesh needs tangents</td></tr>
+<tr id="StandardMaterial3D.normal_scale"><td><code>number normal_scale</code></td><td><code>number</code> Godot 4 normal_scale: strength of the normal map, 0 turns it off</td></tr>
+<tr id="StandardMaterial3D.roughness"><td><code>number roughness</code></td><td><code>number</code> Godot 4 roughness: 0 is a mirror, 1 is matte</td></tr>
+<tr id="StandardMaterial3D.roughness_texture"><td><code>Texture2D | null roughness_texture</code></td><td><code>Texture2D | null</code> Godot 4 roughness_texture: per-pixel roughness on one channel</td></tr>
+<tr id="StandardMaterial3D.roughness_texture_channel"><td><code>number roughness_texture_channel</code></td><td><code>number</code> Godot 4 roughness_texture_channel: TextureChannel.RED by default</td></tr>
+<tr id="StandardMaterial3D.metallic"><td><code>number metallic</code></td><td><code>number</code> Godot 4 metallic: 0 is dielectric, 1 tints reflections with the albedo</td></tr>
+<tr id="StandardMaterial3D.metallic_texture"><td><code>Texture2D | null metallic_texture</code></td><td><code>Texture2D | null</code> Godot 4 metallic_texture: per-pixel metallic on one channel</td></tr>
+<tr id="StandardMaterial3D.metallic_texture_channel"><td><code>number metallic_texture_channel</code></td><td><code>number</code> Godot 4 metallic_texture_channel: TextureChannel.BLUE by default</td></tr>
+<tr id="StandardMaterial3D.uv1_scale"><td><code>Vector2 uv1_scale</code></td><td><code>Vector2</code> Godot 4 uv1_scale: UVs multiply this before every texture samples</td></tr>
+<tr id="StandardMaterial3D.uv1_offset"><td><code>Vector2 uv1_offset</code></td><td><code>Vector2</code> Godot 4 uv1_offset: then add this</td></tr>
       </table>
       
+      <h2>Not yet built</h2>
+      <p class="note">Godot names this class carries that the engine has not built yet. Each says where it waits.</p>
+      <table><tr><th>Godot name</th><th>Waits for</th></tr>
+<tr><td><code>emission (+texture), clearcoat, anisotropy, backscatter</code></td><td>Emission next in P2; clearcoat later</td></tr>
+<tr><td><code>transparency (cull depth / alpha scissor) modes</code></td><td>GeometryInstance3D.transparency covers plain alpha today</td></tr>
+<tr><td><code>heightmap, detail layers, uv2, triplanar</code></td><td>After uv1 maps prove the pipeline</td></tr>
+<tr><td><code>texture_filter, msdf, billboard, shadow modes</code></td><td>P3 shadow maps and sampler control</td></tr>
+      </table>
     </main>
   </div>
 </body>

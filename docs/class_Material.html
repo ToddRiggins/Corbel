@@ -95,9 +95,13 @@
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Resource.html">Resource</a> <strong>&lt;</strong> Object</p>
       <p class="brief">Base class for the way a surface draws.</p>
       <h2>Description</h2>
-      <p>Material is the base class of StandardMaterial3D and ShaderMaterial. A renderer reads the concrete type per draw. Set a material on a MeshInstance3D with material_override.</p>
+      <p>Material carries the properties every material shares: render_priority sorts overlapping transparent draws, and next_pass chains a second material to draw over this one. The concrete classes are StandardMaterial3D and ShaderMaterial.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
+      <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
+<tr id="Material.render_priority"><td><code>number render_priority</code></td><td><code>number</code> Godot 4 render_priority: higher draws later among transparent draws</td></tr>
+<tr id="Material.next_pass"><td><code>Material | null next_pass</code></td><td><code>Material | null</code> Godot 4 next_pass: the material drawn after this one on the same surface</td></tr>
+      </table>
       
       
     </main>

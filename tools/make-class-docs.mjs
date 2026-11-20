@@ -108,7 +108,11 @@ function classPage(name) {
   const group = groupsOf.get(name) ?? "Classes";
   const chain_html = chain(entry.inherits ?? "").map((part, index) => (index === 0 ? (part.linked ? `<a href="class_${part.name}.html">${esc(part.name)}</a>` : esc(part.name)) : ` <strong>&lt;</strong> ${part.linked ? `<a href="class_${part.name}.html">${esc(part.name)}</a>` : esc(part.name)}`)).join("");
   const props = (entry.properties ?? []).map((p) => memberRow(`${name}.${p.name}`, p.name, `${p.type} ${p.name}`, p.type, p.desc)).join("\n");
-  const methods = (entry.methods ?? []).map((m) => memberRow(`${name}.${m.name.split("(")[0]}`, m.name, m.sig, "", m.desc)).join("\n");
+  const methods = (entry.methods ?? []).map((m) => {
+    const sig = m.sig ?? `${m.name}()`;
+    const member = sig.split("(")[0];
+    return memberRow(`${name}.${member}`, member, sig, "", m.desc);
+  }).join("\n");
   const tutorial_block = (entry.tutorials ?? []).length > 0
     ? `<ul>${entry.tutorials.map((t) => `<li><a href="${esc(t.href)}">${esc(t.label)}</a></li>`).join("")}</ul>`
     : `<p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>`;
@@ -158,6 +162,11 @@ ${props}
       </table>` : ""}
       ${(entry.methods ?? []).length > 0 ? `<h2>Methods</h2><table><tr><th>Signature</th><th>Description</th></tr>
 ${methods}
+      </table>` : ""}
+      ${(entry.not_built ?? []).length > 0 ? `<h2>Not yet built</h2>
+      <p class="note">Godot names this class carries that the engine has not built yet. Each says where it waits.</p>
+      <table><tr><th>Godot name</th><th>Waits for</th></tr>
+${(entry.not_built ?? []).map((item) => `<tr><td><code>${esc(item.name)}</code></td><td>${esc(item.why)}</td></tr>`).join("\n")}
       </table>` : ""}
     </main>
   </div>

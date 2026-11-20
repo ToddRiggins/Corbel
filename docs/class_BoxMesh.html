@@ -93,13 +93,21 @@
       <p class="crumbs">Corbel › Class Reference › Resources</p>
       <h1>BoxMesh</h1>
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Mesh.html">Mesh</a> <strong>&lt;</strong> <a href="class_Resource.html">Resource</a> <strong>&lt;</strong> Object</p>
-      <p class="brief">A cube centered on the origin.</p>
+      <p class="brief">A box mesh: every face carries the full 0 to 1 UV square and out-facing normals.</p>
       <h2>Description</h2>
-      <p>BoxMesh builds a 24-vertex, 36-index cube with outward normals, white vertex colors, and one 0-1 UV square per face. size controls the extent along each axis.</p>
+      <p>BoxMesh builds six axis-aligned faces centered on the origin, winded counter-clockwise seen from outside, one full texture square per face, and a tangent on every vertex that follows the face's first grid axis. size sets the full length on each axis. subdivide_width, subdivide_height, and subdivide_depth split the matching face pairs into a grid the way Godot numbers them: width splits the faces normal to Z and Y, height splits those normal to Z and X, and depth splits those normal to Y and X. The default is one, the plain quad faces.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
-<tr id="BoxMesh.size"><td><code>Vector3 size</code></td><td><code>Vector3</code> The extent along each axis. 1x1x1 by default</td></tr>
+<tr id="BoxMesh.size"><td><code>Vector3 size</code></td><td><code>Vector3</code> Full length on each axis</td></tr>
+<tr id="BoxMesh.subdivide_width"><td><code>number subdivide_width</code></td><td><code>number</code> Splits along each face's width direction; 1 keeps one quad</td></tr>
+<tr id="BoxMesh.subdivide_height"><td><code>number subdivide_height</code></td><td><code>number</code> Splits along each face's height direction</td></tr>
+<tr id="BoxMesh.subdivide_depth"><td><code>number subdivide_depth</code></td><td><code>number</code> Splits along each face's depth direction</td></tr>
+      </table>
+      <h2>Methods</h2><table><tr><th>Signature</th><th>Description</th></tr>
+<tr id="BoxMesh.surface_get_arrays"><td><code>surface_get_arrays(surface: number): SurfaceArrays</code></td><td>The box grids. BoxMesh always answers surface 0</td></tr>
+<tr id="BoxMesh.get_aabb"><td><code>get_aabb(): AABB</code></td><td>The box the mesh fills</td></tr>
+<tr id="BoxMesh.get_faces"><td><code>get_faces(): Vector3[]</code></td><td>The 12 triangles as corner points</td></tr>
       </table>
       
     </main>
