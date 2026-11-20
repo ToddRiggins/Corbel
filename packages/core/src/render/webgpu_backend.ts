@@ -1,11 +1,12 @@
 import { Color } from "../math/color.js";
+import { Vector3 } from "../math/vector3.js";
 import type { Mesh } from "../scene/mesh.js";
 import type { Material } from "../scene/material.js";
 import { ShaderMaterial } from "../scene/material.js";
 import { StandardMaterial3D } from "../scene/standard_material3d.js";
 import { Texture2D } from "../scene/texture.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
-import { CLEAR_COLOR, surface_attribs } from "./frame.js";
+import { build_shadow_view, CLEAR_COLOR, surface_attribs } from "./frame.js";
 import { Shader } from "./shaders.js";
 import {
   LIT_SHADER,
@@ -32,6 +33,21 @@ const VERTEX_LAYOUT: GPUVertexBufferLayout = {
 
 const DRAW_SCRATCH = new Float32Array(WGSL_DRAW_FLOATS);
 const CAMERA_SCRATCH = new Float32Array(WGSL_CAMERA_FLOATS);
+const SHADOW_CAMERA_SCRATCH = new Float32Array(WGSL_CAMERA_FLOATS);
+const SHADOW_MODULE = `
+struct ShadowCamera {
+  view_proj : mat4x4f,
+};
+@group(0) @binding(0) var<uniform> c : ShadowCamera;
+
+@vertex
+fn vs_shadow(@location(0) pos : vec3f) -> @builtin(position) vec4f {
+  return c.view_proj * vec4f(pos, 1.0);
+}
+
+@fragment
+fn fs_shadow() {}
+`;
 const CAM_POS = { x: 0, y: 0, z: 0 };
 const WHITE_ALBEDO = new Color(1, 1, 1, 1);
 
@@ -97,6 +113,14 @@ export class WebGPURenderBackend implements RenderBackend {
   private readonly pipeline_layout: GPUPipelineLayout;
   private readonly camera_buffer: GPUBuffer;
   private readonly camera_group: GPUBindGroup;
+  private readonly shadow_camera_buffer: GPUBuffer;
+  private readonly shadow_camera_group: GPUBindGroup;
+  private readonly shadow_texture: GPUTexture;
+  private readonly shadow_view: GPUTextureView;
+  private readonly shadow_sampler: GPUSampler;
+  private readonly shadow_pipelines = new Map<string, GPURenderPipeline>();
+  private readonly depth_pipeline: GPUPipelineLayout;
+  private readonly shadow_uniform_layout: GPUBindGroupLayout;
   private readonly dummy_params: GPUBuffer;
   private readonly dummy_texture: GPUTexture;
   private readonly dummy_sampler: GPUSampler;
@@ -110,6 +134,7 @@ export class WebGPURenderBackend implements RenderBackend {
   private readonly materials = new Map<ShaderMaterial, GPUBuffer>();
   private readonly meshes = new Map<Mesh, UploadedMesh>();
   private readonly view_proj = new Float32Array(16);
+  private readonly shadow_proj = new Float32Array(16);
   private depth: GPUTexture | null = null;
   private depth_view: GPUTextureView | null = null;
 
@@ -117,7 +142,12 @@ export class WebGPURenderBackend implements RenderBackend {
     this.context = context;
     this.device = device;
     const camera_layout = device.createBindGroupLayout({
-      entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: {} }],
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: {} },
+        // The directional shadow map, sampled with depth comparisons.
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "depth" } },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: "comparison" } },
+      ],
     });
     const draw_layout = device.createBindGroupLayout({
       entries: [
@@ -150,11 +180,44 @@ export class WebGPURenderBackend implements RenderBackend {
       size: WGSL_CAMERA_FLOATS * 4,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+    // The directional shadow map: one fixed 2048 depth texture the light pass
+    // rewrites each frame and every fragment compares against.
+    this.shadow_texture = device.createTexture({
+      size: [2048, 2048],
+      format: "depth32float",
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    this.shadow_view = this.shadow_texture.createView();
+    this.shadow_sampler = device.createSampler({
+      compare: "greater-equal",
+      magFilter: "linear",
+      minFilter: "linear",
+    });
     this.camera_group = device.createBindGroup({
       layout: camera_layout,
-      entries: [{ binding: 0, resource: { buffer: this.camera_buffer } }],
+      entries: [
+        { binding: 0, resource: { buffer: this.camera_buffer } },
+        { binding: 1, resource: this.shadow_view },
+        { binding: 2, resource: this.shadow_sampler },
+      ],
     });
-    this.dummy_params = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    this.shadow_camera_buffer = device.createBuffer({
+      size: WGSL_CAMERA_FLOATS * 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    // The shadow pass's own layout: uniform only. It must not carry the
+    // shadow-map bindings, or the depth pass writes and samples one texture.
+    this.shadow_uniform_layout = device.createBindGroupLayout({
+      entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: {} }],
+    });
+    this.shadow_camera_group = device.createBindGroup({
+      layout: this.shadow_uniform_layout,
+      entries: [{ binding: 0, resource: { buffer: this.shadow_camera_buffer } }],
+    });
+    this.depth_pipeline = device.createPipelineLayout({
+      bindGroupLayouts: [this.shadow_uniform_layout],
+    });
+    this.dummy_params = device.createBuffer({ size: WGSL_CAMERA_FLOATS * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     // The no-texture pair: a 1x1 white sample, so albedo texture multiplies neutral.
     this.dummy_texture = device.createTexture({ size: [1, 1], format: "rgba8unorm", usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.device.queue.writeTexture({ texture: this.dummy_texture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
@@ -193,8 +256,45 @@ export class WebGPURenderBackend implements RenderBackend {
       CAM_POS.y = 0;
       CAM_POS.z = 0;
     }
-    fill_camera(CAMERA_SCRATCH, this.view_proj, light_dir_for(frame), frame.light_color, frame.ambient, frame.fog, CAM_POS, frame.lights);
+    const shadow = frame.shadow
+      ? {
+          view_proj: build_shadow_view(light_dir_for(frame), new Vector3(CAM_POS.x, CAM_POS.y, CAM_POS.z), frame.shadow.range, true, this.shadow_proj),
+          bias: frame.shadow.bias,
+        }
+      : null;
+    fill_camera(CAMERA_SCRATCH, this.view_proj, light_dir_for(frame), frame.light_color, frame.ambient, frame.fog, CAM_POS, frame.lights, shadow);
     this.device.queue.writeBuffer(this.camera_buffer, 0, CAMERA_SCRATCH);
+    // The shadow pass runs as its own command buffer: a depth texture cannot
+    // be written and sampled inside one synchronization scope.
+    if (shadow !== null && shadow.view_proj) {
+      const encoder = this.device.createCommandEncoder();
+      // The light's camera block: only the view_proj matters to the vertex stage.
+      SHADOW_CAMERA_SCRATCH.fill(0);
+      SHADOW_CAMERA_SCRATCH.set(shadow.view_proj, 0);
+      this.device.queue.writeBuffer(this.shadow_camera_buffer, 0, SHADOW_CAMERA_SCRATCH);
+      const shadow_pass = encoder.beginRenderPass({
+        colorAttachments: [],
+        depthStencilAttachment: {
+          view: this.shadow_view,
+          depthClearValue: 1.0,
+          depthLoadOp: "clear",
+          depthStoreOp: "store",
+        },
+      });
+      shadow_pass.setPipeline(this.shadow_pipeline());
+      shadow_pass.setBindGroup(0, this.shadow_camera_group);
+      for (const draw of frame.draws) {
+        if (draw.transparency > 0) {
+          continue;
+        }
+        const uploaded = this.mesh_for(draw.mesh);
+        shadow_pass.setVertexBuffer(0, uploaded.vertex);
+        shadow_pass.setIndexBuffer(uploaded.indices, "uint32");
+        shadow_pass.drawIndexed(uploaded.count);
+      }
+      shadow_pass.end();
+      this.device.queue.submit([encoder.finish()]);
+    }
 
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
@@ -234,6 +334,23 @@ export class WebGPURenderBackend implements RenderBackend {
 
     pass.end();
     this.device.queue.submit([encoder.finish()]);
+  }
+
+  /** The depth-only pipeline: same vertex stage, empty fragment, back-face cull off for bias safety. */
+  private shadow_pipeline(): GPURenderPipeline {
+    let pipeline = this.shadow_pipelines.get("shadow");
+    if (pipeline === undefined) {
+      const shadow_module = this.device.createShaderModule({ code: SHADOW_MODULE });
+      pipeline = this.device.createRenderPipeline({
+        layout: this.depth_pipeline,
+        vertex: { module: shadow_module, entryPoint: "vs_shadow", buffers: [VERTEX_LAYOUT] },
+        fragment: { module: shadow_module, entryPoint: "fs_shadow", targets: [] },
+        primitive: { topology: "triangle-list", cullMode: "none" },
+        depthStencil: { format: "depth32float", depthWriteEnabled: true, depthCompare: "less" },
+      });
+      this.shadow_pipelines.set("shadow", pipeline);
+    }
+    return pipeline;
   }
 
   private pipeline_for(material: Material, transparent: boolean): GPURenderPipeline {
@@ -415,6 +532,8 @@ export class WebGPURenderBackend implements RenderBackend {
     this.depth = null;
     this.depth_view = null;
     this.camera_buffer.destroy();
+    this.shadow_camera_buffer.destroy();
+    this.shadow_texture.destroy();
     this.dummy_params.destroy();
   }
 

@@ -3,7 +3,7 @@ import { Basis } from "../src/math/basis.js";
 import { Color } from "../src/math/color.js";
 import { Transform3D } from "../src/math/transform3d.js";
 import { Vector3 } from "../src/math/vector3.js";
-import { CLEAR_COLOR, type RenderLight } from "../src/render/frame.js";
+import { CLEAR_COLOR, build_shadow_view, type RenderLight, type RenderShadow } from "../src/render/frame.js";
 import { WGSL_CAMERA_FLOATS, WGSL_DRAW_FLOATS, fill_camera, fill_draw } from "../src/render/shaders.js";
 import {
   basis_to_mat3,
@@ -150,6 +150,61 @@ describe("build_render_frame", () => {
       return node;
     };
   }
+
+
+  it("a shadow_enabled directional light builds the shadow block; others do not", () => {
+    const with_shadow = build_render_frame(tree_with(box(), shadowedSun(true)), 800, 600);
+    expect(with_shadow.shadow?.range).toBe(14);
+    expect(with_shadow.shadow?.bias).toBeCloseTo(0.03);
+
+    const without = build_render_frame(tree_with(box(), shadowedSun(false)), 800, 600);
+    expect(without.shadow).toBeNull();
+  });
+
+  /** A fresh sun per tree, so two builds never fight over one node. */
+  function shadowedSun(enabled: boolean): () => DirectionalLight3D {
+    return () => {
+      const sun = new DirectionalLight3D();
+      sun.set_name("Sun");
+      sun.shadow_enabled = enabled;
+      sun.shadow_range = 14;
+      sun.shadow_bias = 0.03;
+      return sun;
+    };
+  }
+
+  it("build_shadow_view points the light camera down its direction about the center", () => {
+    const view_proj = build_shadow_view(Vector3.DOWN, new Vector3(3, -2, 5), 6, false);
+    // The light camera stares at the center, so the center projects dead-on.
+    const center = xform_point(view_proj, new Vector3(3, -2, 5));
+    expect(center.x).toBeCloseTo(0, 2);
+    expect(center.y).toBeCloseTo(0, 2);
+    // A surface halfway toward the eye also stays inside the ortho box.
+    const near_point = xform_point(view_proj, new Vector3(3, 1, 5));
+    expect(Math.abs(near_point.x)).toBeLessThanOrEqual(1.001);
+    expect(Math.abs(near_point.y)).toBeLessThanOrEqual(1.001);
+  });
+
+  it("fill_camera packs the shadow block after the lights", () => {
+    const scratch = new Float32Array(WGSL_CAMERA_FLOATS);
+    const view_proj = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0.5, 0.3, -0.2, 1]);
+    fill_camera(scratch, new Float32Array(16), Vector3.FORWARD, Color.WHITE, Color.WHITE, null, { x: 0, y: 0, z: 0 }, [], { view_proj, bias: 0.03 });
+    // After base 44 + count 4 + 8 lights: 44 + 4 + 128 = 176. view_proj occupies 176..191.
+    expect([...scratch.slice(176, 192)]).toEqual([...view_proj]);
+    expect(scratch[192]).toBe(1);
+    expect(scratch[193]).toBeCloseTo(0.03);
+    // Disabled shadows still leave an identity matrix and the switch off.
+    fill_camera(scratch, new Float32Array(16), Vector3.FORWARD, Color.WHITE, Color.WHITE, null, { x: 0, y: 0, z: 0 }, [], null);
+    expect(scratch[192]).toBe(0);
+    expect(scratch[176]).toBe(1);
+  });
+
+  it("shadow_enabled defaults off and the class fields carry Godot names", () => {
+    const sun = new DirectionalLight3D();
+    expect(sun.shadow_enabled).toBe(false);
+    expect(sun.shadow_range).toBe(20);
+    expect(sun.shadow_bias).toBeCloseTo(0.02);
+  });
 
   function light(name: string, rotation: Vector3 = Vector3.ZERO, color = Color.WHITE): () => DirectionalLight3D {
     return () => {

@@ -362,7 +362,7 @@
       "not_built": [
         {
           "name": "cast_shadow",
-          "why": "P3 shadow maps"
+          "why": "Shadows exist on lights today (DirectionalLight3D.shadow_enabled); per-surface casting lands with the next shadow slice"
         },
         {
           "name": "visibility_range_*",
@@ -425,12 +425,27 @@
     "DirectionalLight3D": {
       "brief": "A sun-style light that shines along the node's local -Z.",
       "inherits": "Node3D",
-      "description": "DirectionalLight3D shines along the node's local -Z, so an unrotated light points (0, 0, -1). The frame keeps the first directional found as the primary (its light_dir and light_color ride the camera block) and adds it to the light list; DirectionalLight3D beyond the first contribute through the light list.",
+      "description": "DirectionalLight3D shines along the node's local -Z, so an unrotated light points (0, 0, -1). The frame keeps the first directional found as the primary (its light_dir and light_color ride the camera block) and adds it to the light list; DirectionalLight3D beyond the first contribute through the light list. shadow_enabled opens the shadow block: a depth pass from the light, ortho about the camera with shadow_range as the half-extent, filtered percentage-closer and padded by shadow_bias.",
       "properties": [
         {
           "name": "light_color",
           "type": "Color",
-          "desc": "The light's color. White by default"
+          "desc": "The light color"
+        },
+        {
+          "name": "shadow_enabled",
+          "type": "boolean",
+          "desc": "Godot 4 shadow_enabled: draws the shadow map and shades the directional term with it"
+        },
+        {
+          "name": "shadow_range",
+          "type": "number",
+          "desc": "The ortho shadow's half-extent in world units about the camera"
+        },
+        {
+          "name": "shadow_bias",
+          "type": "number",
+          "desc": "Godot 4 shadow_bias: how far a surface may sit behind the map write before shadowing"
         }
       ]
     },

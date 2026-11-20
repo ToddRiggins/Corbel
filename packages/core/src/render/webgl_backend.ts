@@ -1,4 +1,5 @@
 import { Color } from "../math/color.js";
+import { Vector3 } from "../math/vector3.js";
 import type { Mesh } from "../scene/mesh.js";
 import type { Material } from "../scene/material.js";
 import { ShaderMaterial } from "../scene/material.js";
@@ -8,8 +9,21 @@ import type { RenderBackend, RenderFrame } from "./frame.js";
 import { CLEAR_COLOR, surface_attribs } from "./frame.js";
 import { Shader, coerce_vec4, light_dir_for, view_proj_for_backend } from "./shaders.js";
 import { LIT_SHADER, WGSL_DRAW_FLOATS, fill_draw } from "./shaders.js";
+import { build_shadow_view } from "./frame.js";
 
 const CAM_POS = { x: 0, y: 0, z: 0 };
+const IDENTITY_4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+const SHADOW_VERT = `#version 300 es
+layout(location = 0) in vec3 a_position;
+uniform mat4 u_shadow_view_proj;
+void main() {
+  gl_Position = u_shadow_view_proj * vec4(a_position, 1.0);
+}
+`;
+const SHADOW_FRAG = `#version 300 es
+precision mediump float;
+void main() {}
+`;
 
 /** The five texture maps a material carries, all null when it is not standard. */
 function map_pair_of(material: Material): { albedo: Texture2D | null; normal: Texture2D | null; roughness: Texture2D | null; metallic: Texture2D | null; emission: Texture2D | null } {
@@ -63,6 +77,7 @@ export class WebGL2RenderBackend implements RenderBackend {
   private readonly compiled = new Map<Shader, CompiledShader>();
   private readonly meshes = new Map<Mesh, UploadedMesh>();
   private readonly view_proj = new Float32Array(16);
+  private readonly shadow_proj = new Float32Array(16);
 
   private constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl2", { antialias: true });
@@ -99,6 +114,47 @@ export class WebGL2RenderBackend implements RenderBackend {
     const dir = light_dir_for(frame);
 
     view_proj_for_backend(frame, false, this.view_proj);
+
+    // The shadow pass: render opaque draws into a 2048 depth texture from the light.
+    const gl2 = this.gl;
+    const shadow_block = frame.shadow
+      ? {
+          view_proj: build_shadow_view(light_dir_for(frame), new Vector3(CAM_POS.x, CAM_POS.y, CAM_POS.z), frame.shadow.range, false, this.shadow_proj),
+          bias: frame.shadow.bias,
+        }
+      : null;
+    if (shadow_block !== null) {
+      const shadow = this.shadow_target(2048);
+      gl2.bindFramebuffer(gl2.FRAMEBUFFER, shadow.framebuffer);
+      gl2.viewport(0, 0, 2048, 2048);
+      gl2.clear(gl2.DEPTH_BUFFER_BIT);
+      gl2.useProgram(this.shadow_program());
+      gl2.uniformMatrix4fv(this.shadow_uniform("u_shadow_view_proj"), false, shadow_block.view_proj);
+      gl2.enable(gl2.DEPTH_TEST);
+      gl2.depthMask(true);
+      gl2.disable(gl2.BLEND);
+      gl2.enable(gl2.CULL_FACE);
+      gl2.cullFace(gl2.FRONT);
+      for (const draw of frame.draws) {
+        if (draw.transparency > 0) {
+          continue;
+        }
+        const uploaded = this.mesh_for(draw.mesh);
+        gl2.bindBuffer(gl2.ARRAY_BUFFER, uploaded.vertex);
+        gl2.vertexAttribPointer(0, 3, gl2.FLOAT, false, 60, 0);
+        gl2.vertexAttribPointer(1, 3, gl2.FLOAT, false, 60, 12);
+        gl2.vertexAttribPointer(2, 3, gl2.FLOAT, false, 60, 24);
+        gl2.vertexAttribPointer(3, 2, gl2.FLOAT, false, 60, 36);
+        gl2.vertexAttribPointer(4, 4, gl2.FLOAT, false, 60, 44);
+        gl2.bindBuffer(gl2.ELEMENT_ARRAY_BUFFER, uploaded.indices);
+        gl2.drawElements(gl2.TRIANGLES, uploaded.count, gl2.UNSIGNED_INT, 0);
+      }
+      gl2.cullFace(gl2.BACK);
+      gl2.disable(gl2.CULL_FACE);
+      gl2.bindFramebuffer(gl2.FRAMEBUFFER, null);
+      gl2.viewport(0, 0, frame.width, frame.height);
+    }
+
     for (let slot = 0; slot < frame.draws.length; slot += 1) {
       const draw = frame.draws[slot];
       const material = draw.material;
@@ -143,6 +199,15 @@ export class WebGL2RenderBackend implements RenderBackend {
         gl.uniform4f(this.location(compiled, "u_fog_data"), 0, 0, 0, 0);
         gl.uniform4f(this.location(compiled, "u_fog_data2"), 0, 0, 0, 0);
       }
+      // The shadow block: matrix, enabled + bias, and the depth texture at unit 9.
+      gl.uniformMatrix4fv(this.location(compiled, "u_shadow_view_proj"), false, shadow_block ? shadow_block.view_proj : IDENTITY_4);
+      gl.uniform4f(this.location(compiled, "u_shadow_params"), shadow_block ? 1 : 0, shadow_block?.bias ?? 0, 0, 0);
+      gl.activeTexture(gl.TEXTURE9);
+      const shadow_texture = shadow_block ? this.shadow_target(2048).depth_texture : this.gpu_texture(null);
+      if (shadow_texture !== null) {
+        gl.bindTexture(gl.TEXTURE_2D, shadow_texture);
+      }
+      gl.uniform1i(this.location(compiled, "u_shadow_texture"), 9);
       const scratch = this.draw_scratch();
       fill_draw(scratch, draw.transform, draw.normal_matrix, material, draw.transparency, uploaded.has_tangents);
       gl.bindBuffer(gl.ARRAY_BUFFER, uploaded.vertex);
@@ -194,6 +259,49 @@ export class WebGL2RenderBackend implements RenderBackend {
         gl.depthMask(true);
       }
     }
+  }
+
+  /** The 2048 depth texture and framebuffer, built once, rewritten every frame. */
+  private shadow_target(size: number): { depth_texture: WebGLTexture; framebuffer: WebGLFramebuffer } {
+    if (!this.shadow_fb || this.shadow_size !== size) {
+      const gl = this.gl;
+      this.shadow_size = size;
+      this.shadow_depth = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, this.shadow_depth);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, size, size, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      this.shadow_fb = gl.createFramebuffer()!;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadow_fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.shadow_depth, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+    return { depth_texture: this.shadow_depth as WebGLTexture, framebuffer: this.shadow_fb as WebGLFramebuffer };
+  }
+
+  private shadow_size = 0;
+  private shadow_fb: WebGLFramebuffer | null = null;
+  private shadow_depth: WebGLTexture | null = null;
+
+  /** The depth-only shadow program: transform, nothing else. */
+  private shadow_program(): WebGLProgram {
+    if (!this.shadow_compiled) {
+      this.shadow_compiled = link_program(this.gl, SHADOW_VERT, SHADOW_FRAG);
+      const gl = this.gl;
+      gl.useProgram(this.shadow_compiled);
+      for (const attribute of [0, 1, 2, 3, 4]) {
+        gl.enableVertexAttribArray(attribute);
+      }
+    }
+    return this.shadow_compiled;
+  }
+
+  private shadow_compiled: WebGLProgram | null = null;
+
+  private shadow_uniform(name: string): WebGLUniformLocation | null {
+    return this.gl.getUniformLocation(this.shadow_program(), name);
   }
 
   /** A scratch for the shared draw packing; one per call is fine at this scale. */

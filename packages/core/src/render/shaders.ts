@@ -11,7 +11,7 @@ import type { RenderFrame } from "./frame.js";
  * parameters are `vec4` (colors, vectors, and scalars coerce), and both bodies
  * see the same names: `color`, `normal`, `albedo`, `roughness`, `metallic`,
  * `emission`, `uv`, `light_dir`, `light_color`, `ambient`, plus
- * `lighting(normal)` in WGSL and `lighting()` in GLSL, and each parameter by
+ * `lighting(normal, in.world)` in WGSL and `lighting()` in GLSL, and each parameter by
  * its own name. A body's final `return vec4(...)` is the lit color; the
  * harness adds fog, texture alpha, and transparency after it.
  */
@@ -70,8 +70,11 @@ export const WGSL_LIGHT_FLOATS = 16;
 /** Lights the uniform carries; MAX_LIGHTS caps the frame's list too. */
 export const WGSL_LIGHT_COUNT = 8;
 
-/** Camera uniform total: base block plus the light array and the count. */
-export const WGSL_CAMERA_FLOATS = WGSL_CAMERA_BASE_FLOATS + WGSL_LIGHT_FLOATS * WGSL_LIGHT_COUNT + 4;
+/** Shadow block: view_proj 16 floats, then params (enabled, bias). */
+export const WGSL_SHADOW_FLOATS = 20;
+
+/** Camera uniform total: base + light array + count + the shadow block. */
+export const WGSL_CAMERA_FLOATS = WGSL_CAMERA_BASE_FLOATS + WGSL_LIGHT_FLOATS * WGSL_LIGHT_COUNT + 4 + WGSL_SHADOW_FLOATS;
 
 const WGSL_CAMERA = `
 struct Camera {
@@ -85,7 +88,13 @@ struct Camera {
   cam_pos : vec4f,
   light_count : vec4f,
   lights : array<Light, ${WGSL_LIGHT_COUNT}>,
+  shadow_view_proj : mat4x4f,
+  shadow_params : vec4f,
 };
+
+@group(0) @binding(0) var<uniform> u : Camera;
+@group(0) @binding(1) var t_shadow : texture_depth_2d;
+@group(0) @binding(2) var s_shadow_cmp : sampler_comparison;
 
 struct Light {
   // x kind (0 directional, 1 omni, 2 spot), y energy, z attenuation, w spot
@@ -111,7 +120,6 @@ struct Draw {
   emission : vec4f,
 };
 
-@group(0) @binding(0) var<uniform> u : Camera;
 @group(1) @binding(0) var<uniform> d : Draw;
 @group(1) @binding(2) var t_albedo : texture_2d<f32>;
 @group(1) @binding(3) var s_albedo : sampler;
@@ -170,8 +178,8 @@ ${params.map((name) => `  ${name} : vec4f,`).join("\n")}
 ${textures_block}
 ${params_block}
 
-fn lighting(normal : vec3f) -> vec3f {
-  return u.light_color.rgb * max(dot(normalize(normal), u.light_dir.xyz), 0.0) + u.ambient.rgb;
+fn lighting(normal : vec3f, world : vec3f) -> vec3f {
+  return u.light_color.rgb * max(dot(normalize(normal), u.light_dir.xyz), 0.0) * shadow_factor(world) + u.ambient.rgb;
 }
 
 fn extra_lights(normal : vec3f, world : vec3f) -> vec3f {
@@ -179,8 +187,7 @@ fn extra_lights(normal : vec3f, world : vec3f) -> vec3f {
   for (var i = 0; i < i32(u.light_count.x); i += 1) {
     let l = u.lights[i];
     if (l.kind.x < 0.5) {
-      // Directional lights already in the list beyond the primary still contribute.
-      sum = sum + l.color.rgb * l.kind.y * max(dot(normal, l.direction.xyz), 0.0);
+      // Directional light stays with the primary term and its shadow factor.
       continue;
     }
     let to_source = l.position.xyz - world;
@@ -215,6 +222,33 @@ fn fog_amount(world : vec3f) -> f32 {
 
 fn height_fog(world : vec3f) -> f32 {
   return exp2(-abs(u.fog_data2.y) * (world.y - u.fog_data2.x));
+}
+
+// Percentage-closer filtering over four offsets; returns the lit share.
+// textureSampleCompareLevel skips the uniform-control-flow rule, so the
+// helper stays legal wherever it is called from.
+const SHADOW_TEXEL = vec2f(1.0 / 2048.0, 1.0 / 2048.0);
+
+fn shadow_factor(world : vec3f) -> f32 {
+  if (u.shadow_params.x < 0.5) {
+    return 1.0;
+  }
+  var clip = u.shadow_view_proj * vec4f(world, 1.0);
+  var ndc = clip.xyz / clip.w;
+  // WebGPU textures place v row 0 at the top; NDC +1 is the top too.
+  let at = vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
+  let depth = ndc.z;
+  if (at.x < 0.001 || at.x > 0.999 || at.y < 0.001 || at.y > 0.999 || depth < -1.0 || depth > 1.0) {
+    return 1.0;
+  }
+  let compare = depth + u.shadow_params.y;
+  var lit = 0.0;
+  for (var px = -1; px <= 1; px += 2) {
+    for (var py = -1; py <= 1; py += 2) {
+      lit = lit + textureSampleCompareLevel(t_shadow, s_shadow_cmp, at + vec2f(f32(px), f32(py)) * SHADOW_TEXEL, compare);
+    }
+  }
+  return lit * 0.25;
 }
 
 @fragment
@@ -313,6 +347,9 @@ uniform vec4 u_fog_data2;
 uniform vec4 u_cam_pos;
 uniform vec4 u_light_count;
 uniform vec4 u_lights[32];
+uniform mat4 u_shadow_view_proj;
+uniform vec4 u_shadow_params;
+uniform sampler2D u_shadow_texture;
 uniform sampler2D u_albedo_texture;
 uniform sampler2D u_normal_texture;
 uniform sampler2D u_roughness_texture;
@@ -323,8 +360,35 @@ ${params_block}
 
 out vec4 out_color;
 
+// Depth texture shadowing, percentage-closer filtered over four offsets.
+float shadow_point(vec3 world) {
+  vec4 clip = u_shadow_view_proj * vec4(world, 1.0);
+  vec3 ndc = clip.xyz / clip.w;
+  if (abs(ndc.x) > 1.0 || abs(ndc.y) > 1.0 || ndc.z < -1.0 || ndc.z > 1.0) {
+    return 1.0;
+  }
+  // The depth texture stores window depth, ndc.z mapped into 0..1.
+  float stored = ndc.z * 0.5 + 0.5;
+  float compare = stored - u_shadow_params.y;
+  float lit = 0.0;
+  for (int px = -1; px <= 1; px += 2) {
+    for (int py = -1; py <= 1; py += 2) {
+      vec2 offset = vec2(float(px), float(py)) / vec2(textureSize(u_shadow_texture, 0));
+      lit += texture(u_shadow_texture, ndc.xy * 0.5 + 0.5 + offset).r < compare ? 0.0 : 1.0;
+    }
+  }
+  return lit * 0.25;
+}
+
+float shadow_factor() {
+  if (u_shadow_params.x < 0.5) {
+    return 1.0;
+  }
+  return shadow_point(v_world);
+}
+
 vec3 lighting() {
-  return u_light_color.rgb * max(dot(normalize(v_normal), u_light_dir.xyz), 0.0) + u_ambient.rgb;
+  return u_light_color.rgb * max(dot(normalize(v_normal), u_light_dir.xyz), 0.0) * shadow_factor() + u_ambient.rgb;
 }
 
 vec3 extra_lights() {
@@ -422,6 +486,8 @@ export function fill_camera(
   camera_position: { x: number; y: number; z: number },
   /** The frame's light list, packed after the base camera block. */
   lights: readonly RenderLight[] = [],
+  /** The backend-built shadow view_proj plus the bias, or null when shadows are off. */
+  shadow: { view_proj: Float32Array; bias: number } | null = null,
 ): void {
   scratch.fill(0);
   scratch.set(view_proj, 0);
@@ -462,7 +528,15 @@ export function fill_camera(
     scratch.set([light.color.r, light.color.g, light.color.b, 0], base + 8);
     scratch.set([light.direction.x, light.direction.y, light.direction.z, light.spot_attenuation], base + 12);
   }
+  // Shadow block after the light array: view_proj, then enabled + bias.
+  const shadow_base = WGSL_CAMERA_BASE_FLOATS + 4 + WGSL_LIGHT_FLOATS * WGSL_LIGHT_COUNT;
+  scratch.set(shadow?.view_proj ?? IDENTITY_SHADOW, shadow_base);
+  scratch[shadow_base + 16] = shadow ? 1 : 0;
+  scratch[shadow_base + 17] = shadow?.bias ?? 0;
 }
+
+/** Identity 4x4, the disabled shadow block's view_proj. */
+const IDENTITY_SHADOW = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
 /** One-hot vec4 mask for a texture channel: 0 red, 1 green, 2 blue, 3 alpha. */
 function channel_mask(channel: number): [number, number, number, number] {
@@ -478,7 +552,7 @@ function channel_mask(channel: number): [number, number, number, number] {
  * the body; this body supplies the lit RGB.
  */
 export const LIT_SHADER = Shader.lit({
-  webgpu_body: `  return vec4f(albedo * color * lighting(normal) + emission, 1.0);`,
+  webgpu_body: `  return vec4f(albedo * color * lighting(normal, in.world) + emission, 1.0);`,
   webgl_body: `  return vec4(albedo * color * lighting() + emission, 1.0);`,
 });
 
@@ -500,7 +574,11 @@ export function fill_draw(
 ): void {
   scratch.fill(0);
   scratch.set(model, 0);
-  scratch.set(normal_matrix, 16);
+  // WGSL aligns each mat3x3f column to a vec4 in uniform buffers: one pad
+  // float after every three components, or the normals shear into garbage.
+  scratch.set([normal_matrix[0], normal_matrix[1], normal_matrix[2], 0], 16);
+  scratch.set([normal_matrix[3], normal_matrix[4], normal_matrix[5], 0], 20);
+  scratch.set([normal_matrix[6], normal_matrix[7], normal_matrix[8], 0], 24);
   if (material instanceof StandardMaterial3D) {
     scratch[28] = material.albedo.r;
     scratch[29] = material.albedo.g;

@@ -88,6 +88,8 @@ export interface RenderFrame {
   ambient: Color;
   /** Fog from the tree's Environment, or null when fog is off. */
   fog: RenderFog | null;
+  /** The primary directional's shadow block, or null when shadows are off. */
+  shadow: RenderShadow | null;
   /** Lights in tree order, directional first-come plus every omni/spot, capped. */
   lights: RenderLight[];
   /** Opaque draws first, then transparent ones, each group in tree order. */
@@ -171,6 +173,10 @@ export function build_render_frame(
 
   const chosen_environment = environment as Environment | null;
 
+  const shadow = chosen_light && chosen_light.shadow_enabled
+    ? { range: chosen_light.shadow_range, bias: chosen_light.shadow_bias }
+    : null;
+
   const fog: RenderFog | null = chosen_environment && chosen_environment.fog_enabled
     ? {
         mode: chosen_environment.fog_mode,
@@ -199,6 +205,7 @@ export function build_render_frame(
     light_color: chosen_light ? chosen_light.light_color : Color.WHITE,
     ambient: chosen_environment ? chosen_environment.ambient : ambient,
     fog,
+    shadow,
     // The primary directional leads the list; its light_dir/light_color
     // uniforms keep carrying it for the frame's base directional term.
     lights: [
@@ -330,4 +337,72 @@ export function perspective_proj(
   }
   out[11] = -1;
   return out;
+}
+
+/**
+ * Right-handed orthographic projection matching `perspective_proj`'s depth
+ * convention, with width/height extents about the axis (half sizes).
+ */
+export function ortho_proj(
+  extent_x: number,
+  extent_y: number,
+  near: number,
+  far: number,
+  zero_to_one: boolean,
+  out = new Float32Array(16),
+): Float32Array {
+  out.fill(0);
+  out[0] = 1 / extent_x;
+  out[5] = 1 / extent_y;
+  // Ortho depth: view_z in [-far, -near] maps linearly to the clip range,
+  // 0..1 for WebGPU and -1..1 for the GL convention.
+  const span = far - near;
+  if (zero_to_one) {
+    out[10] = -1 / span;
+    out[14] = near / span;
+  } else {
+    out[10] = -2 / span;
+    out[14] = -(far + near) / span;
+  }
+  // An orthographic clip keeps w = 1 for every point: no perspective divide.
+  out[15] = 1;
+  return out;
+}
+
+/**
+ * Godot 4 `Light.shadow_bias`: the depth a surface can sit behind the shadow
+ * map's write before the light counts as shadowed.
+ */
+export const SHADOW_BIAS_FALLBACK = 0.02;
+
+/**
+ * One directional light's shadow block. When a frame carries it, the
+ * backends render a depth-only pass from the light into it (each with its
+ * own depth convention via `build_shadow_view`), and the fragment shaders
+ * sample that depth to shade the directional term.
+ */
+export interface RenderShadow {
+  /** The shadow's ortho half-extent in world units about the camera. */
+  range: number;
+  /** The fragment may sit this far behind the map write before shadowing. */
+  bias: number;
+}
+
+/**
+ * The light's view_proj for a shadow pass: an ortho box of `range` half
+ * extent centered on `center`, with the eye one `range` along the light
+ * vector (`light_direction` points at the light, as the engine carries it).
+ * `zero_to_one` matches the backend's depth convention.
+ */
+export function build_shadow_view(
+  light_direction: Vector3,
+  center: Vector3,
+  range: number,
+  zero_to_one: boolean,
+  out = new Float32Array(16),
+): Float32Array {
+  const dir = light_direction.normalized();
+  const eye = center.add(dir.mul(range));
+  const view = transform_to_mat4(new Transform3D(Basis.looking_at(center.sub(eye)), eye).inverse());
+  return mat4_mul(ortho_proj(range, range, 0.01, range * 2, zero_to_one), view, out);
 }

@@ -9,7 +9,7 @@ import { Shader, coerce_vec4 } from "../src/render/shaders.js";
 function tint_material(): ShaderMaterial {
   const shader = Shader.lit({
     uniforms: ["Tint"],
-    webgpu_body: `  return vec4f(albedo * color * lighting(normal) * Tint.rgb, 1.0);`,
+    webgpu_body: `  return vec4f(albedo * color * lighting(normal, in.world) * Tint.rgb, 1.0);`,
     webgl_body: `  return vec4(albedo * color * lighting() * Tint.rgb, 1.0);`,
   });
   return new ShaderMaterial(shader);
@@ -49,7 +49,7 @@ describe("Shader.lit", () => {
   it("generates both programs, declaring each shared parameter once by name", () => {
     const shader = Shader.lit({
       uniforms: ["Tint", "Speed"],
-      webgpu_body: `  return vec4f(albedo * color * lighting(normal) * Tint.rgb, 1.0);`,
+      webgpu_body: `  return vec4f(albedo * color * lighting(normal, in.world) * Tint.rgb, 1.0);`,
       webgl_body: `  return vec4(albedo * color * lighting() * Tint.rgb, 1.0);`,
     });
     expect(shader.params).toEqual(["Tint", "Speed"]);
@@ -59,7 +59,7 @@ describe("Shader.lit", () => {
     expect(shader.webgpu).toContain("Tint : vec4f");
     expect(shader.webgpu).toContain("@group(1) @binding(1) var<uniform> p : Params;");
     expect(shader.webgpu).toContain("let Tint = p.Tint;");
-    expect(shader.webgpu).toContain("fn lighting(normal : vec3f)");
+    expect(shader.webgpu).toContain("fn lighting(normal : vec3f, world : vec3f)");
 
     // GLSL: `uniform vec4 <Name>` per parameter, main() calling the fragment body.
     expect(shader.webgl.fragment).toContain("uniform vec4 Tint;");
@@ -76,7 +76,7 @@ describe("Shader.lit", () => {
     const shader = Shader.lit({
       uniforms: ["Tint"],
       texture_uniforms: ["Decal", "Emissive"],
-      webgpu_body: `  return vec4f(albedo * color * lighting(normal) * Tint.rgb + texture_Decal.rgb * texture_Emissive.rgb, 1.0);`,
+      webgpu_body: `  return vec4f(albedo * color * lighting(normal, in.world) * Tint.rgb + texture_Decal.rgb * texture_Emissive.rgb, 1.0);`,
       webgl_body: `  return vec4(albedo * color * lighting() * Tint.rgb + texture_Decal.rgb * texture_Emissive.rgb, 1.0);`,
     });
     expect(shader.texture_params).toEqual(["Decal", "Emissive"]);

@@ -95,11 +95,14 @@
       <p class="inherits"><strong>Inherits:</strong> <a href="class_Node3D.html">Node3D</a> <strong>&lt;</strong> <a href="class_Node.html">Node</a> <strong>&lt;</strong> Object</p>
       <p class="brief">A sun-style light that shines along the node's local -Z.</p>
       <h2>Description</h2>
-      <p>DirectionalLight3D shines along the node's local -Z, so an unrotated light points (0, 0, -1). The frame keeps the first directional found as the primary (its light_dir and light_color ride the camera block) and adds it to the light list; DirectionalLight3D beyond the first contribute through the light list.</p>
+      <p>DirectionalLight3D shines along the node's local -Z, so an unrotated light points (0, 0, -1). The frame keeps the first directional found as the primary (its light_dir and light_color ride the camera block) and adds it to the light list; DirectionalLight3D beyond the first contribute through the light list. shadow_enabled opens the shadow block: a depth pass from the light, ortho about the camera with shadow_range as the half-extent, filtered percentage-closer and padded by shadow_bias.</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
       <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
-<tr id="DirectionalLight3D.light_color"><td><code>Color light_color</code></td><td><code>Color</code> The light's color. White by default</td></tr>
+<tr id="DirectionalLight3D.light_color"><td><code>Color light_color</code></td><td><code>Color</code> The light color</td></tr>
+<tr id="DirectionalLight3D.shadow_enabled"><td><code>boolean shadow_enabled</code></td><td><code>boolean</code> Godot 4 shadow_enabled: draws the shadow map and shades the directional term with it</td></tr>
+<tr id="DirectionalLight3D.shadow_range"><td><code>number shadow_range</code></td><td><code>number</code> The ortho shadow's half-extent in world units about the camera</td></tr>
+<tr id="DirectionalLight3D.shadow_bias"><td><code>number shadow_bias</code></td><td><code>number</code> Godot 4 shadow_bias: how far a surface may sit behind the map write before shadowing</td></tr>
       </table>
       
       

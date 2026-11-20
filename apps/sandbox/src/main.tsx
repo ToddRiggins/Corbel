@@ -58,7 +58,7 @@ function build_pyramid(): MeshInstance3D {
   // A user material: same names in both bodies, the tint arrives as a vec4.
   const pyramid_shader = Shader.lit({
     uniforms: ["Sides"],
-    webgpu_body: `  return vec4f(color * lighting(normal) * Sides.rgb + albedo * 0.15, 1.0);`,
+    webgpu_body: `  return vec4f(color * lighting(normal, in.world) * Sides.rgb + albedo * 0.15, 1.0);`,
     webgl_body: `  return vec4(color * lighting() * Sides.rgb + albedo * 0.15, 1.0);`,
   });
   const tinted = new ShaderMaterial(pyramid_shader);
