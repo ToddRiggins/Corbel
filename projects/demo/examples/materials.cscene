@@ -1,0 +1,6 @@
+{
+  "format": 1,
+  "type": "Node3D",
+  "name": "MaterialsExample",
+  "script": "res://examples/materials_example.ts"
+}

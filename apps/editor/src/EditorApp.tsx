@@ -27,7 +27,10 @@ interface Diagnostic {
   message: string;
 }
 
-const NODE_TYPES = ["Node", "Node3D", "Camera3D", "MeshInstance3D"];
+const NODE_TYPES = [
+  "Node", "Node3D", "Camera3D", "MeshInstance3D", "OmniLight3D", "SpotLight3D",
+  "DirectionalLight3D", "WorldEnvironment", "Timer",
+];
 
 export function EditorApp() {
   const treeRef = useRef<SceneTree | null>(null);
@@ -661,7 +664,7 @@ export function EditorApp() {
     if (!path.startsWith("res://")) {
       throw new Error("A script path starts with res://.");
     }
-    const type = ["Node", "Node3D", "Camera3D", "MeshInstance3D"].includes(node.get_class())
+    const type = ["Node", "Node3D", "Camera3D", "MeshInstance3D", "OmniLight3D", "SpotLight3D", "DirectionalLight3D", "WorldEnvironment", "Timer"].includes(node.get_class())
       ? node.get_class()
       : "Node";
     let text: string;

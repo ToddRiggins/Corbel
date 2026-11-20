@@ -14,10 +14,9 @@ npm test
 npm run try
 npm run sandbox
 npm run editor
-npm run examples
 ```
 
-`check` lists typos with a file and a line. `test` checks the math and the scene tree. `try` runs `main.ts`. `sandbox` opens the browser sandbox at `http://127.0.0.1:5178/`, where a box turns and the sidebar names the renderer. `editor` opens the browser editor at `http://127.0.0.1:5177/`. `start_editor.bat` does that and opens the page. `examples` serves runnable example scenes (point lights, shadow maps, material maps, shader textures) at `http://127.0.0.1:5179/`.
+`check` lists typos with a file and a line. `test` checks the math and the scene tree. `try` runs `main.ts`. `sandbox` opens the browser sandbox at `http://127.0.0.1:5178/`, where a box turns and the sidebar names the renderer. `editor` opens the browser editor at `http://127.0.0.1:5177/`. `start_editor.bat` does that and opens the page.
 
 Slice 1 is the math in `@corbel/core`. Slice 2 is the scene tree. Slice 3 draws: `npm run sandbox` turns a cube on WebGPU or WebGL2. The React shell (`@corbel/react`: `EngineView`, `useSceneTree`, `useSelection`) and the input system (`Input`, `InputMap`, project key binds in Project settings) are in. Voxel picking is not in yet.
 

@@ -1,6 +1,7 @@
 import { Color } from "../math/color.js";
 import { Vector3 } from "../math/vector3.js";
-import { mat4_mul, perspective_proj, transform_to_mat4, type RenderFog, type RenderLight } from "./frame.js";
+import { mat4_mul, ortho_proj, perspective_proj, transform_to_mat4, type RenderFog, type RenderLight } from "./frame.js";
+import { Projection } from "../scene/camera3d.js";
 export type { RenderFog, RenderLight } from "./frame.js";
 import type { Material } from "../scene/material.js";
 import { StandardMaterial3D } from "../scene/standard_material3d.js";
@@ -241,7 +242,7 @@ fn shadow_factor(world : vec3f) -> f32 {
   if (at.x < 0.001 || at.x > 0.999 || at.y < 0.001 || at.y > 0.999 || depth < -1.0 || depth > 1.0) {
     return 1.0;
   }
-  let compare = depth + u.shadow_params.y;
+  let compare = depth - u.shadow_params.y;
   var lit = 0.0;
   for (var px = -1; px <= 1; px += 2) {
     for (var py = -1; py <= 1; py += 2) {
@@ -647,8 +648,11 @@ export function view_proj_for_backend(
   zero_to_one: boolean,
   out = new Float32Array(16),
 ): Float32Array {
+  const camera = frame.camera!;
   const view = transform_to_mat4(frame.camera_transform!.inverse());
-  const proj = perspective_proj(frame.camera!.fov, frame.aspect, frame.camera!.near, frame.camera!.far, zero_to_one);
+  const proj = camera.projection === Projection.ORTHOGONAL
+    ? ortho_proj(camera.size * frame.aspect * 0.5, camera.size * 0.5, camera.near, camera.far, zero_to_one)
+    : perspective_proj(camera.fov, frame.aspect, camera.near, camera.far, zero_to_one);
   return mat4_mul(proj, view, out);
 }
 

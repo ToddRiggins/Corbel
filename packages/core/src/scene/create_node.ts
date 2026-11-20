@@ -1,4 +1,7 @@
 import { Camera3D } from "./camera3d.js";
+import { DirectionalLight3D } from "./directional_light3d.js";
+import { OmniLight3D, SpotLight3D } from "./omni_light3d.js";
+import { WorldEnvironment } from "./environment.js";
 import { MeshInstance3D } from "./mesh_instance3d.js";
 import { Timer } from "./timer.js";
 import { Node } from "./node.js";
@@ -11,6 +14,10 @@ const BUILTIN_TYPES: Record<string, new () => Node> = {
   Camera3D,
   MeshInstance3D,
   Timer,
+  DirectionalLight3D,
+  OmniLight3D,
+  SpotLight3D,
+  WorldEnvironment,
 };
 
 /** Builds a node by Godot class name: built-ins first, then project `class_name` classes. */

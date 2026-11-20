@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "type": "Node3D",
+  "name": "ShadowsExample",
+  "script": "res://examples/shadows_example.ts",
+  "position": [
+    0,
+    0,
+    0
+  ],
+  "rotation_degrees": [
+    0,
+    0,
+    0
+  ]
+}

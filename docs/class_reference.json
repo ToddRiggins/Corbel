@@ -78,6 +78,12 @@
         "Mesh",
         "ArrayMesh",
         "BoxMesh",
+        "CapsuleMesh",
+        "CylinderMesh",
+        "PlaneMesh",
+        "PrismMesh",
+        "SphereMesh",
+        "TorusMesh",
         "SurfaceTool",
         "PrimitiveType",
         "Environment",
@@ -319,27 +325,37 @@
     "Camera3D": {
       "brief": "The view the renderer draws through.",
       "inherits": "Node3D",
-      "description": "Camera3D is the view. fov is vertical degrees, 75 like Godot. near and far clip it. current picks the camera: the last current camera in tree order draws, or the first camera when none is current. The camera looks down its local -Z.",
+      "description": "Camera3D looks down local -Z. The projection decides the lens: PERSPECTIVE keeps fov as the vertical angle; ORTHOGONAL flattens the view, with `size` as the view height in world units, near and far as the clip planes. The renderer draws through the last current camera in tree order, or the first camera when none is current.",
       "properties": [
         {
           "name": "fov",
           "type": "number",
-          "desc": "Vertical field of view in degrees. Default 75, like Godot"
+          "desc": "Godot 4 fov: the vertical angle, degrees, under PERSPECTIVE"
+        },
+        {
+          "name": "size",
+          "type": "number",
+          "desc": "Godot 4 size: the ortho view height in world units, under ORTHOGONAL"
         },
         {
           "name": "near",
           "type": "number",
-          "desc": "Near clip distance"
+          "desc": "The near clip plane"
         },
         {
           "name": "far",
           "type": "number",
-          "desc": "Far clip distance"
+          "desc": "The far clip plane"
+        },
+        {
+          "name": "projection",
+          "type": "number",
+          "desc": "Projection.PERSPECTIVE (0) or Projection.ORTHOGONAL (1)"
         },
         {
           "name": "current",
           "type": "boolean",
-          "desc": "Marks this camera as the one the renderer draws through"
+          "desc": "The renderer draws through this camera when set"
         }
       ]
     },
@@ -2100,6 +2116,153 @@
           "name": "spot_attenuation",
           "type": "number",
           "desc": "Godot 4 spot_attenuation: exponent on the cone edge"
+        }
+      ]
+    },
+    "PlaneMesh": {
+      "brief": "A flat XZ quad facing +Y, subdividable.",
+      "inherits": "Mesh",
+      "description": "PlaneMesh builds one full uv square per face with subdividable grids across width and depth. Everything the renderer draws (outward normals, uv, tangents) is built in.",
+      "properties": [
+        {
+          "name": "size",
+          "type": "Vector3",
+          "desc": "Width and depth; y is ignored"
+        },
+        {
+          "name": "subdivide_width",
+          "type": "number",
+          "desc": "Grid splits along the width"
+        },
+        {
+          "name": "subdivide_depth",
+          "type": "number",
+          "desc": "Grid splits along the depth"
+        }
+      ]
+    },
+    "SphereMesh": {
+      "brief": "A UV sphere about the Y axis.",
+      "inherits": "Mesh",
+      "description": "SphereMesh stacks radial segments in rings; height stretches the sphere along Y (height = 2 x radius gives the round ball).",
+      "properties": [
+        {
+          "name": "radius",
+          "type": "number",
+          "desc": "The ring radius"
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "desc": "The full height along Y"
+        },
+        {
+          "name": "radial_segments",
+          "type": "number",
+          "desc": "Slices around the Y axis"
+        },
+        {
+          "name": "rings",
+          "type": "number",
+          "desc": "Stacks from pole to pole"
+        }
+      ]
+    },
+    "CylinderMesh": {
+      "brief": "An extruded ring about Y; top_radius 0 makes a cone.",
+      "inherits": "Mesh",
+      "description": "CylinderMesh builds the barrel between the two radii plus disc caps; top_radius 0 answers Godot's cone shape.",
+      "properties": [
+        {
+          "name": "top_radius",
+          "type": "number",
+          "desc": "The ring radius at the top"
+        },
+        {
+          "name": "bottom_radius",
+          "type": "number",
+          "desc": "The ring radius at the bottom"
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "desc": "The full height along Y"
+        },
+        {
+          "name": "radial_segments",
+          "type": "number",
+          "desc": "Slices around the Y axis"
+        }
+      ]
+    },
+    "CapsuleMesh": {
+      "brief": "A cylinder body capped by two hemispheres about Y.",
+      "inherits": "Mesh",
+      "description": "CapsuleMesh lofts one profile: bottom pole, hemispheres, the cylinder band, the top hemisphere, and the top pole.",
+      "properties": [
+        {
+          "name": "radius",
+          "type": "number",
+          "desc": "The cap radius and tube width"
+        },
+        {
+          "name": "height",
+          "type": "number",
+          "desc": "The full height along Y; height = 2 x radius makes a sphere"
+        },
+        {
+          "name": "radial_segments",
+          "type": "number",
+          "desc": "Slices around the Y axis"
+        },
+        {
+          "name": "rings",
+          "type": "number",
+          "desc": "Stacks per hemisphere"
+        }
+      ]
+    },
+    "TorusMesh": {
+      "brief": "A ring about Y between inner_radius and outer_radius.",
+      "inherits": "Mesh",
+      "description": "TorusMesh sweeps a tube whose wall reaches the outer radius and whose hole keeps the inner radius.",
+      "properties": [
+        {
+          "name": "inner_radius",
+          "type": "number",
+          "desc": "The hole radius"
+        },
+        {
+          "name": "outer_radius",
+          "type": "number",
+          "desc": "The wall radius"
+        },
+        {
+          "name": "rings",
+          "type": "number",
+          "desc": "Slices around the main ring"
+        },
+        {
+          "name": "ring_segments",
+          "type": "number",
+          "desc": "Slices around the tube"
+        }
+      ]
+    },
+    "PrismMesh": {
+      "brief": "An extruded triangle; the ridge leans with left_to_right.",
+      "inherits": "Mesh",
+      "description": "PrismMesh builds two slope faces, two triangle end caps, and the bottom quad. left_to_right 0 pushes the ridge to the left side, 1 to the right, 0.5 centers it.",
+      "properties": [
+        {
+          "name": "size",
+          "type": "Vector3",
+          "desc": "Width, height, and depth"
+        },
+        {
+          "name": "left_to_right",
+          "type": "number",
+          "desc": "Where the ridge leans: 0 left, 0.5 center, 1 right"
         }
       ]
     }
