@@ -3,12 +3,13 @@
   "name": "Level2",
   "position": [0, 0, 0],
   "rotation_degrees": [0, 0, 0],
+  "script": "res://level2.ts",
   "children": [
     {
       "type": "Camera3D",
       "name": "Camera",
       "position": [2.5, 1.5, 4],
-      "rotation_degrees": [0, -30, 0]
+      "rotation_degrees": [-12, 32, 0]
     },
     {
       "type": "MeshInstance3D",

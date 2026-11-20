@@ -11,9 +11,13 @@ import {
   StandardMaterial3D,
   Vector3,
 } from "@corbel/core";
+import Score from "./score.ts";
 
 /** The demo Player: a body mesh that spins, using the project's action binds. */
 export default class Player extends Node3D {
+  /** How many _process ticks this node has seen (probe/debug). */
+  frames = 0;
+
   override _ready(): void {
     const body = this.get_node("Body") as MeshInstance3D;
     body.geometry = new BoxMesh(new Vector3(1, 1, 1));
@@ -24,9 +28,13 @@ export default class Player extends Node3D {
     const sun = new DirectionalLight3D();
     sun.rotation = new Vector3(-0.6, 0.4, 0);
     this.add_child(sun);
+
+    // The Globals autoload: reachable from anywhere by node path.
+    (this.get_node("/root/Score") as Score).add(1);
   }
 
   override _process(delta: number): void {
+    this.frames += 1;
     const body = this.get_node("Body") as MeshInstance3D;
     let speed = 1.5;
     if (Input.is_action_pressed("spin_fast")) {

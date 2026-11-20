@@ -91,6 +91,20 @@ export class SceneTree implements TreeHost {
     return this._current_scene;
   }
 
+  /**
+   * Turns script-path metas into live script classes on a fresh node tree.
+   * The runtime installs this; PackedScene instances of `.cscene` files go
+   * through it inside `change_scene_to_packed`, exactly how Godot packs
+   * compiled scripts into its own PackedScenes.
+   */
+  node_weaver: ((node: Node) => Promise<Node>) | null = null;
+
+  /** Godot 4 `change_scene_to_packed`: weaves (if installed) then swaps. */
+  async change_scene_to_packed(packed: PackedScene): Promise<void> {
+    const next = this.node_weaver ? await this.node_weaver(packed.instantiate()) : packed.instantiate();
+    this.change_scene_to_node(next);
+  }
+
   /** Swaps the current scene at the end of the frame; the old scene queues free. */
   change_scene_to_node(next: Node): void {
     if (this._current_scene) {
@@ -98,11 +112,6 @@ export class SceneTree implements TreeHost {
     }
     this.get_root().add_child(next);
     this._current_scene = next;
-  }
-
-  /** Godot 4 `change_scene_to_packed`: instantiates and swaps. */
-  change_scene_to_packed(packed: PackedScene): void {
-    this.change_scene_to_node(packed.instantiate());
   }
 
   /**
@@ -114,7 +123,9 @@ export class SceneTree implements TreeHost {
       return false;
     }
     try {
-      this.change_scene_to_node(await this.scene_loader(path));
+      const node = await this.scene_loader(path);
+      const woven = this.node_weaver ? await this.node_weaver(node) : node;
+      this.change_scene_to_node(woven);
       return true;
     } catch (error) {
       this.on_node_error?.(

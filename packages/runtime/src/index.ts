@@ -88,15 +88,16 @@ export class Player {
       const message = error instanceof Error ? error.message : String(error);
       this.log(`${node.name} (${where}): ${message}`, "error");
     };
-    // change_scene_to_file loads saved scenes through the shared loader,
-    // which also weaves project scripts into the fresh instance.
+    // change_scene_to_file loads saved scenes through the shared loader; the
+    // tree's weaver attaches this project's scripts to the fresh instance.
     tree.scene_loader = async (path) => {
       const packed = await resource_loader().load(path) as PackedScene | null;
       if (!(packed instanceof PackedScene)) {
         throw new Error(`Could not load ${path} as a scene.`);
       }
-      return await this.weave(packed.instantiate());
+      return packed.instantiate();
     };
+    tree.node_weaver = async (node) => await this.weave(node);
 
     // Project settings: the Input Map goes live before any script's _ready can read it.
     let settings: ProjectSettings | null = null;

@@ -505,8 +505,11 @@ export function EditorApp() {
           .catch(() => null);
         const width = settings?.window?.width ?? 1280;
         const height = settings?.window?.height ?? 720;
-        if (gameHandleRef.current && !gameHandleRef.current.closed) {
-          gameHandleRef.current.close();
+        // Reusing a target reopens the same popup; close the old one so a
+        // new Play always boots a fresh, focused game window.
+        const stale = window.open("", "corbel-game");
+        if (stale && !stale.closed) {
+          stale.close();
         }
         gameHandleRef.current = window.open(
           `/game?project=${encodeURIComponent(project)}&scene=${encodeURIComponent(scenePath)}`,

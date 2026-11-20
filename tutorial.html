@@ -194,16 +194,15 @@ await this.get_tree()?.create_timer(0.5).timeout;</pre>
       <pre>import { PackedScene, load } from "@corbel/core";
 
 export default class Player extends Node3D {
-  override _input(event: InputEvent): void {
-    // L loads the next level and swaps to it, old scene freed automatically.
+  override _process(delta: number): void {
+    // L loads the next level and swaps to it; the old scene frees automatically
+    // and autoloads stay alive across the swap.
     if (Input.is_action_just_pressed("next_scene")) {
-      void this.get_tree()?.change_scene_to_packed(
-        await load("res://level2.cscene") as PackedScene
-      );
+      void this.get_tree()?.change_scene_to_file("res://level2.cscene");
     }
   }
 }</pre>
-      <p>Resources cache by path, autoloads survive the swap, and the demo binds <code>L</code> as <code>next_scene</code> to swap its two levels in the game window.</p>
+      <p>Change scenes with the node you already have: <code>change_scene_to_packed(packed)</code>, after <code>const packed = await load("res://level2.cscene") as PackedScene</code>. Loaded scenes weave in their scripts, resources cache by path, and the demo binds <code>L</code> as <code>next_scene</code> to bounce Main ↔ Level2 in the game window.</p>
     </div>
   </section>
 
