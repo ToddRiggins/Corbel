@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Corbel Game</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #101014; color: #ddd; font-family: system-ui, sans-serif; }
+      canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+      #load { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #888; }
+      #err { position: fixed; top: 8px; left: 8px; margin: 0; color: #f87171; white-space: pre-wrap; font: 12px/1.5 Consolas, monospace; z-index: 2; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="load">Corbel: loading…</div>
+    <pre id="err"></pre>
+    <script type="module" src="__GAME_MAIN__"></script>
+  </body>
+</html>

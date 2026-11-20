@@ -1,0 +1,19 @@
+{
+  "name": "@corbel/runtime",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "The runner that plays a Corbel scene: window, input, scripts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@corbel/core": "0.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  }
+}

@@ -9,7 +9,7 @@
     "apps/*"
   ],
   "scripts": {
-    "check": "npm run check -w @corbel/core && npm run check -w @corbel/react && npm run check -w @corbel/try && npm run check -w @corbel/sandbox && npm run check -w @corbel/editor",
+    "check": "npm run check -w @corbel/core && npm run check -w @corbel/runtime && npm run check -w @corbel/react && npm run check -w @corbel/try && npm run check -w @corbel/sandbox && npm run check -w @corbel/game && npm run check -w @corbel/editor",
     "test": "npm run test -w @corbel/core",
     "try": "npm run start -w @corbel/try",
     "sandbox": "npm run dev -w @corbel/sandbox",

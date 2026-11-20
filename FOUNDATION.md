@@ -239,7 +239,7 @@ After slice 7, the foundation is done. Growth from there, in order, when we ask 
 
 - ~~Procedural mesh building, Godot `SurfaceTool` style~~ Done: `SurfaceTool` + `PrimitiveType` in `@corbel/core`; per-vertex attributes reset after `add_vertex` like Godot; `index()`, `generate_normals()`, and `generate_tangents()` are in; `commit()` yields an `ArrayMesh`. UVs and tangents ride in the mesh data; texture sampling waits for the ShaderMaterial work.
 - ~~Materials and shader loading: a Godot-style `ShaderMaterial` over the WGSL/GLSL twin pair~~ Done: `Material`, `ShaderMaterial` (Godot's `set_shader_parameter`), and `Shader.lit({ uniforms, webgpu_body, webgl_body })`. Backends compile one pipeline/program per Shader, bind parameters per material instance, and the built-in lit material goes through the same path. Loading `.material`/`.gdshader`-style files from disk lands with the resource loader.
-- A second window for the running game, detached from the editor canvas.
+- ~~A second window for the running game, detached from the editor canvas~~ Done: Play saves the open scene and opens the game window (`/game`, its own browser window with the project's window size); the runner lives in `@corbel/runtime` and the page in `apps/game`. Stop closes it; Pause lands when the window gets a control channel.
 - More than one voxel object, a palette resource, and a ground plane node.
 - `StandardMaterial3D` lighting and a shadow map.
 - `AnimationPlayer` with rotation keys, because the editor's clips are bone rotations.

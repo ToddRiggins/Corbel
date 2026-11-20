@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ScriptEditor, type ScriptEditorHandle } from "./script/ScriptEditor";
 import { scriptRoles } from "./script/roles";
-import { Player } from "./play";
 import { chooser_result, event_label, matches_filter, type ChooserState, type InputActionSpec, type InputEventSpec, KEYBOARD_KEYS, MOUSE_BUTTONS } from "./inputMap";
 import {
   Node,
@@ -9,7 +8,6 @@ import {
   SceneTree,
   Vector3,
   create_node,
-  key_name_from_dom,
   node_label,
   pack_scene,
   unpack_scene,
@@ -35,12 +33,7 @@ export function EditorApp() {
   if (!treeRef.current) {
     treeRef.current = new SceneTree();
   }
-  const playerRef = useRef<Player | null>(null);
-  if (!playerRef.current) {
-    playerRef.current = new Player();
-  }
-  const runCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const player = playerRef.current;
+  const gameHandleRef = useRef<Window | null>(null);
   const sceneRef = useRef<Node | null>(null);
   const scriptRef = useRef<ScriptEditorHandle | null>(null);
 
@@ -51,9 +44,7 @@ export function EditorApp() {
   const [selected, setSelected] = useState<Node | null>(null);
   const [tick, setTick] = useState(0);
   const [workspace, setWorkspace] = useState<"3d" | "script">("3d");
-  const [playState, setPlayState] = useState<"off" | "starting" | "on" | "paused">("off");
-  const [pendingPlay, setPendingPlay] = useState(false);
-  const [runRenderer, setRunRenderer] = useState<string | null>(null);
+  const [playState, setPlayState] = useState<"off" | "on">("off");
   const [scriptPath, setScriptPath] = useState<string | null>(null);
   const [scriptText, setScriptText] = useState("");
   const [diags, setDiags] = useState<Diagnostic[]>([]);
@@ -448,69 +439,55 @@ export function EditorApp() {
     scriptRef.current?.jump(line);
   }
 
-  /** Play runs the open scene on the canvas. Pressing Play again restarts. */
+  /** Play saves the open scene and runs it in the game window. */
   function playClicked(): void {
     if (!sceneRef.current) {
       log("Open a .cscene to play.");
       return;
     }
-    if (player.running) {
-      player.stop();
-    }
-    setRunRenderer(null);
-    setWorkspace("3d");
-    setPendingPlay(true);
-    log(`Play pressed: ${sceneRef.current.name}${scenePath ? ` (${scenePath})` : ""}.`);
-  }
-
-  function pauseClicked(): void {
-    if (!player.running) {
+    if (!scenePath?.endsWith(".cscene")) {
+      log("Save the scene first (Scene → Save As), then Play.");
       return;
     }
-    player.toggle_pause();
-    setPlayState(player.paused ? "paused" : "on");
+    log(`Play pressed: ${scenePath}. Saving, then opening the game window...`);
+    void (async () => {
+      try {
+        await writeScene(scenePath);
+        const settings = await readFile(project, "res://project.corbel.json")
+          .then((text) => JSON.parse(text) as { window?: { width?: number; height?: number } })
+          .catch(() => null);
+        const width = settings?.window?.width ?? 1280;
+        const height = settings?.window?.height ?? 720;
+        if (gameHandleRef.current && !gameHandleRef.current.closed) {
+          gameHandleRef.current.close();
+        }
+        gameHandleRef.current = window.open(
+          `/game?project=${encodeURIComponent(project)}&scene=${encodeURIComponent(scenePath)}`,
+          "corbel-game",
+          `width=${width},height=${height}`,
+        );
+        if (gameHandleRef.current === null) {
+          log("The browser blocked the game window. Allow pop-ups for this page.", "error");
+          return;
+        }
+        gameHandleRef.current.focus();
+        setPlayState("on");
+        log(`Playing ${scenePath} in the game window.`);
+      } catch (error) {
+        log(error instanceof Error ? error.message : String(error), "error");
+      }
+    })();
   }
 
   function stopClicked(): void {
-    player.stop();
+    const handle = gameHandleRef.current;
+    gameHandleRef.current = null;
+    handle?.close();
     setPlayState("off");
+    if (handle) {
+      log("Stopped the game window.");
+    }
   }
-
-  // Starts the run once the canvas is really on the page.
-  useEffect(() => {
-    if (!pendingPlay || workspace !== "3d") {
-      return;
-    }
-    const canvas = runCanvasRef.current;
-    const scene = sceneRef.current;
-    if (!canvas || !scene) {
-      return;
-    }
-    setPendingPlay(false);
-    setPlayState("starting");
-    void (async () => {
-      try {
-        await player.start(scene, project, canvas, log);
-        setRunRenderer(player.renderer_name);
-        setPlayState("on");
-      } catch (error) {
-        log(error instanceof Error ? error.message : String(error), "error");
-        setPlayState("off");
-      }
-    })();
-    // The run holds the tree that start built; nothing else joins it here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingPlay, workspace, project]);
-
-  // The canvas only lives in the 3D workspace; leaving it stops the run.
-  useEffect(() => {
-    if (workspace !== "3d" && player.running) {
-      player.stop();
-      setPlayState("off");
-      log("Stopped: the 3D view closed.");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace]);
 
   useEffect(() => {
     localStorage.setItem("corbel.scriptFont", String(fontSize));
@@ -676,16 +653,11 @@ export function EditorApp() {
         <div className="play-group">
           <button
             className="play"
-            disabled={playState === "starting"}
-            title={playState === "off" ? "Play runs the open scene on the 3D canvas." : "Play restarts the scene."}
+            title="Play saves the open scene and runs it in the game window."
             onClick={playClicked}
           >Play</button>
-          <button
-            disabled={playState === "off" || playState === "starting"}
-            title="Pause skips _process but keeps the last frame on the canvas."
-            onClick={pauseClicked}
-          >{playState === "paused" ? "Resume" : "Pause"}</button>
-          <button className="stop" disabled={playState === "off"} title="Stop ends the run." onClick={stopClicked}>Stop</button>
+          <button disabled title="Pause lands in the game window later; the window runs at full speed now.">Pause</button>
+          <button className="stop" disabled={playState === "off"} title="Stop closes the game window." onClick={stopClicked}>Stop</button>
         </div>
       </header>
 
@@ -771,23 +743,15 @@ export function EditorApp() {
         <div className="center">
           {workspace === "3d" ? (
             <div className="viewport">
-              <canvas
-                ref={runCanvasRef}
-                className={playState === "off" ? "run-canvas idle" : "run-canvas"}
-              />
               <div className="run-bar">
                 {scene ? (
                   playState === "off" ? (
                     <>
                       <h3>{scene.name}</h3>
-                      <p>{countNodes(scene)} nodes. Press Play to run this scene here. Script errors print in Output.</p>
+                      <p>{countNodes(scene)} nodes. Play saves this scene and runs it in the game window.</p>
                     </>
                   ) : (
-                    <p>
-                      {playState === "starting"
-                        ? "Building the run..."
-                        : `Playing ${scene.name}${playState === "paused" ? " · paused" : ""} · ${runRenderer ?? "starting renderer"}`}
-                    </p>
+                    <p>Playing {scenePath ?? scene.name} in the game window. Stop closes it.</p>
                   )
                 ) : (
                   <>
