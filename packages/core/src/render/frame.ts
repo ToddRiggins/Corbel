@@ -129,14 +129,14 @@ export function transform_to_mat4(t: Transform3D, out = new Float32Array(16)): F
 
 /**
  * The per-vertex arrays a backend draws, with defaults for optional data:
- * missing normals point +Z, missing colors are white, so a mesh a script
- * built without them still renders.
+ * missing normals point +Z, missing colors are white, missing UVs are zero,
+ * so a mesh a script built without them still renders.
  */
-export function surface_attribs(surface: SurfaceArrays): { count: number; normals: Float32Array; colors: Float32Array } {
+export function surface_attribs(surface: SurfaceArrays): { count: number; normals: Float32Array; colors: Float32Array; uvs: Float32Array } {
   const count = surface.positions.length / 3;
   const normals = surface.normals ?? forward_normals(count);
   const colors = surface.colors ?? white_colors(count);
-  return { count, normals, colors };
+  return { count, normals, colors, uvs: surface.uvs ?? zero_uvs(count) };
 }
 
 function forward_normals(count: number): Float32Array {
@@ -149,6 +149,10 @@ function forward_normals(count: number): Float32Array {
 
 function white_colors(count: number): Float32Array {
   return new Float32Array(count * 3).fill(1);
+}
+
+function zero_uvs(count: number): Float32Array {
+  return new Float32Array(count * 2);
 }
 
 /** Basis as a column-major 3x3. */

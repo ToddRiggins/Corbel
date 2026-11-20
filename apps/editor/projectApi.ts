@@ -49,6 +49,12 @@ async function handle(req: Connect.IncomingMessage, res: Connect.ServerResponse)
   }
   if (req.method === "GET" && pathname === "/file") {
     const file = resToAbs(required(url, "project"), required(url, "path"));
+    // Binary assets (textures, audio) travel as base64 so the page can decode them.
+    if (isBinary(path.extname(file).toLowerCase())) {
+      const bytes = fs.readFileSync(file);
+      send(res, 200, { base64: bytes.toString("base64") });
+      return;
+    }
     send(res, 200, { text: fs.readFileSync(file, "utf8") });
     return;
   }
@@ -82,6 +88,12 @@ async function handle(req: Connect.IncomingMessage, res: Connect.ServerResponse)
     return;
   }
   send(res, 404, { error: "Not found." });
+}
+
+const BINARY_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".wav", ".ogg", ".mp3"]);
+
+function isBinary(extension: string): boolean {
+  return BINARY_EXTENSIONS.has(extension);
 }
 
 function listFiles(project: string): FileRow[] {

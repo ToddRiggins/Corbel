@@ -69,6 +69,7 @@ function build_box(size: Vector3): SurfaceArrays {
   const positions = new Float32Array(24 * 3);
   const normals = new Float32Array(24 * 3);
   const colors = new Float32Array(24 * 3).fill(1);
+  const uvs = new Float32Array(24 * 2);
   const indices = new Uint32Array(36);
 
   for (let face = 0; face < 6; face += 1) {
@@ -88,6 +89,9 @@ function build_box(size: Vector3): SurfaceArrays {
       normals[slot * 3] = n.x;
       normals[slot * 3 + 1] = n.y;
       normals[slot * 3 + 2] = n.z;
+      // Each face gets the full [0,1]x[0,1] texture square.
+      uvs[slot * 2] = (i + 1) / 2;
+      uvs[slot * 2 + 1] = j === 1 ? 1 : 0;
     }
     // CCW from outside: (-a,-b) -> (+a,-b) -> (+a,+b), and the mirrored pair.
     const tris = [0, 1, 2, 0, 2, 3];
@@ -95,5 +99,5 @@ function build_box(size: Vector3): SurfaceArrays {
       indices[face * 6 + t] = base + tris[t];
     }
   }
-  return { positions, normals, colors, indices };
+  return { positions, normals, colors, uvs, indices };
 }

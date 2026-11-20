@@ -295,6 +295,17 @@
         </div>
       </section>
 
+      <section class="teal" id="texture">
+        <h2 id="doc-Texture2D" data-doc="Texture2D">Texture2D and albedo textures</h2>
+        <div class="body">
+          <p><code id="doc-Texture2D" data-doc="Texture2D">Texture2D</code> is a decoded project image (PNG, JPG, GIF, WebP). <code id="doc-load" data-doc="load">load("res://textures/wall.png")</code> reads it, decodes it, and caches it by path. <code id="doc-StandardMaterial3D-albedo_texture" data-doc="albedo_texture" data-owner="StandardMaterial3D">StandardMaterial3D.albedo_texture</code> multiplies the albedo color: white material + colorful texture = colorful surface. Each <code>BoxMesh</code> face carries its own 0–1 UV square, so textures land once per face.</p>
+<pre><span class="kw">const</span> <span class="vr">material</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">StandardMaterial3D</span><span class="op">();</span>
+<span class="kw">const</span> <span class="vr">texture</span> <span class="op">=</span> <span class="kw">await</span> <span class="call">load</span><span class="op">(</span><span class="st">"res://textures/brick.png"</span><span class="op">)</span> <span class="kw">as</span> <span class="ty">Texture2D</span><span class="op">;</span>
+<span class="vr">material</span><span class="op">.</span><span class="vr">albedo_texture</span> <span class="op">=</span> <span class="vr">texture</span><span class="op">;</span></pre>
+          <p>Textures also sample in <code>ShaderMaterial</code> fragments through the built-in <code>u_albedo_texture</code> binding on both backends; named texture uniforms land with the full shader material work. Meshes without UVs sample (0, 0); a texture-less material samples white, so colors stay exact.</p>
+        </div>
+      </section>
+
       <section class="teal" id="globals">
         <h2 id="doc-Globals" data-doc="Globals">Globals — Autoload, and the class registry</h2>
         <div class="body">

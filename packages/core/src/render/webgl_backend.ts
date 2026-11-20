@@ -3,6 +3,7 @@ import type { Mesh } from "../scene/mesh.js";
 import type { Material } from "../scene/material.js";
 import { ShaderMaterial } from "../scene/material.js";
 import { StandardMaterial3D } from "../scene/standard_material3d.js";
+import { Texture2D } from "../scene/texture.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
 import { CLEAR_COLOR, surface_attribs } from "./frame.js";
 import { Shader, coerce_vec4, light_dir_for, view_proj_for_backend } from "./shaders.js";
@@ -15,6 +16,7 @@ interface UploadedMesh {
   indices: WebGLBuffer;
   count: number;
 }
+
 
 interface CompiledShader {
   program: WebGLProgram;
@@ -90,13 +92,19 @@ export class WebGL2RenderBackend implements RenderBackend {
 
       const albedo = material instanceof StandardMaterial3D ? material.albedo : WHITE_ALBEDO;
       gl.bindBuffer(gl.ARRAY_BUFFER, uploaded.vertex);
-      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 36, 0);
-      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 36, 12);
-      gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 36, 24);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 44, 0);
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 44, 12);
+      gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 44, 24);
+      gl.vertexAttribPointer(3, 2, gl.FLOAT, false, 44, 36);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, uploaded.indices);
       gl.uniformMatrix4fv(this.location(compiled, "u_model"), false, draw.transform);
       gl.uniformMatrix3fv(this.location(compiled, "u_normal_mat"), false, draw.normal_matrix);
       gl.uniform4f(this.location(compiled, "u_albedo"), albedo.r, albedo.g, albedo.b, 1);
+      // The albedo texture: unit 0, or the white dummy when the material has none.
+      const albedo_texture = material instanceof StandardMaterial3D ? material.albedo_texture : null;
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.albedo_gpu_texture(albedo_texture));
+      gl.uniform1i(this.location(compiled, "u_albedo_texture"), 0);
       if (material instanceof ShaderMaterial) {
         const values = material.get_shader_parameter_list();
         for (const name of shader.params) {
@@ -118,6 +126,33 @@ export class WebGL2RenderBackend implements RenderBackend {
       this.compiled.set(shader, compiled);
     }
     return compiled;
+  }
+
+  private readonly gl_textures = new Map<Texture2D, WebGLTexture>();
+  private dummy_texture: WebGLTexture | null = null;
+  private dummy_uploaded = false;
+
+  /** Uploads (once) the albedo texture; no texture binds the white 1x1. */
+  private albedo_gpu_texture(texture: Texture2D | null): WebGLTexture {
+    const gl = this.gl;
+    if (texture === null) {
+      if (!this.dummy_uploaded) {
+        this.dummy_texture = gl.createTexture()!;
+        gl.bindTexture(gl.TEXTURE_2D, this.dummy_texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+        this.dummy_uploaded = true;
+      }
+      return this.dummy_texture as WebGLTexture;
+    }
+    let uploaded = this.gl_textures.get(texture);
+    if (uploaded === undefined) {
+      uploaded = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, uploaded);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image as unknown as TexImageSource);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      this.gl_textures.set(texture, uploaded);
+    }
+    return uploaded;
   }
 
   private location(compiled: CompiledShader, name: string): WebGLUniformLocation | null {
@@ -155,8 +190,8 @@ export class WebGL2RenderBackend implements RenderBackend {
       return cached;
     }
     const surface = mesh.surface();
-    const { count, normals, colors } = surface_attribs(surface);
-    const interleaved = new Float32Array(count * 9);
+    const { count, normals, colors, uvs } = surface_attribs(surface);
+    const interleaved = new Float32Array(count * 11);
     for (let i = 0; i < count; i += 1) {
       interleaved.set(
         [
@@ -169,8 +204,10 @@ export class WebGL2RenderBackend implements RenderBackend {
           colors[i * 3],
           colors[i * 3 + 1],
           colors[i * 3 + 2],
+          uvs[i * 2],
+          uvs[i * 2 + 1],
         ],
-        i * 9,
+        i * 11,
       );
     }
     const gl = this.gl;

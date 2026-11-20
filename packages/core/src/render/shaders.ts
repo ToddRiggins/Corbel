@@ -60,19 +60,23 @@ struct Draw {
 
 @group(0) @binding(0) var<uniform> u : Camera;
 @group(1) @binding(0) var<uniform> d : Draw;
+@group(1) @binding(2) var t_albedo : texture_2d<f32>;
+@group(1) @binding(3) var s_albedo : sampler;
 
 struct VertexOut {
   @builtin(position) clip : vec4f,
   @location(0) color : vec3f,
   @location(1) normal : vec3f,
+  @location(2) uv : vec2f,
 };
 
 @vertex
-fn vs(@location(0) pos : vec3f, @location(1) normal_in : vec3f, @location(2) color_in : vec3f) -> VertexOut {
+fn vs(@location(0) pos : vec3f, @location(1) normal_in : vec3f, @location(2) color_in : vec3f, @location(3) uv_in : vec2f) -> VertexOut {
   var out : VertexOut;
   out.clip = u.view_proj * (d.model * vec4f(pos, 1.0));
   out.normal = d.normal_mat * normal_in;
   out.color = color_in;
+  out.uv = uv_in;
   return out;
 }
 
@@ -93,7 +97,8 @@ fn lighting(normal : vec3f) -> vec3f {
 fn fs(in : VertexOut) -> @location(0) vec4f {
   let color = in.color;
   let normal = in.normal;
-  let albedo = d.albedo.rgb;
+  let uv = in.uv;
+  let albedo = d.albedo.rgb * textureSample(t_albedo, s_albedo, uv).rgb;
   let light_dir = u.light_dir.xyz;
   let light_color = u.light_color.rgb;
   let ambient = u.ambient.rgb;
@@ -109,6 +114,7 @@ export function build_glsl(params: readonly string[], body: string): { vertex: s
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;
 layout(location = 2) in vec3 a_color;
+layout(location = 3) in vec2 a_uv;
 
 uniform mat4 u_view_proj;
 uniform mat4 u_model;
@@ -116,11 +122,13 @@ uniform mat3 u_normal_mat;
 
 out vec3 v_color;
 out vec3 v_normal;
+out vec2 v_uv;
 
 void main() {
   gl_Position = u_view_proj * (u_model * vec4(a_position, 1.0));
   v_normal = u_normal_mat * a_normal;
   v_color = a_color;
+  v_uv = a_uv;
 }
 `;
   const params_block = params.map((name) => `uniform vec4 ${name};`).join("\n");
@@ -129,11 +137,13 @@ precision highp float;
 
 in vec3 v_color;
 in vec3 v_normal;
+in vec2 v_uv;
 
 uniform vec4 u_light_dir;
 uniform vec4 u_light_color;
 uniform vec4 u_ambient;
 uniform vec4 u_albedo;
+uniform sampler2D u_albedo_texture;
 ${params_block}
 
 out vec4 out_color;
@@ -145,7 +155,8 @@ vec3 lighting() {
 vec4 fs_fragment() {
   vec3 color = v_color;
   vec3 normal = v_normal;
-  vec3 albedo = u_albedo.rgb;
+  vec2 uv = v_uv;
+  vec3 albedo = u_albedo.rgb * texture(u_albedo_texture, v_uv).rgb;
   vec3 light_dir = u_light_dir.xyz;
   vec3 light_color = u_light_color.rgb;
   vec3 ambient = u_ambient.rgb;

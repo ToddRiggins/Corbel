@@ -1,4 +1,4 @@
-import { Node3D, DirectionalLight3D, BoxMesh, Color, Input, MeshInstance3D, StandardMaterial3D, Vector3 } from "@corbel/core";
+import { Node3D, DirectionalLight3D, BoxMesh, Color, Input, load, MeshInstance3D, StandardMaterial3D, Texture2D, Vector3 } from "@corbel/core";
 import Score from "./score.ts";
 
 /** Level2's root script: a purple portal scene, reached by the L bind in Main. */
@@ -10,7 +10,11 @@ export default class Level2 extends Node3D {
     const portal = this.get_node("Portal") as MeshInstance3D;
     portal.geometry = new BoxMesh(new Vector3(1.2, 2.2, 0.4));
     const material = new StandardMaterial3D();
-    material.albedo = Color.html("#a855f7");
+    void load("res://textures/portal.png").then((resource) => {
+      if (resource instanceof Texture2D) {
+        material.albedo_texture = resource;
+      }
+    });
     portal.material_override = material;
 
     const sun = new DirectionalLight3D();

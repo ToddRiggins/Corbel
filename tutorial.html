@@ -226,6 +226,20 @@ body.geometry = tool.commit();</pre>
     </div>
   </section>
 
+  <section class="block green">
+    <h2>Textures on meshes</h2>
+    <div class="body">
+      <p>Put image files in the project (for example <code>textures/brick.png</code>), load them, and set them on a material. The texture multiplies the material's albedo color, so a white material shows the texture colors:</p>
+      <pre>import { Color, MeshInstance3D, StandardMaterial3D, Texture2D, load } from "@corbel/core";
+
+const material = new StandardMaterial3D();
+material.albedo = Color.WHITE;
+material.albedo_texture = await load("res://textures/brick.png") as Texture2D;
+(this.get_node("Body") as MeshInstance3D).material_override = material;</pre>
+      <p><code>BoxMesh</code> textures map once per face. A texture-less material samples white, so albedo colors behave exactly like before textures existed.</p>
+    </div>
+  </section>
+
   <section class="block amber">
     <h2>Input and key binds</h2>
     <div class="body">

@@ -56,17 +56,18 @@ export class ResourceLoader {
   }
 
   private async load_fresh(path: string): Promise<unknown> {
-    const extension = path.split(".").pop()?.toLowerCase() ?? "";
-    if (extension === "cscene" || extension === "tscn") {
+    // Built-in scene handling reads text; registered handlers (textures,
+    // scripts, anything binary) fetch their own bytes over the API instead.
+    if (path.endsWith(".cscene") || path.endsWith(".tscn")) {
       const text = await this.read(path);
       return PackedScene.from_data(JSON.parse(text));
     }
+    const extension = path.split(".").pop()?.toLowerCase() ?? "";
     const handler = this._handlers.get(extension);
     if (handler === undefined) {
       return null;
     }
-    const text = await this.read(path);
-    return await handler(text, path);
+    return await handler("", path);
   }
 
   private read(path: string): Promise<string> {

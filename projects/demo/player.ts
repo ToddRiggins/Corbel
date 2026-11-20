@@ -9,6 +9,7 @@ import {
   Node3D,
   PackedScene,
   StandardMaterial3D,
+  Texture2D,
   Vector3,
 } from "@corbel/core";
 import Score from "./score.ts";
@@ -23,6 +24,12 @@ export default class Player extends Node3D {
     body.geometry = new BoxMesh(new Vector3(1, 1, 1));
     const material = new StandardMaterial3D();
     material.albedo = Color.html("#e07a26");
+    // The texture arrives as a project resource; Godot's `load` idiom.
+    void load("res://textures/brick.png").then((resource) => {
+      if (resource instanceof Texture2D) {
+        material.albedo_texture = resource;
+      }
+    });
     body.material_override = material;
 
     const sun = new DirectionalLight3D();

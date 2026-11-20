@@ -3,6 +3,7 @@ import type { Mesh } from "../scene/mesh.js";
 import type { Material } from "../scene/material.js";
 import { ShaderMaterial } from "../scene/material.js";
 import { StandardMaterial3D } from "../scene/standard_material3d.js";
+import { Texture2D } from "../scene/texture.js";
 import type { RenderBackend, RenderFrame } from "./frame.js";
 import { CLEAR_COLOR, surface_attribs } from "./frame.js";
 import { Shader } from "./shaders.js";
@@ -17,13 +18,14 @@ import {
   view_proj_for_backend,
 } from "./shaders.js";
 
-const VERTEX_FLOATS = 9; // position 3 + normal 3 + color 3
+const VERTEX_FLOATS = 11; // position 3 + normal 3 + color 3 + uv 2
 const VERTEX_LAYOUT: GPUVertexBufferLayout = {
   arrayStride: VERTEX_FLOATS * 4,
   attributes: [
     { shaderLocation: 0, format: "float32x3", offset: 0 },
     { shaderLocation: 1, format: "float32x3", offset: 12 },
     { shaderLocation: 2, format: "float32x3", offset: 24 },
+    { shaderLocation: 3, format: "float32x2", offset: 36 },
   ],
 };
 
@@ -64,6 +66,10 @@ export class WebGPURenderBackend implements RenderBackend {
   private readonly camera_buffer: GPUBuffer;
   private readonly camera_group: GPUBindGroup;
   private readonly dummy_params: GPUBuffer;
+  private readonly dummy_texture: GPUTexture;
+  private readonly dummy_sampler: GPUSampler;
+  /** Decoded GPU texture pairs per material albedo texture. */
+  private readonly textures = new Map<Texture2D, { texture: GPUTexture; sampler: GPUSampler }>();
 
   /** One pipeline per Shader, one draw uniform per draw slot, one bind group per slot-and-material. */
   private readonly pipelines = new Map<Shader, GPURenderPipeline>();
@@ -85,11 +91,13 @@ export class WebGPURenderBackend implements RenderBackend {
       entries: [
         { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: {} },
         { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: {} },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
       ],
     });
     this.pipeline_layout = device.createPipelineLayout({ bindGroupLayouts: [camera_layout, draw_layout] });
-    this.draw_layout = draw_layout;
     this.camera_layout = camera_layout;
+    this.draw_layout = draw_layout;
     this.camera_buffer = device.createBuffer({
       size: WGSL_CAMERA_FLOATS * 4,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -99,6 +107,10 @@ export class WebGPURenderBackend implements RenderBackend {
       entries: [{ binding: 0, resource: { buffer: this.camera_buffer } }],
     });
     this.dummy_params = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    // The no-texture pair: a 1x1 white sample, so albedo texture multiplies neutral.
+    this.dummy_texture = device.createTexture({ size: [1, 1], format: "rgba8unorm", usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.device.queue.writeTexture({ texture: this.dummy_texture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
+    this.dummy_sampler = device.createSampler({ magFilter: "linear", minFilter: "linear", addressModeU: "repeat", addressModeV: "repeat" });
   }
 
   static async create(canvas: HTMLCanvasElement): Promise<WebGPURenderBackend> {
@@ -202,7 +214,8 @@ export class WebGPURenderBackend implements RenderBackend {
 
   private draw_bind_group(slot: number, material: Material): GPUBindGroup {
     const params = material instanceof ShaderMaterial ? this.params_buffer(material) : this.dummy_params;
-    const key = `${slot}:${material instanceof ShaderMaterial ? id_of(material) : 0}`;
+    const texture_pair = this.albedo_texture_pair(material);
+    const key = `${slot}:${id_of(material)}:${texture_pair.id}`;
     let group = this.bind_groups.get(key);
     if (group === undefined) {
       group = this.device.createBindGroup({
@@ -210,11 +223,48 @@ export class WebGPURenderBackend implements RenderBackend {
         entries: [
           { binding: 0, resource: { buffer: this.draw_uniform(slot) } },
           { binding: 1, resource: { buffer: params } },
+          { binding: 2, resource: texture_pair.view },
+          { binding: 3, resource: texture_pair.sampler },
         ],
       });
       this.bind_groups.set(key, group);
     }
     return group;
+  }
+
+  /** Uploads (once) the material's albedo texture; no texture means white. */
+  private albedo_texture_pair(material: Material): { view: GPUTextureView; sampler: GPUSampler; id: number } {
+    const texture = material instanceof StandardMaterial3D ? material.albedo_texture : null;
+    if (texture === null) {
+      return { view: this.dummy_texture.createView(), sampler: this.dummy_sampler, id: 0 };
+    }
+    let pair = this.textures.get(texture);
+    if (pair === undefined) {
+      const gpu_texture = this.device.createTexture({
+        size: [texture.width, texture.height],
+        format: "rgba8unorm",
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+      this.device.queue.copyExternalImageToTexture(
+        { source: texture.image as unknown as HTMLVideoElement },
+        { texture: gpu_texture },
+        [texture.width, texture.height],
+      );
+      const sampler = this.device.createSampler({ magFilter: "linear", minFilter: "linear", addressModeU: "repeat", addressModeV: "repeat" });
+      pair = { texture: gpu_texture, sampler };
+      this.textures.set(texture, pair);
+    }
+    return { view: pair.texture.createView(), sampler: pair.sampler, id: this.texture_id(texture) };
+  }
+
+  private readonly texture_ids = new Map<Texture2D, number>();
+  private texture_id(texture: Texture2D): number {
+    let id = this.texture_ids.get(texture);
+    if (id === undefined) {
+      id = this.texture_ids.size + 1;
+      this.texture_ids.set(texture, id);
+    }
+    return id;
   }
 
   private params_buffer(material: ShaderMaterial): GPUBuffer {
@@ -287,7 +337,7 @@ export class WebGPURenderBackend implements RenderBackend {
       return cached;
     }
     const surface = mesh.surface();
-    const { count, normals, colors } = surface_attribs(surface);
+    const { count, normals, colors, uvs } = surface_attribs(surface);
     const interleaved = new Float32Array(count * VERTEX_FLOATS);
     for (let i = 0; i < count; i += 1) {
       interleaved.set(
@@ -301,6 +351,8 @@ export class WebGPURenderBackend implements RenderBackend {
           colors[i * 3],
           colors[i * 3 + 1],
           colors[i * 3 + 2],
+          uvs[i * 2],
+          uvs[i * 2 + 1],
         ],
         i * VERTEX_FLOATS,
       );

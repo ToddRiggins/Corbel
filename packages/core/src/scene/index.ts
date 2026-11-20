@@ -15,6 +15,7 @@ export { PrimitiveType, SurfaceTool } from "./surface_tool.js";
 export { Timer } from "./timer.js";
 export { ProcessMode } from "./process_mode.js";
 export { PackedScene } from "./packed_scene.js";
+export { Texture2D } from "./texture.js";
 export { SceneTree, SceneTreeTimer } from "./scene_tree.js";
 export { load, resource_cached, resource_loader, ResourceLoader } from "./resource_loader.js";
 export type { TreeInit } from "./scene_tree.js";

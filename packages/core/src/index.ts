@@ -59,6 +59,7 @@ export {
   Signal,
   StandardMaterial3D,
   SurfaceTool,
+  Texture2D,
   Timer,
   create_node,
   import_tscn,

@@ -17,6 +17,7 @@ import {
   mouse_event_from_dom,
   pack_scene,
   unpack_scene,
+  Texture2D,
   type CSceneNode,
   Vector2,
 } from "@corbel/core";
@@ -81,6 +82,9 @@ export class Player {
       const module = await this.load_module(path);
       return module.default;
     });
+    for (const extension of ["png", "jpg", "jpeg", "webp", "gif"]) {
+      resource_loader().set_loader(extension, (text, path) => this.load_texture(path));
+    }
 
     const tree = new SceneTree();
     this.tree = tree;
@@ -249,6 +253,18 @@ export class Player {
     const rel = script.replace(/^res:\/\//, "");
     const url = `/@fs/${this.root}/projects/${this.project}/${rel}?run=${this.stamp}`;
     return (await import(/* @vite-ignore */ url)) as { default?: unknown };
+  }
+
+  /** Reads a project image file (base64 over the project API) and decodes it. */
+  private async load_texture(path: string): Promise<Texture2D> {
+    const payload = await fetch(`/__project/file?project=${encodeURIComponent(this.project)}&path=${encodeURIComponent(path)}`)
+      .then(async (response) => (response.ok ? (await response.json() as { base64?: string; error?: string }) : null));
+    if (!payload?.base64) {
+      throw new Error(payload?.error ?? `Could not read ${path}.`);
+    }
+    const image_type = path.split(".").pop()?.toLowerCase() ?? "png";
+    const mime = image_type === "jpg" || image_type === "jpeg" ? "image/jpeg" : image_type === "gif" ? "image/gif" : image_type === "webp" ? "image/webp" : "image/png";
+    return Texture2D.from_base64(`data:${mime};base64,${payload.base64}`);
   }
 
   /**
