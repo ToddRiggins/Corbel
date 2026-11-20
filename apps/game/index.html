@@ -9,11 +9,14 @@
       canvas { display: block; width: 100vw; height: 100vh; outline: none; }
       #load { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #888; }
       #err { position: fixed; top: 8px; left: 8px; margin: 0; color: #f87171; white-space: pre-wrap; font: 12px/1.5 Consolas, monospace; z-index: 2; pointer-events: none; }
+      #err-copy { position: fixed; top: 8px; right: 8px; z-index: 3; display: none; }
+      #err-copy.show { display: block; }
     </style>
   </head>
   <body>
     <div id="load">Corbel: loading…</div>
     <pre id="err"></pre>
+    <button id="err-copy" title="Copy the errors">⧉ Copy errors</button>
     <script type="module" src="__GAME_MAIN__"></script>
   </body>
 </html>

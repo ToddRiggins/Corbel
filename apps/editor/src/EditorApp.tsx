@@ -81,6 +81,41 @@ export function EditorApp() {
     setOutput((prev) => [...prev, kind === "error" ? `ERROR: ${line}` : line].slice(-200));
   }
 
+  /** Copies with the clipboard API, falling back to a hidden selection for restricted contexts. */
+  async function copyToClipboard(text: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+      log("Copied to clipboard.");
+    } catch {
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.style.position = "fixed";
+      helper.style.opacity = "0";
+      document.body.appendChild(helper);
+      helper.select();
+      const copied = document.execCommand("copy");
+      helper.remove();
+      log(copied ? "Copied to clipboard." : "Copy failed. Select the line and press Ctrl+C.", copied ? "info" : "error");
+    }
+  }
+
+  /** Game window log lines land in the editor Output, copyable from here. */
+  useEffect(() => {
+    const onMessage = (event: MessageEvent): void => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+      const data = event.data as { type?: string; line?: string; kind?: "info" | "error" } | null;
+      if (data?.type === "corbel-game-log" && typeof data.line === "string") {
+        log(data.line, data.kind === "error" ? "error" : "info");
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+    // One listener for the page lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function bump(): void {
     setTick((value) => value + 1);
   }
@@ -505,12 +540,8 @@ export function EditorApp() {
           .catch(() => null);
         const width = settings?.window?.width ?? 1280;
         const height = settings?.window?.height ?? 720;
-        // Reusing a target reopens the same popup; close the old one so a
-        // new Play always boots a fresh, focused game window.
-        const stale = window.open("", "corbel-game");
-        if (stale && !stale.closed) {
-          stale.close();
-        }
+        // The target name reuses an already-running game window and navigates
+        // it — a full page load, so every Play boots a fresh game.
         gameHandleRef.current = window.open(
           `/game?project=${encodeURIComponent(project)}&scene=${encodeURIComponent(scenePath)}`,
           "corbel-game",
@@ -885,8 +916,27 @@ export function EditorApp() {
         />
         <section className="dock output">
           <h2>Output</h2>
+          <div className="tools">
+            <button title="Copy every Output line" onClick={() => { void copyToClipboard(output.join("\n")); }}>Copy</button>
+            <button title="Clear the Output" onClick={() => setOutput([])}>Clear</button>
+          </div>
           <div className="body">
-            {output.length === 0 ? <div className="empty">No output yet</div> : <pre className="log">{output.join("\n")}</pre>}
+            {output.length === 0 ? (
+              <div className="empty">No output yet</div>
+            ) : (
+              <div className="log">
+                {output.map((line, index) => (
+                  <div className={`log-line${line.startsWith("ERROR:") ? " err" : ""}`} key={`${index}:${line}`}>
+                    <span className="log-text">{line}</span>
+                    <button
+                      className="mini"
+                      title="Copy this line"
+                      onClick={() => { void copyToClipboard(line); }}
+                    >⧉</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>

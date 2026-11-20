@@ -9,10 +9,27 @@ const scene_path = params.get("scene") ?? "res://main.cscene";
 
 const loadEl = document.getElementById("load")!;
 const errEl = document.getElementById("err")!;
+const errCopyEl = document.getElementById("err-copy")!;
+if (errCopyEl instanceof HTMLButtonElement) {
+  errCopyEl.addEventListener("click", () => {
+    try {
+      navigator.clipboard?.writeText(errEl.textContent ?? "");
+    } catch (error) {
+      void error;
+    }
+  });
+}
 const log: PlayLog = (line, kind) => {
   if (kind === "error") {
     console.error(line);
     errEl.textContent += line + "\n";
+    errCopyEl.classList.add("show");
+    // Relay to the editor's Output panel, where the line is copyable.
+    try {
+      window.opener?.postMessage({ type: "corbel-game-log", line, kind }, window.location.origin);
+    } catch (error) {
+      void error;
+    }
   } else {
     console.log(line);
   }

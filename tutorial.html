@@ -281,6 +281,19 @@ const deep = enemy.duplicate(true); // nested dictionaries and arrays copied</pr
     </div>
   </section>
 
+  <section class="block red">
+    <h2>Output — copying errors and warnings</h2>
+    <div class="body">
+      <p>The Output panel at the bottom holds every editor and game message. Three ways to copy, so nothing gets lost on the way to a bug report:</p>
+      <ol>
+        <li>Select a line with the mouse and press Ctrl+C — Output text is selectable.</li>
+        <li>Hover a line and click its <code>⧉</code> chip to copy just that line.</li>
+        <li>The Output header <strong>Copy</strong> button copies every line at once. <strong>Clear</strong> empties the panel.</li>
+      </ol>
+      <p>Errors from the game window arrive in Output too: the window relays them through <code>window.opener.postMessage</code>, and they show up red as <code>ERROR: …</code> lines, copyable like the rest. The game window itself also shows a <strong>⧉ Copy errors</strong> button beside its error overlay.</p>
+    </div>
+  </section>
+
   <section class="block zinc">
     <h2>Not built yet</h2>
     <div class="body">
