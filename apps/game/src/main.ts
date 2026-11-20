@@ -1,4 +1,4 @@
-import { CSceneNode, unpack_scene } from "@corbel/core";
+import { unpack_scene, type CSceneNode } from "@corbel/core";
 import { Player, type PlayLog } from "@corbel/runtime";
 
 /** The game window: load the saved scene, weave scripts, run. Nothing else. */

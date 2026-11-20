@@ -1,5 +1,7 @@
 import type { TreeHost } from "./tree_host.js";
 import type { InputEvent } from "../input/events.js";
+import { ProcessMode } from "./process_mode.js";
+import type { SceneTree } from "./scene_tree.js";
 
 const NAME_CHARS = /[./:@%]/;
 
@@ -217,16 +219,35 @@ export class Node {
   }
 
   /** @internal */
-  _process_branch(delta: number): void {
-    try {
-      this._process(delta);
-    } catch (error) {
-      this._tree?._report_node_error?.(this, error, "process");
+  _process_branch(delta: number, parent_paused: boolean, tree_paused: boolean): void {
+    const paused = this.paused_for(parent_paused, tree_paused);
+    if (!paused) {
+      try {
+        this._process(delta);
+      } catch (error) {
+        this._tree?._report_node_error?.(this, error, "process");
+      }
     }
     for (const child of [...this._children]) {
       if (child._tree) {
-        child._process_branch(delta);
+        child._process_branch(delta, paused, tree_paused);
       }
+    }
+  }
+
+  /** Godot's ProcessMode resolution against the tree's pause state. */
+  private paused_for(parent_paused: boolean, tree_paused: boolean): boolean {
+    switch (this.process_mode) {
+      case ProcessMode.PAUSABLE:
+        return tree_paused;
+      case ProcessMode.WHEN_PAUSED:
+        return !tree_paused;
+      case ProcessMode.ALWAYS:
+        return false;
+      case ProcessMode.DISABLED:
+        return true;
+      default:
+        return parent_paused;
     }
   }
 
@@ -248,6 +269,19 @@ export class Node {
   _input(_event: InputEvent): void {}
 
   _exit_tree(): void {}
+
+  /**
+   * Godot 4 `process_mode`: how this node behaves when the tree is paused.
+   * `INHERIT` follows the parent, like Godot's default.
+   */
+  process_mode: ProcessMode = ProcessMode.INHERIT;
+
+  /** The SceneTree this node lives in, or null outside the tree — Godot's `get_tree`. */
+  get_tree(): SceneTree | null {
+    // Only SceneTree ever acts as the host; a cast keeps node.ts out of the
+    // module cycle (scene_tree's imports reach Node's declaration).
+    return this._tree as SceneTree | null;
+  }
 
   private _entered(tree: TreeHost): void {
     this._tree = tree;

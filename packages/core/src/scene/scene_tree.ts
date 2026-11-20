@@ -3,6 +3,7 @@ import type { TreeHost } from "./tree_host.js";
 import { Renderer, type BackendPreference } from "../render/renderer.js";
 import { Input } from "../input/input.js";
 import type { InputEvent } from "../input/events.js";
+import { Signal } from "./signal.js";
 
 /** Options for `SceneTree.init`. */
 export interface TreeInit {
@@ -26,6 +27,11 @@ export class SceneTree implements TreeHost {
 
   /** Receives script errors from `_process` and `_ready`. */
   on_node_error: NodeErrorHook | null = null;
+
+  private readonly _timers: SceneTreeTimer[] = [];
+  private _current_scene: Node | null = null;
+  /** Fetched by the runtime; `change_scene_to_file` uses it to load `.cscene` files. */
+  scene_loader: ((path: string) => Promise<Node>) | null = null;
 
   constructor() {
     this._root.set_name("root");
@@ -71,13 +77,58 @@ export class SceneTree implements TreeHost {
     this._renderer = null;
   }
 
-  /** One frame. `_process` is skipped while `paused`; the draw still happens. */
+  /** One frame. The walk runs every frame; each node's `process_mode` gates `_process`. */
   tick(delta: number): void {
     Input._advance_frame();
-    if (!this.paused) {
-      this._process(delta);
-    }
+    this._process(delta);
+    this._advance_timers(delta);
     this._renderer?.render_tree(this);
+  }
+
+  /** Godot 4 `current_scene`: the root's scene node, or null. */
+  get_current_scene(): Node | null {
+    return this._current_scene;
+  }
+
+  /** Swaps the current scene at the end of the frame; the old scene queues free. */
+  change_scene_to_node(next: Node): void {
+    if (this._current_scene) {
+      this._current_scene.queue_free();
+    }
+    this.get_root().add_child(next);
+    this._current_scene = next;
+  }
+
+  /**
+   * Godot 4 `change_scene_to_file`. The runtime supplies the loader; false
+   * means no loader was installed or the file could not load.
+   */
+  async change_scene_to_file(path: string): Promise<boolean> {
+    if (this.scene_loader === null) {
+      return false;
+    }
+    try {
+      this.change_scene_to_node(await this.scene_loader(path));
+      return true;
+    } catch (error) {
+      this.on_node_error?.(
+        this.get_root(),
+        new Error(`change_scene_to_file failed for "${path}": ${error instanceof Error ? error.message : String(error)}`),
+        "process",
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Godot 4 `SceneTree.create_timer`: an awaitable timer independent of the
+   * node tree; `process_always` (true by default) keeps it running while the
+   * tree is paused. Await `timer.timeout`.
+   */
+  create_timer(time_sec: number, process_always = true): SceneTreeTimer {
+    const timer = new SceneTreeTimer(Math.max(time_sec, 0), process_always);
+    this._timers.push(timer);
+    return timer;
   }
 
   /**
@@ -129,7 +180,7 @@ export class SceneTree implements TreeHost {
 
   /** One frame. `delta` is seconds. Queued nodes leave the tree at the end. */
   _process(delta: number): void {
-    this._root._process_branch(delta);
+    this._root._process_branch(delta, this.paused, this.paused);
     const batch = this._queue.splice(0);
     for (const node of batch) {
       const parent = node.get_parent();
@@ -138,5 +189,33 @@ export class SceneTree implements TreeHost {
       }
       node._clear_queue();
     }
+  }
+
+  /** Advances tree timers; a paused tree still runs the `process_always` ones, like Godot's default. */
+  private _advance_timers(delta: number): void {
+    for (let i = this._timers.length - 1; i >= 0; i -= 1) {
+      const timer = this._timers[i];
+      if (this.paused && !timer.process_always) {
+        continue;
+      }
+      timer.time_left -= delta;
+      if (timer.time_left <= 0) {
+        this._timers.splice(i, 1);
+        timer.timeout.emit();
+      }
+    }
+  }
+}
+
+/** Godot 4 SceneTreeTimer: created by `SceneTree.create_timer`; await `.timeout`. */
+export class SceneTreeTimer {
+  readonly timeout = new Signal();
+  /** Seconds remaining, counting down every frame it is allowed to run. */
+  time_left: number;
+  readonly process_always: boolean;
+
+  constructor(time_sec: number, process_always: boolean) {
+    this.time_left = time_sec;
+    this.process_always = process_always;
   }
 }

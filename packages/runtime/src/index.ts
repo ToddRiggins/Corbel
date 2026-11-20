@@ -15,8 +15,9 @@ import {
   mouse_event_from_dom,
   pack_scene,
   unpack_scene,
+  type CSceneNode,
+  Vector2,
 } from "@corbel/core";
-import { Vector2 } from "@corbel/core";
 
 export type PlayLog = (line: string, kind?: "info" | "error") => void;
 
@@ -68,6 +69,15 @@ export class Player {
     tree.on_node_error = (node, error, where) => {
       const message = error instanceof Error ? error.message : String(error);
       this.log(`${node.name} (${where}): ${message}`, "error");
+    };
+    // change_scene_to_file loads saved scenes through the project API.
+    tree.scene_loader = async (path) => {
+      const payload = await fetch(`/__project/file?project=${encodeURIComponent(this.project)}&path=${encodeURIComponent(path)}`)
+        .then(async (response) => (response.ok ? (await response.json() as { text?: string }) : null));
+      if (!payload?.text) {
+        throw new Error(`Could not read ${path}.`);
+      }
+      return unpack_scene(JSON.parse(payload.text) as CSceneNode);
     };
 
     // Project settings: the Input Map goes live before any script's _ready can read it.

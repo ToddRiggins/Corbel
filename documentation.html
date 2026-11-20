@@ -269,6 +269,18 @@
         </div>
       </section>
 
+      <section class="teal" id="timer">
+        <h2 id="doc-Timer" data-doc="Timer">Timer, timers, and scene change</h2>
+        <div class="body">
+          <p><code id="doc-Timer" data-doc="Timer">Timer</code> is a node that counts a <code id="doc-Timer-wait_time" data-doc="wait_time" data-owner="Timer">wait_time</code> and emits <code id="doc-Timer-timeout" data-doc="timeout" data-owner="Timer">timeout</code>. <code id="doc-Timer-start" data-doc="start" data-owner="Timer">start(time)</code>, <code id="doc-Timer-stop" data-doc="stop" data-owner="Timer">stop()</code>, <code id="doc-Timer-is_stopped" data-doc="is_stopped" data-owner="Timer">is_stopped()</code>, <code id="doc-Timer-get_time_left" data-doc="get_time_left" data-owner="Timer">get_time_left()</code>, <code id="doc-Timer-one_shot" data-doc="one_shot" data-owner="Timer">one_shot</code>, and <code id="doc-Timer-autostart" data-doc="autostart" data-owner="Timer">autostart</code> work like Godot's. Pause behaves like Godot: a <code>PAUSABLE</code> Timer waits, an <code>ALWAYS</code> Timer keeps counting.</p>
+          <p><code id="doc-SceneTree-create_timer" data-doc="create_timer" data-owner="SceneTree">SceneTree.create_timer(seconds, process_always)</code> builds an awaitable timer independent of the tree: <code id="doc-SceneTreeTimer-timeout" data-doc="timeout" data-owner="SceneTreeTimer">timeout</code> fires after the wait, and the timer honors Godot's <code>process_always</code> default. Every Signal awaits, so GDScript's <code>await</code> idiom ports directly:</p>
+<pre><span class="kw">const</span> <span class="vr">tree</span> <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">();</span>
+<span class="kw">await</span> <span class="vr">tree</span><span class="op">.</span><span class="call">create_timer</span><span class="op">(</span><span class="num">0.5</span><span class="op">).</span><span class="vr">timeout</span><span class="op">;</span>
+<span class="cm">// 0.5 seconds later, game paused or not</span></pre>
+          <p><code id="doc-SceneTree-change_scene_to_file" data-doc="change_scene_to_file" data-owner="SceneTree">change_scene_to_file(path)</code> frees the current scene at the end of the frame and swaps in the loaded one (<code id="doc-SceneTree-get_current_scene" data-doc="get_current_scene" data-owner="SceneTree">get_current_scene()</code>, <code id="doc-SceneTree-change_scene_to_node" data-doc="change_scene_to_node" data-owner="SceneTree">change_scene_to_node(node)</code> for a node you already built). The runtime loads <code>.cscene</code> files for it.</p>
+        </div>
+      </section>
+
       <section class="teal" id="globals">
         <h2 id="doc-Globals" data-doc="Globals">Globals — Autoload, and the class registry</h2>
         <div class="body">
@@ -311,6 +323,8 @@
             <tr><td><code id="doc-Node-queue_free" data-doc="queue_free" data-owner="Node">queue_free()</code></td><td>Remove the node at the end of the frame</td></tr>
             <tr><td><code id="doc-Node-is_inside_tree" data-doc="is_inside_tree" data-owner="Node">is_inside_tree()</code></td><td>True after it has entered a scene tree</td></tr>
             <tr><td><code id="doc-Node-is_queued_for_deletion" data-doc="is_queued_for_deletion" data-owner="Node">is_queued_for_deletion()</code></td><td>True after <code>queue_free</code></td></tr>
+            <tr><td><code id="doc-Node-get_tree" data-doc="get_tree" data-owner="Node">get_tree()</code></td><td>The <code>SceneTree</code> this node lives in, or null outside the tree</td></tr>
+            <tr><td><code id="doc-Node-process_mode" data-doc="process_mode" data-owner="Node">process_mode</code></td><td>Pause behavior under a paused tree: <code>INHERIT</code> (follows the parent), <code>PAUSABLE</code>, <code>WHEN_PAUSED</code>, <code>ALWAYS</code>, <code>DISABLED</code></td></tr>
           </table>
           <p>Override <code id="doc-Node-_enter_tree" data-doc="_enter_tree" data-owner="Node">_enter_tree</code>, <code id="doc-Node-_ready" data-doc="_ready" data-owner="Node">_ready</code>, <code id="doc-Node-_process" data-doc="_process" data-owner="Node">_process</code>, <code id="doc-Node-_input" data-doc="_input" data-owner="Node">_input</code>, and <code id="doc-Node-_exit_tree" data-doc="_exit_tree" data-owner="Node">_exit_tree</code>. Leave them empty when a node has nothing to do. <code>_input</code> only runs when a subclass overrides it. A throw in <code>_ready</code> or <code>_process</code> does not stop the tree; <code>SceneTree.on_node_error</code> receives the node and the error.</p>
         </div>
