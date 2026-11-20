@@ -68,7 +68,7 @@ export class WebGL2RenderBackend implements RenderBackend {
   render(frame: RenderFrame): void {
     const gl = this.gl;
     gl.viewport(0, 0, frame.width, frame.height);
-    gl.clearColor(CLEAR_COLOR.r, CLEAR_COLOR.g, CLEAR_COLOR.b, CLEAR_COLOR.a);
+    gl.clearColor(frame.background.r, frame.background.g, frame.background.b, frame.background.a);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     if (!frame.camera || !frame.camera_transform || frame.draws.length === 0) {

@@ -143,7 +143,7 @@ export class WebGPURenderBackend implements RenderBackend {
     const pass = encoder.beginRenderPass({
       colorAttachments: [{
         view: this.context.getCurrentTexture().createView(),
-        clearValue: { r: CLEAR_COLOR.r, g: CLEAR_COLOR.g, b: CLEAR_COLOR.b, a: CLEAR_COLOR.a },
+        clearValue: { r: frame.background.r, g: frame.background.g, b: frame.background.b, a: frame.background.a },
         loadOp: "clear",
         storeOp: "store",
       }],

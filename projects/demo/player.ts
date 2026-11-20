@@ -2,6 +2,7 @@ import {
   BoxMesh,
   Color,
   DirectionalLight3D,
+  Environment,
   Input,
   InputEvent,
   load,
@@ -11,6 +12,7 @@ import {
   StandardMaterial3D,
   Texture2D,
   Vector3,
+  WorldEnvironment,
 } from "@corbel/core";
 import Score from "./score.ts";
 
@@ -35,6 +37,14 @@ export default class Player extends Node3D {
     const sun = new DirectionalLight3D();
     sun.rotation = new Vector3(-0.6, 0.4, 0);
     this.add_child(sun);
+
+    // A WorldEnvironment under /root, Godot style: sky background, brighter ambient.
+    const environment = new Environment();
+    environment.background_color = Color.html("#87ceeb");
+    environment.ambient = Color.html("#8a8f99");
+    const world_environment = new WorldEnvironment();
+    world_environment.environment = environment;
+    this.get_tree()?.get_root().add_child(world_environment);
 
     // The Globals autoload: reachable from anywhere by node path.
     (this.get_node("/root/Score") as Score).add(1);

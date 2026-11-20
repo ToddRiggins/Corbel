@@ -1,4 +1,5 @@
 import {
+  Color,
   Input,
   InputEventKey,
   InputMap,
@@ -11,6 +12,7 @@ import {
   registered_node_class_names,
   resource_loader,
   SceneTree,
+  StandardMaterial3D,
   key_from_name,
   key_name_from_dom,
   key_name_from_layout,
@@ -85,6 +87,7 @@ export class Player {
     for (const extension of ["png", "jpg", "jpeg", "webp", "gif"]) {
       resource_loader().set_loader(extension, (text, path) => this.load_texture(path));
     }
+    resource_loader().set_loader("cmaterial", async (text, path) => await this.load_material(JSON.parse(text), path));
 
     const tree = new SceneTree();
     this.tree = tree;
@@ -265,6 +268,27 @@ export class Player {
     const image_type = path.split(".").pop()?.toLowerCase() ?? "png";
     const mime = image_type === "jpg" || image_type === "jpeg" ? "image/jpeg" : image_type === "gif" ? "image/gif" : image_type === "webp" ? "image/webp" : "image/png";
     return Texture2D.from_base64(`data:${mime};base64,${payload.base64}`);
+  }
+
+  /** Builds a material from a `.cmaterial` JSON file, referenced textures included. */
+  private async load_material(data: { type?: string; albedo?: string; albedo_texture?: string; metallic?: number; roughness?: number }, path: string): Promise<StandardMaterial3D> {
+    const material = new StandardMaterial3D();
+    if (typeof data.albedo === "string") {
+      material.albedo = Color.html(data.albedo);
+    }
+    if (typeof data.metallic === "number") {
+      material.metallic = data.metallic;
+    }
+    if (typeof data.roughness === "number") {
+      material.roughness = data.roughness;
+    }
+    if (typeof data.albedo_texture === "string") {
+      const texture = await resource_loader().load(data.albedo_texture);
+      if (texture instanceof Texture2D) {
+        material.albedo_texture = texture;
+      }
+    }
+    return material;
   }
 
   /**

@@ -14,6 +14,7 @@ export { StandardMaterial3D } from "./standard_material3d.js";
 export { PrimitiveType, SurfaceTool } from "./surface_tool.js";
 export { Timer } from "./timer.js";
 export { ProcessMode } from "./process_mode.js";
+export { Environment, WorldEnvironment } from "./environment.js";
 export { PackedScene } from "./packed_scene.js";
 export { Texture2D } from "./texture.js";
 export { SceneTree, SceneTreeTimer } from "./scene_tree.js";

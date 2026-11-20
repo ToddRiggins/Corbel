@@ -290,8 +290,21 @@
 <span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">().</span><span class="call">change_scene_to_node</span><span class="op">(</span><span class="vr">fresh</span><span class="op">);</span>
 <span class="cm">// or the direct swap:</span>
 <span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">().</span><span class="call">change_scene_to_packed</span><span class="op">(</span><span class="vr">packed</span><span class="op">);</span></pre>
-          <p>New resources need a loader per extension: <code id="doc-ResourceLoader-set_loader" data-doc="set_loader" data-owner="ResourceLoader">ResourceLoader.set_loader("json", handler)</code>. Resources cache by path. The runtime wires the project API into the shared loader, so game scripts only ever write <code>await load("res://…")</code>.</p>
+          <p>New resources need a loader per extension: <code id="doc-ResourceLoader-set_loader" data-doc="set_loader" data-owner="ResourceLoader">ResourceLoader.set_loader("json", handler)</code>. Resources cache by path. The runtime wires the project API into the shared loader, so game scripts only ever write <code>await load("res://…")</code>. A <code>.cmaterial</code> file is material data — <code>albedo</code>, <code>albedo_texture</code>, <code>roughness</code>, <code>metallic</code> — and <code>load("res://materials/portal.cmaterial")</code> hands back a ready StandardMaterial3D with the texture loaded.</p>
           <p>Scene change ties it together: <code id="doc-SceneTree-change_scene_to_packed" data-doc="change_scene_to_packed" data-owner="SceneTree">change_scene_to_packed(packed)</code> frees the old level at the end of the frame, swaps in the loaded one, and keeps the runner's weaved scripts and Globals (autoload) alive through the swap.</p>
+        </div>
+      </section>
+
+      <section class="teal" id="environment">
+        <h2 id="doc-WorldEnvironment" data-doc="WorldEnvironment">Environment and WorldEnvironment</h2>
+        <div class="body">
+          <p><code id="doc-WorldEnvironment" data-doc="WorldEnvironment">WorldEnvironment</code> is a node that overrides the tree's look. Assign it an <code id="doc-Environment" data-doc="Environment">Environment</code> with <code id="doc-Environment-background_color" data-doc="background_color" data-owner="Environment">background_color</code> (what the canvas clears to) and <code id="doc-Environment-ambient" data-doc="ambient" data-owner="Environment">ambient</code>. The renderer picks the first WorldEnvironment in the tree; none means the default gray background and dim ambient.</p>
+<pre><span class="kw">const</span> <span class="vr">environment</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">Environment</span><span class="op">();</span>
+<span class="vr">environment</span><span class="op">.</span><span class="vr">background_color</span> <span class="op">=</span> <span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#87ceeb"</span><span class="op">);</span>
+<span class="vr">environment</span><span class="op">.</span><span class="vr">ambient</span> <span class="op">=</span> <span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#606c80"</span><span class="op">);</span>
+<span class="kw">const</span> <span class="vr">world</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">WorldEnvironment</span><span class="op">();</span>
+<span class="vr">world</span><span class="op">.</span><span class="vr">environment</span> <span class="op">=</span> <span class="vr">environment</span><span class="op">;</span>
+<span class="vr">root</span><span class="op">.</span><span class="call">add_child</span><span class="op">(</span><span class="vr">world</span><span class="op">);</span></pre>
         </div>
       </section>
 

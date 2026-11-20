@@ -3,6 +3,7 @@ import { Basis } from "../src/math/basis.js";
 import { Color } from "../src/math/color.js";
 import { Transform3D } from "../src/math/transform3d.js";
 import { Vector3 } from "../src/math/vector3.js";
+import { CLEAR_COLOR } from "../src/render/frame.js";
 import {
   basis_to_mat3,
   build_render_frame,
@@ -12,10 +13,12 @@ import {
 } from "../src/render/frame.js";
 import { Camera3D } from "../src/scene/camera3d.js";
 import { DirectionalLight3D } from "../src/scene/directional_light3d.js";
+import { Environment } from "../src/scene/environment.js";
 import { BoxMesh } from "../src/scene/mesh.js";
 import { MeshInstance3D } from "../src/scene/mesh_instance3d.js";
 import { Node } from "../src/scene/node.js";
 import { Node3D } from "../src/scene/node3d.js";
+import { WorldEnvironment } from "../src/scene/environment.js";
 import { SceneTree } from "../src/scene/scene_tree.js";
 import { StandardMaterial3D } from "../src/scene/standard_material3d.js";
 
@@ -214,5 +217,33 @@ describe("build_render_frame", () => {
     const frame = build_render_frame(tree_with(box()), 800, 600);
     expect(frame.camera).toBe(null);
     expect(frame.draws.length).toBe(1);
+  });
+});
+
+describe("build_render_frame environment", () => {
+  function tree_with(children: Array<() => Node>): SceneTree {
+    const tree = new SceneTree();
+    for (const build of children) {
+      tree.get_root().add_child(build());
+    }
+    return tree;
+  }
+
+  it("a WorldEnvironment sets the background and ambient; none keeps the defaults", () => {
+    const with_env = tree_with([() => new WorldEnvironment()]);
+    const env_node = with_env.get_root().get_child(0);
+    const env = new Environment();
+    env.background_color = Color.html("#87ceeb");
+    env.ambient = Color.html("#606c80");
+    if (env_node instanceof WorldEnvironment) {
+      env_node.environment = env;
+    }
+
+    const frame = build_render_frame(with_env, 800, 600);
+    expect(frame.background.is_equal_approx(Color.html("#87ceeb"))).toBe(true);
+    expect(frame.ambient.is_equal_approx(Color.html("#606c80"))).toBe(true);
+
+    const without = build_render_frame(tree_with([() => new Node()]), 800, 600);
+    expect(without.background.is_equal_approx(CLEAR_COLOR)).toBe(true);
   });
 });

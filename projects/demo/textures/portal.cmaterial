@@ -1,0 +1,5 @@
+{
+  "type": "StandardMaterial3D",
+  "albedo": "#eab8f2",
+  "albedo_texture": "res://textures/portal.png"
+}

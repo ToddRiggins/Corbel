@@ -4,6 +4,7 @@ import { Transform3D } from "../math/transform3d.js";
 import { Vector3 } from "../math/vector3.js";
 import { Camera3D } from "../scene/camera3d.js";
 import { DirectionalLight3D } from "../scene/directional_light3d.js";
+import { WorldEnvironment, type Environment } from "../scene/environment.js";
 import type { Mesh, SurfaceArrays } from "../scene/mesh.js";
 import { MeshInstance3D } from "../scene/mesh_instance3d.js";
 import type { Material } from "../scene/material.js";
@@ -38,6 +39,8 @@ export interface RenderFrame {
   width: number;
   height: number;
   aspect: number;
+  /** What the canvas clears to (from WorldEnvironment, or the default gray). */
+  background: Color;
   camera: Camera3D | null;
   camera_transform: Transform3D | null;
   /** World-space, unit length. Points where the light goes. */
@@ -68,6 +71,7 @@ export function build_render_frame(
   let camera: Camera3D | null = null;
   let first_camera: Camera3D | null = null;
   let light: DirectionalLight3D | null = null;
+  let environment: Environment | null = null;
   const draws: RenderDraw[] = [];
 
   const walk = (node: Node): void => {
@@ -76,6 +80,8 @@ export function build_render_frame(
       if (node.current) {
         camera = node;
       }
+    } else if (node instanceof WorldEnvironment && environment === null) {
+      environment = node.environment;
     } else if (node instanceof DirectionalLight3D && light === null) {
       light = node;
     }
@@ -102,15 +108,18 @@ export function build_render_frame(
     ? chosen_light.get_global_transform().basis.z.neg().normalized()
     : Vector3.FORWARD.clone();
 
+  const chosen_environment = environment as Environment | null;
+
   return {
     width,
     height,
     aspect: width / height,
+    background: chosen_environment ? chosen_environment.background_color : CLEAR_COLOR,
     camera: chosen_camera,
     camera_transform,
     light_direction,
     light_color: chosen_light ? chosen_light.light_color : Color.WHITE,
-    ambient,
+    ambient: chosen_environment ? chosen_environment.ambient : ambient,
     draws,
   };
 }

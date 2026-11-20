@@ -206,6 +206,26 @@ export default class Player extends Node3D {
     </div>
   </section>
 
+  <section class="block violet">
+    <h2>Material files and the world environment</h2>
+    <div class="body">
+      <p>A <code>.cmaterial</code> file keeps a material's data out of the script. Put it in the project (for example <code>textures/portal.cmaterial</code>) and load it — the texture inside loads with it:</p>
+      <pre>{
+  "albedo": "#eab8f2",
+  "albedo_texture": "res://textures/portal.png"
+}</pre>
+      <pre>const material = await load("res://textures/portal.cmaterial") as StandardMaterial3D;
+(this.get_node("Portal") as MeshInstance3D).material_override = material;</pre>
+      <p>A <code>WorldEnvironment</code> node overrides the sky and the ambient light for the whole tree:</p>
+      <pre>const environment = new Environment();
+environment.background_color = Color.html("#87ceeb");
+environment.ambient = Color.html("#606c80");
+const world = new WorldEnvironment();
+world.environment = environment;
+this.get_tree()?.get_root().add_child(world);</pre>
+    </div>
+  </section>
+
   <section class="block green">
     <h2>Build a mesh in code</h2>
     <div class="body">
