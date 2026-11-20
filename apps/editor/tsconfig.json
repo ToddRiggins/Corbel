@@ -6,6 +6,7 @@
     "jsx": "react-jsx",
     "lib": ["ES2024", "DOM"],
     "strict": true,
+    "allowImportingTsExtensions": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "skipLibCheck": true,

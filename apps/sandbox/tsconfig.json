@@ -6,6 +6,7 @@
     "jsx": "react-jsx",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "strict": true,
+    "allowImportingTsExtensions": true,
     "types": ["@webgpu/types"],
     "useDefineForClassFields": false,
     "skipLibCheck": true,

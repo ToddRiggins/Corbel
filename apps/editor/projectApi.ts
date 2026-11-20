@@ -114,12 +114,13 @@ function checkTs(filePath: string, text: string): Array<{ line: number; column: 
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
+    allowImportingTsExtensions: true,
     experimentalDecorators: true,
     useDefineForClassFields: false,
     skipLibCheck: true,
     baseUrl: corbelRoot,
     paths: { "@corbel/core": ["packages/core/src/index.ts"] },
-    lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    lib: ["lib.es2024.d.ts", "lib.dom.d.ts"],
   };
   const host = ts.createCompilerHost(options);
   const read = host.getSourceFile.bind(host);

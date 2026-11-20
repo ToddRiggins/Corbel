@@ -7,6 +7,7 @@
     "types": ["@webgpu/types"],
     "types": ["@webgpu/types"],
     "strict": true,
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true
