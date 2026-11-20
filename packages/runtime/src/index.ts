@@ -136,7 +136,8 @@ export class Player {
         tree.get_root().add_child(singleton);
         log(`Autoload ${name}: ${script}.`);
       } catch (error) {
-        this.log(`Autoload ${name} (${script}) did not load: ${error instanceof Error ? error.message : String(error)}`, "error");
+        const message = error instanceof Error ? error.message : String(error);
+        this.log(`Autoload ${name} (${script}) did not load: ${pretty_path(message, this.project)}`, "error");
       }
     }
 
@@ -221,7 +222,7 @@ export class Player {
         this.log(`Script on ${node.name}: ${script}.`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        this.log(`Script on ${node.name} (${script}) did not load: ${message}. The node stays plain.`, "error");
+        this.log(`Script on ${node.name} (${script}) did not load: ${pretty_path(message, this.project)}. The node stays plain.`, "error");
       }
     }
     for (const kid of woven) {
@@ -271,6 +272,19 @@ export class Player {
     }
     return module.default;
   }
+}
+
+/** Rewrites a dev-server module URL inside an error into the res:// path the author wrote. */
+export function pretty_path(message: string, project: string): string {
+  const marker = `/projects/${project}/`;
+  for (const token of message.split(/\s+/)) {
+    const at = token.indexOf(marker);
+    if (at >= 0) {
+      const rel = token.slice(at + marker.length).split("?")[0].replace(/["')\]],?$/, "");
+      return `res://${decodeURIComponent(rel)}`;
+    }
+  }
+  return message;
 }
 
 /**
