@@ -67,7 +67,18 @@ export class ResourceLoader {
     if (handler === undefined) {
       return null;
     }
-    return await handler("", path);
+    // The handler takes the file text, like Godot's import loaders. Formats
+    // that read their own bytes ignore it; a read that fails (a missing file
+    // with a byte-fetching handler behind it) leaves the text empty.
+    let text = "";
+    if (this._file_loader !== null) {
+      try {
+        text = await this.read(path);
+      } catch {
+        // The handler reads for itself below.
+      }
+    }
+    return await handler(text, path);
   }
 
   private read(path: string): Promise<string> {

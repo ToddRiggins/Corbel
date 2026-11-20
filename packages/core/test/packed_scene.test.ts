@@ -88,6 +88,18 @@ describe("ResourceLoader and load()", () => {
     expect(enemy.parsed === true).toBe(true);
   });
 
+  it("handlers take the file text through the injected read", async () => {
+    let text_seen = "";
+    loader.set_file_loader(async (path) => `{"kind":"${path.endsWith(".cmat") ? "mat" : "any"}"}`);
+    loader.set_loader("cmat", (text) => {
+      text_seen = text;
+      return { got: JSON.parse(text) } as unknown;
+    });
+    const resource = (await loader.load("res://data/item.cmat")) as { got?: { kind?: string } };
+    expect(text_seen).toBe('{"kind":"mat"}');
+    expect(resource.got?.kind).toBe("mat");
+  });
+
   it("load() is the global route to the shared instance", async () => {
     const { load } = await import("../src/scene/resource_loader.js");
     const dict = new Dictionary<string, number>();

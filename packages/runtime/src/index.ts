@@ -87,7 +87,12 @@ export class Player {
     for (const extension of ["png", "jpg", "jpeg", "webp", "gif"]) {
       resource_loader().set_loader(extension, (text, path) => this.load_texture(path));
     }
-    resource_loader().set_loader("cmaterial", async (text, path) => await this.load_material(JSON.parse(text), path));
+    resource_loader().set_loader("cmaterial", async (text, path) => {
+      if (!text.trim()) {
+        throw new Error(`Could not read ${path}: the loader sent no file text.`);
+      }
+      return await this.load_material(JSON.parse(text) as { albedo?: string }, path);
+    });
 
     const tree = new SceneTree();
     this.tree = tree;
