@@ -11,25 +11,21 @@ export interface LookupHit {
   label: string;
 }
 
-/** Read the symbol anchors from documentation.html. The page is the list. */
-export function parseDocs(html: string): DocEntry[] {
-  const doc = new DOMParser().parseFromString(html, "text/html");
+/** Entry id for a class or one of its members, matching class_reference.html rows. */
+export function classDocId(name: string, owner: string | null): string {
+  return owner ? `${owner}.${name}` : name;
+}
+
+/** Flattens class_reference.json into the same DocEntry list parseDocs produces. */
+export function parseClassDocs(data: { classes?: Record<string, { inherits?: string; properties?: Array<{ name: string; type: string }>; methods?: Array<{ name: string }> }> }): DocEntry[] {
   const entries: DocEntry[] = [];
-  for (const el of Array.from(doc.querySelectorAll("[data-doc]"))) {
-    const name = el.getAttribute("data-doc")?.trim() ?? "";
-    const id = el.id;
-    if (!name || !id) {
-      continue;
+  for (const [className, entry] of Object.entries(data.classes ?? {})) {
+    entries.push({ name: className, owner: "", id: className, type: "", extends: entry.inherits ?? "" });
+    for (const property of entry.properties ?? []) {
+      entries.push({ name: property.name, owner: className, id: `${className}.${property.name}`, type: property.type ?? "", extends: "" });
     }
-    const type = el.getAttribute("data-type")?.trim() ?? "";
-    const base = el.getAttribute("data-extends")?.trim() ?? "";
-    const owners = (el.getAttribute("data-owner") ?? "").split(/\s+/).filter(Boolean);
-    if (owners.length === 0) {
-      entries.push({ name, owner: "", id, type, extends: base });
-    } else {
-      for (const owner of owners) {
-        entries.push({ name, owner, id, type, extends: "" });
-      }
+    for (const method of entry.methods ?? []) {
+      entries.push({ name: method.name, owner: className, id: `${className}.${method.name}`, type: "", extends: "" });
     }
   }
   return entries;

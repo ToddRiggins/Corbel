@@ -39,7 +39,7 @@ function gamePage(): Plugin {
 
 function rootPages(): Plugin {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-  const pages = new Set(["/documentation.html", "/tutorial.html", "/history.html"]);
+  const pages = new Set(["/documentation.html", "/tutorial.html", "/history.html", "/class_reference.html", "/class_reference.json", "/class_reference_app.js"]);
   return {
     name: "corbel-pages",
     configureServer(server) {

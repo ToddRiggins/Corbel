@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Corbel — Class Reference</title>
+  <style>
+    body { font-family: Georgia, "Times New Roman", serif; margin: 0; background: #121212; color: #e7e5e4; }
+    a { color: #fdba74; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.92rem; background: #2a2a2a; color: #fde68a; padding: 0.05rem 0.3rem; }
+    .layout { display: flex; min-height: 100vh; }
+    nav { width: 16.5rem; flex: none; background: #1a1a1a; border-right: 1px solid #333; padding: 1rem 0 2rem; overflow-y: auto; position: sticky; top: 0; height: 100vh; box-sizing: border-box; }
+    nav h1 { font-weight: normal; font-size: 1.05rem; margin: 0.7rem 0.9rem 0.4rem; }
+    nav input { width: calc(100% - 1.6rem); margin: 0 0.8rem 0.5rem; padding: 0.35rem 0.5rem; background: #2a2a2a; border: 1px solid #444; color: #e7e5e4; border-radius: 4px; font: 13px system-ui; box-sizing: border-box; }
+    nav .group-label { color: #a8a29e; font-size: 0.8rem; margin: 0.9rem 0.9rem 0.2rem; letter-spacing: 0.05em; }
+    nav button { display: block; width: 100%; text-align: left; background: none; border: none; color: #d6d3d1; padding: 0.22rem 0.9rem; font: 14px/1.5 Georgia, serif; cursor: pointer; }
+    nav button:hover { background: #2a2a2a; }
+    nav button.on { background: #3f3f46; color: #fff; }
+    main { flex: 1; padding: 2rem 2.4rem 4rem; max-width: 60rem; box-sizing: border-box; }
+    .crumbs { color: #a8a29e; font-size: 0.85rem; margin-bottom: 1.1rem; }
+    .crumbs a { color: #a8a29e; }
+    h1 { font-weight: normal; font-size: 2rem; margin: 0 0 0.35rem; }
+    .inherits { color: #a8a29e; font-size: 0.9rem; margin-bottom: 1.6rem; }
+    .inherits a { color: #fdba74; }
+    .brief { font-size: 1.12rem; color: #fde68a; margin: 0 0 1.4rem; }
+    h2 { font-weight: 600; font-size: 1.2rem; margin: 1.6rem 0 0.7rem; color: #fdba74; }
+    p { line-height: 1.6; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+    th { text-align: left; color: #aaa; font-weight: normal; padding: 0.35rem 0.6rem; border-bottom: 1px solid #444; }
+    td { padding: 0.32rem 0.6rem; border-bottom: 1px solid #2c2c2c; vertical-align: top; }
+    .soon { color: #a8a29e; font-style: italic; }
+    .note { color: #a8a29e; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <h1>Class Reference</h1>
+      <input id="find" type="search" placeholder="Filter classes" aria-label="Filter classes">
+      <div id="class-list"></div>
+    </nav>
+    <main><div id="page"></div></main>
+  </div>
+  <script src="class_reference_app.js"></script>
+</body>
+</html>

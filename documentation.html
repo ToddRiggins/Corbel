@@ -124,31 +124,57 @@
 <body>
   <nav class="toc">
     <h1><span class="mark">Corbel</span> docs</h1>
-    <p>What the engine can do today. This page grows with the code.</p>
     <input id="find" type="search" placeholder="Search" aria-label="Search the contents">
-    <h2>Start</h2>
+    <h2>Documentation</h2>
+    <a href="#about">About</a>
+    <a href="#getting-started">Getting Started</a>
+    <a href="#manual">Manual</a>
+    <a href="#engine-details">Engine Details</a>
+    <a href="/class_reference.html">Class Reference</a>
+    <a href="https://exodev.com">Community ↗</a>
+    <h2>On this page</h2>
     <a href="#start">What this is</a>
     <a href="#pages">These pages</a>
-    <h2>Editor</h2>
     <a href="#editor">Layout</a>
     <a href="#scene-dock">Scene dock</a>
     <a href="#script-editor">Script editor</a>
     <a href="#cscene">Scene file</a>
-    <h2>Scene</h2>
     <a href="#script">A script</a>
-    <a href="#node">Node</a>
-    <a href="#node3d">Node3D</a>
-    <a href="#camera">Camera3D and MeshInstance3D</a>
-    <a href="#tree">SceneTree and Signal</a>
-    <h2>Math</h2>
-    <a href="#vectors">Vectors</a>
+    <a href="#vectors">Vectors and math</a>
     <a href="#rotation">Rotation</a>
-    <a href="#shape">Plane, box, and color</a>
-    <h2>Later</h2>
-    <a href="#ahead">Not built yet</a>
   </nav>
   <main>
+<main>
     <article>
+      <section class="amber" id="about">
+        <h2>About Corbel</h2>
+        <div class="body">
+          <p>Corbel is an HTML5 creation engine. Games run on it, and VoxiTect — the voxel editor — runs on it. TypeScript is what you write; the API names follow Godot 4, so a script can move between GDScript and Corbel with small edits. The engine renders through WebGPU when the browser has it and falls back to WebGL2.</p>
+        </div>
+      </section>
+
+      <section class="blue" id="getting-started">
+        <h2>Getting Started</h2>
+        <div class="body">
+          <p>Open the Corbel folder in Visual Studio Code. There is no special project file: the folder is the project. Write code as <code>.ts</code> files, save with Ctrl+S, and check with <code>npm run check</code>.</p>
+          <p>Run the editor with <code>start_editor.bat</code>. The commands list is in the How-to sections below and in <a href="tutorial.html">tutorial.html</a>.</p>
+        </div>
+      </section>
+
+      <section class="stone" id="manual">
+        <h2>Manual</h2>
+        <div class="body">
+          <p>The sections below are the manual: the editor, scripts, math conventions, and the features the engine has today. Every class, property, and method has its own page in the <a href="class_reference.html">Class Reference</a>.</p>
+        </div>
+      </section>
+
+      <section class="zinc" id="engine-details">
+        <h2>Engine Details</h2>
+        <div class="body">
+          <p>The renderer starts on WebGPU and falls back to WebGL2. Both draw the same scene: the built-in lit shader is written twice, once in WGSL and once in GLSL, so a browser without WebGPU still shows the whole game. The runner lives in <code>@corbel/runtime</code>, the editor in <code>apps/editor</code>, and a running game is its own window. The roadmap and build order are in <a href="FOUNDATION.md">FOUNDATION.md</a> and <a href="PLAN.md">PLAN.md</a>.</p>
+        </div>
+      </section>
+
       <section class="amber" id="start">
         <h2>What this is</h2>
         <div class="body">
@@ -269,250 +295,6 @@
         </div>
       </section>
 
-      <section class="teal" id="timer">
-        <h2 id="doc-Timer" data-doc="Timer">Timer, timers, and scene change</h2>
-        <div class="body">
-          <p><code id="doc-Timer" data-doc="Timer">Timer</code> is a node that counts a <code id="doc-Timer-wait_time" data-doc="wait_time" data-owner="Timer">wait_time</code> and emits <code id="doc-Timer-timeout" data-doc="timeout" data-owner="Timer">timeout</code>. <code id="doc-Timer-start" data-doc="start" data-owner="Timer">start(time)</code>, <code id="doc-Timer-stop" data-doc="stop" data-owner="Timer">stop()</code>, <code id="doc-Timer-is_stopped" data-doc="is_stopped" data-owner="Timer">is_stopped()</code>, <code id="doc-Timer-get_time_left" data-doc="get_time_left" data-owner="Timer">get_time_left()</code>, <code id="doc-Timer-one_shot" data-doc="one_shot" data-owner="Timer">one_shot</code>, and <code id="doc-Timer-autostart" data-doc="autostart" data-owner="Timer">autostart</code> work like Godot's. Pause behaves like Godot: a <code>PAUSABLE</code> Timer waits, an <code>ALWAYS</code> Timer keeps counting.</p>
-          <p><code id="doc-SceneTree-create_timer" data-doc="create_timer" data-owner="SceneTree">SceneTree.create_timer(seconds, process_always)</code> builds an awaitable timer independent of the tree: <code id="doc-SceneTreeTimer-timeout" data-doc="timeout" data-owner="SceneTreeTimer">timeout</code> fires after the wait, and the timer honors Godot's <code>process_always</code> default. Every Signal awaits, so GDScript's <code>await</code> idiom ports directly:</p>
-<pre><span class="kw">const</span> <span class="vr">tree</span> <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">();</span>
-<span class="kw">await</span> <span class="vr">tree</span><span class="op">.</span><span class="call">create_timer</span><span class="op">(</span><span class="num">0.5</span><span class="op">).</span><span class="vr">timeout</span><span class="op">;</span>
-<span class="cm">// 0.5 seconds later, game paused or not</span></pre>
-          <p><code id="doc-SceneTree-change_scene_to_file" data-doc="change_scene_to_file" data-owner="SceneTree">change_scene_to_file(path)</code> frees the current scene at the end of the frame and swaps in the loaded one (<code id="doc-SceneTree-get_current_scene" data-doc="get_current_scene" data-owner="SceneTree">get_current_scene()</code>, <code id="doc-SceneTree-change_scene_to_node" data-doc="change_scene_to_node" data-owner="SceneTree">change_scene_to_node(node)</code> for a node you already built). The runtime loads <code>.cscene</code> files for it.</p>
-        </div>
-      </section>
-
-      <section class="teal" id="packedscene">
-        <h2 id="doc-PackedScene" data-doc="PackedScene">PackedScene, load, and saving scenes to disk</h2>
-        <div class="body">
-          <p><code id="doc-PackedScene" data-doc="PackedScene">PackedScene</code> holds saved scene data. <code id="doc-PackedScene-from_node" data-doc="from_node" data-owner="PackedScene">PackedScene.from_node(node)</code> packs a live tree; <code id="doc-PackedScene-instantiate" data-doc="instantiate" data-owner="PackedScene">instantiate()</code> builds a fresh tree each call. Scenes save to <code>.cscene</code> files and load back with Godot's <code id="doc-load" data-doc="load">load("res://…")</code> through the shared <code id="doc-ResourceLoader" data-doc="ResourceLoader">ResourceLoader</code></p>
-<pre><span class="kw">const</span> <span class="vr">packed</span> <span class="op">=</span> <span class="kw">await</span> <span class="call">load</span><span class="op">(</span><span class="st">"res://level2.cscene"</span><span class="op">)</span> <span class="kw">as</span> <span class="ty">PackedScene</span><span class="op">;</span>
-<span class="kw">const</span> <span class="vr">fresh</span> <span class="op">=</span> <span class="vr">packed</span><span class="op">.</span><span class="call">instantiate</span><span class="op">();</span>
-<span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">().</span><span class="call">change_scene_to_node</span><span class="op">(</span><span class="vr">fresh</span><span class="op">);</span>
-<span class="cm">// or the direct swap:</span>
-<span class="kw">this</span><span class="op">.</span><span class="call">get_tree</span><span class="op">().</span><span class="call">change_scene_to_packed</span><span class="op">(</span><span class="vr">packed</span><span class="op">);</span></pre>
-          <p>New resources need a loader per extension: <code id="doc-ResourceLoader-set_loader" data-doc="set_loader" data-owner="ResourceLoader">ResourceLoader.set_loader("json", handler)</code>. Resources cache by path. The runtime wires the project API into the shared loader, so game scripts only ever write <code>await load("res://…")</code>. A <code>.cmaterial</code> file is material data — <code>albedo</code>, <code>albedo_texture</code>, <code>roughness</code>, <code>metallic</code> — and <code>load("res://materials/portal.cmaterial")</code> hands back a ready StandardMaterial3D with the texture loaded.</p>
-          <p>Scene change ties it together: <code id="doc-SceneTree-change_scene_to_packed" data-doc="change_scene_to_packed" data-owner="SceneTree">change_scene_to_packed(packed)</code> frees the old level at the end of the frame, swaps in the loaded one, and keeps the runner's weaved scripts and Globals (autoload) alive through the swap.</p>
-        </div>
-      </section>
-
-      <section class="teal" id="environment">
-        <h2 id="doc-WorldEnvironment" data-doc="WorldEnvironment">Environment and WorldEnvironment</h2>
-        <div class="body">
-          <p><code id="doc-WorldEnvironment" data-doc="WorldEnvironment">WorldEnvironment</code> is a node that overrides the tree's look. Assign it an <code id="doc-Environment" data-doc="Environment">Environment</code> with <code id="doc-Environment-background_color" data-doc="background_color" data-owner="Environment">background_color</code> (what the canvas clears to) and <code id="doc-Environment-ambient" data-doc="ambient" data-owner="Environment">ambient</code>. The renderer picks the first WorldEnvironment in the tree; none means the default gray background and dim ambient.</p>
-<pre><span class="kw">const</span> <span class="vr">environment</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">Environment</span><span class="op">();</span>
-<span class="vr">environment</span><span class="op">.</span><span class="vr">background_color</span> <span class="op">=</span> <span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#87ceeb"</span><span class="op">);</span>
-<span class="vr">environment</span><span class="op">.</span><span class="vr">ambient</span> <span class="op">=</span> <span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#606c80"</span><span class="op">);</span>
-<span class="kw">const</span> <span class="vr">world</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">WorldEnvironment</span><span class="op">();</span>
-<span class="vr">world</span><span class="op">.</span><span class="vr">environment</span> <span class="op">=</span> <span class="vr">environment</span><span class="op">;</span>
-<span class="vr">root</span><span class="op">.</span><span class="call">add_child</span><span class="op">(</span><span class="vr">world</span><span class="op">);</span></pre>
-        </div>
-      </section>
-
-      <section class="teal" id="texture">
-        <h2 id="doc-Texture2D" data-doc="Texture2D">Texture2D and albedo textures</h2>
-        <div class="body">
-          <p><code id="doc-Texture2D" data-doc="Texture2D">Texture2D</code> is a decoded project image (PNG, JPG, GIF, WebP). <code id="doc-load" data-doc="load">load("res://textures/wall.png")</code> reads it, decodes it, and caches it by path. <code id="doc-StandardMaterial3D-albedo_texture" data-doc="albedo_texture" data-owner="StandardMaterial3D">StandardMaterial3D.albedo_texture</code> multiplies the albedo color: white material + colorful texture = colorful surface. Each <code>BoxMesh</code> face carries its own 0–1 UV square, so textures land once per face.</p>
-<pre><span class="kw">const</span> <span class="vr">material</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">StandardMaterial3D</span><span class="op">();</span>
-<span class="kw">const</span> <span class="vr">texture</span> <span class="op">=</span> <span class="kw">await</span> <span class="call">load</span><span class="op">(</span><span class="st">"res://textures/brick.png"</span><span class="op">)</span> <span class="kw">as</span> <span class="ty">Texture2D</span><span class="op">;</span>
-<span class="vr">material</span><span class="op">.</span><span class="vr">albedo_texture</span> <span class="op">=</span> <span class="vr">texture</span><span class="op">;</span></pre>
-          <p>Textures also sample in <code>ShaderMaterial</code> fragments through the built-in <code>u_albedo_texture</code> binding on both backends; named texture uniforms land with the full shader material work. Meshes without UVs sample (0, 0); a texture-less material samples white, so colors stay exact.</p>
-        </div>
-      </section>
-
-      <section class="teal" id="globals">
-        <h2 id="doc-Globals" data-doc="Globals">Globals — Autoload, and the class registry</h2>
-        <div class="body">
-          <p>Godot's Globals feature: a script named in Project → <strong>Globals — Autoload…</strong> is created under <code id="doc-Globals-autoload" data-doc="autoload" data-owner="Globals">/root/&lt;Name&gt;</code> before the main scene, in the order the project lists them. Access it from any script with <code>get_node("/root/Score")</code>, the way Godot code calls an autoload by name. The singleton's <code>_ready</code> runs before any scene node's.</p>
-          <p>Godot's <code>class_name</code> registry: every project script's default export class registers under its own class name, so <code id="doc-Node-create_node" data-doc="create_node">create_node("MyNodeType")</code> builds custom node types in scenes, and the Add-node menu lists them. The list refreshes from the project's <code>.ts</code> scripts on load and on demand.</p>
-<pre><span class="kw">export default class</span> <span class="ty">Score</span> <span class="kw">extends</span> <span class="ty">Node</span> <span class="op">{</span>
-  <span class="vr">points</span> <span class="op">=</span> <span class="num">0</span><span class="op">;</span>
-<span class="op">}</span>
-
-<span class="cm">// from any script:</span>
-<span class="kw">const</span> <span class="vr">score</span> <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="call">get_node</span><span class="op">(</span><span class="st">"/root/Score"</span><span class="op">)</span> <span class="kw">as</span> <span class="ty">Score</span><span class="op">;</span></pre>
-        </div>
-      </section>
-
-      <section class="stone" id="node">
-        <h2 id="doc-Node" data-doc="Node">Node</h2>
-        <div class="body">
-          <p>Every object in the tree is a <code>Node</code>. The name cannot contain <code>.</code> <code>/</code> <code>:</code> <code>@</code> or <code>%</code>. <code>add_child</code> renames a duplicate sibling to <code>Name2</code>.</p>
-          <table>
-            <tr><th>Method</th><th>Job</th></tr>
-            <tr><td><code id="doc-Node-get_class" data-doc="get_class" data-owner="Node">get_class()</code></td><td>The class name, such as <code>Node3D</code></td></tr>
-            <tr><td><code id="doc-Node-set_name" data-doc="set_name" data-owner="Node">set_name(name)</code></td><td>Rename. Throws if a sibling already has it</td></tr>
-            <tr><td><code id="doc-Node-add_child" data-doc="add_child" data-owner="Node">add_child(node)</code></td><td>Parent the node under this one</td></tr>
-            <tr><td><code id="doc-Node-remove_child" data-doc="remove_child" data-owner="Node">remove_child(node)</code></td><td>Detach a direct child</td></tr>
-            <tr><td><code id="doc-Node-reparent" data-doc="reparent" data-owner="Node">reparent(new_parent)</code></td><td>Move this node under another parent</td></tr>
-            <tr><td><code id="doc-Node-get_child" data-doc="get_child" data-owner="Node">get_child(index)</code></td><td>One child, by position</td></tr>
-            <tr><td><code id="doc-Node-get_children" data-doc="get_children" data-owner="Node">get_children()</code></td><td>A copy of the child list</td></tr>
-            <tr><td><code id="doc-Node-get_child_count" data-doc="get_child_count" data-owner="Node">get_child_count()</code></td><td>How many children</td></tr>
-            <tr><td><code id="doc-Node-get_parent" data-doc="get_parent" data-owner="Node">get_parent()</code></td><td>The parent, or null</td></tr>
-            <tr><td><code id="doc-Node-get_node" data-doc="get_node" data-owner="Node">get_node(path)</code></td><td>A child by name, <code>Body/Hand</code>, <code>..</code>, or <code>/root/...</code>. Throws if missing</td></tr>
-            <tr><td><code id="doc-Node-get_node_or_null" data-doc="get_node_or_null" data-owner="Node">get_node_or_null(path)</code></td><td>The same lookup, or null</td></tr>
-            <tr><td><code id="doc-Node-find_child" data-doc="find_child" data-owner="Node">find_child(pattern)</code></td><td>First matching descendant. <code>*</code> is a wildcard</td></tr>
-            <tr><td><code id="doc-Node-add_to_group" data-doc="add_to_group" data-owner="Node">add_to_group(group)</code></td><td>Put this node in a named group</td></tr>
-            <tr><td><code id="doc-Node-remove_from_group" data-doc="remove_from_group" data-owner="Node">remove_from_group(group)</code></td><td>Take it out</td></tr>
-            <tr><td><code id="doc-Node-is_in_group" data-doc="is_in_group" data-owner="Node">is_in_group(group)</code></td><td>True when it is in that group</td></tr>
-            <tr><td><code id="doc-Node-get_groups" data-doc="get_groups" data-owner="Node">get_groups()</code></td><td>The group names</td></tr>
-            <tr><td><code id="doc-Node-set_meta" data-doc="set_meta" data-owner="Node">set_meta(key, value)</code></td><td>Store an extra value. The editor uses <code>script_path</code></td></tr>
-            <tr><td><code id="doc-Node-get_meta" data-doc="get_meta" data-owner="Node">get_meta(key)</code></td><td>Read that value</td></tr>
-            <tr><td><code id="doc-Node-has_meta" data-doc="has_meta" data-owner="Node">has_meta(key)</code></td><td>True when the key was set</td></tr>
-            <tr><td><code id="doc-Node-queue_free" data-doc="queue_free" data-owner="Node">queue_free()</code></td><td>Remove the node at the end of the frame</td></tr>
-            <tr><td><code id="doc-Node-is_inside_tree" data-doc="is_inside_tree" data-owner="Node">is_inside_tree()</code></td><td>True after it has entered a scene tree</td></tr>
-            <tr><td><code id="doc-Node-is_queued_for_deletion" data-doc="is_queued_for_deletion" data-owner="Node">is_queued_for_deletion()</code></td><td>True after <code>queue_free</code></td></tr>
-            <tr><td><code id="doc-Node-get_tree" data-doc="get_tree" data-owner="Node">get_tree()</code></td><td>The <code>SceneTree</code> this node lives in, or null outside the tree</td></tr>
-            <tr><td><code id="doc-Node-process_mode" data-doc="process_mode" data-owner="Node">process_mode</code></td><td>Pause behavior under a paused tree: <code>INHERIT</code> (follows the parent), <code>PAUSABLE</code>, <code>WHEN_PAUSED</code>, <code>ALWAYS</code>, <code>DISABLED</code></td></tr>
-          </table>
-          <p>Override <code id="doc-Node-_enter_tree" data-doc="_enter_tree" data-owner="Node">_enter_tree</code>, <code id="doc-Node-_ready" data-doc="_ready" data-owner="Node">_ready</code>, <code id="doc-Node-_process" data-doc="_process" data-owner="Node">_process</code>, <code id="doc-Node-_input" data-doc="_input" data-owner="Node">_input</code>, and <code id="doc-Node-_exit_tree" data-doc="_exit_tree" data-owner="Node">_exit_tree</code>. Leave them empty when a node has nothing to do. <code>_input</code> only runs when a subclass overrides it. A throw in <code>_ready</code> or <code>_process</code> does not stop the tree; <code>SceneTree.on_node_error</code> receives the node and the error.</p>
-        </div>
-      </section>
-
-      <section class="blue" id="node3d">
-        <h2 id="doc-Node3D" data-doc="Node3D" data-extends="Node">Node3D</h2>
-        <div class="body">
-          <p><code>Node3D</code> adds a place in 3D space. <code>position</code> is a <code>Vector3</code>. <code>basis</code> is the rotation. <code>visible</code> hides the node. The eye in the scene dock and the Inspector checkbox write the same flag.</p>
-          <table>
-            <tr><th>Property</th><th>Job</th></tr>
-            <tr><td><code id="doc-Node3D-position" data-doc="position" data-owner="Node3D" data-type="Vector3">position</code></td><td>Local translation</td></tr>
-            <tr><td><code id="doc-Node3D-rotation" data-doc="rotation" data-owner="Node3D" data-type="Vector3">rotation</code></td><td>Euler radians. Setting it replaces the basis</td></tr>
-            <tr><td><code id="doc-Node3D-rotation_degrees" data-doc="rotation_degrees" data-owner="Node3D" data-type="Vector3">rotation_degrees</code></td><td>The same rotation in degrees</td></tr>
-            <tr><td><code id="doc-Node3D-basis" data-doc="basis" data-owner="Node3D" data-type="Basis">basis</code></td><td>The rotation, stored as a <code>Basis</code></td></tr>
-            <tr><td><code id="doc-Node3D-transform" data-doc="transform" data-owner="Node3D" data-type="Transform3D">transform</code></td><td>Basis plus position as a <code>Transform3D</code></td></tr>
-            <tr><td><code id="doc-Node3D-visible" data-doc="visible" data-owner="Node3D">visible</code></td><td><code>true</code> until something hides it</td></tr>
-          </table>
-          <p>Copy a basis or a vector before you keep it. The constants on <code>Basis</code> and <code>Vector3</code> are shared.</p>
-        </div>
-      </section>
-
-      <section class="stone" id="dictionary">
-        <h2 id="doc-Dictionary" data-doc="Dictionary">Dictionary</h2>
-        <div class="body">
-          <p>The Godot 4 key/value map. Keys are strings and numbers, kept in the order they were set.</p>
-          <table>
-            <tr><th>Method</th><th>Job</th></tr>
-            <tr><td><code id="doc-Dictionary-size" data-doc="size" data-owner="Dictionary">size()</code>, <code id="doc-Dictionary-is_empty" data-doc="is_empty" data-owner="Dictionary">is_empty()</code>, <code id="doc-Dictionary-clear" data-doc="clear" data-owner="Dictionary">clear()</code></td><td>Count, emptiness, wipe</td></tr>
-            <tr><td><code id="doc-Dictionary-has" data-doc="has" data-owner="Dictionary">has(key)</code>, <code id="doc-Dictionary-has_all" data-doc="has_all" data-owner="Dictionary">has_all(keys)</code></td><td>Key lookups</td></tr>
-            <tr><td><code id="doc-Dictionary-get" data-doc="get" data-owner="Dictionary">get(key, fallback)</code></td><td>The value, or the fallback (null)</td></tr>
-            <tr><td><code id="doc-Dictionary-set" data-doc="set" data-owner="Dictionary">set(key, value)</code></td><td>Store, in order</td></tr>
-            <tr><td><code id="doc-Dictionary-get_or_add" data-doc="get_or_add" data-owner="Dictionary">get_or_add(key, fallback)</code></td><td>Read, storing the fallback first when missing</td></tr>
-            <tr><td><code id="doc-Dictionary-erase" data-doc="erase" data-owner="Dictionary">erase(key)</code></td><td>Remove; true when it was there</td></tr>
-            <tr><td><code id="doc-Dictionary-keys" data-doc="keys" data-owner="Dictionary">keys()</code>, <code id="doc-Dictionary-values" data-doc="values" data-owner="Dictionary">values()</code></td><td>Copies of the lists</td></tr>
-            <tr><td><code id="doc-Dictionary-merge" data-doc="merge" data-owner="Dictionary">merge(other, overwrite)</code></td><td>Add another dictionary’s pairs</td></tr>
-            <tr><td><code id="doc-Dictionary-duplicate" data-doc="duplicate" data-owner="Dictionary">duplicate(deep)</code></td><td>A copy; deep also copies nested dictionaries and arrays</td></tr>
-            <tr><td><code id="doc-Dictionary-find_key" data-doc="find_key" data-owner="Dictionary">find_key(value)</code></td><td>The first key with that value</td></tr>
-          </table>
-        </div>
-      </section>
-
-      <section class="blue" id="project-settings">
-        <h2 id="doc-ProjectSettings" data-doc="ProjectSettings">ProjectSettings</h2>
-        <div class="body">
-          <p><code id="doc-ProjectSettings-load" data-doc="load" data-owner="ProjectSettings">ProjectSettings.load(data)</code> holds the parsed <code>project.corbel.json</code>. Loading installs the Input Map and clears <code>Input</code>. <code id="doc-ProjectSettings-get" data-doc="get" data-owner="ProjectSettings">get(name)</code> reads a top-level key such as <code>window</code> or <code>main_scene</code>.</p>
-        </div>
-      </section>
-
-      <section class="rose" id="input">
-        <h2>Input and InputMap</h2>
-        <div class="body">
-          <p>An action is a name in <code>project.corbel.json</code> with key or mouse binds. The editor edits them under Project → Project settings… The run reads them through the Godot names.</p>
-          <table>
-            <tr><th>Call</th><th>Job</th></tr>
-            <tr><td><code id="doc-Input-is_action_pressed" data-doc="is_action_pressed" data-owner="Input">Input.is_action_pressed(action)</code></td><td>True while the action is held</td></tr>
-            <tr><td><code id="doc-Input-is_action_just_pressed" data-doc="is_action_just_pressed" data-owner="Input">Input.is_action_just_pressed(action)</code></td><td>True for the one frame it went down</td></tr>
-            <tr><td><code id="doc-Input-is_action_just_released" data-doc="is_action_just_released" data-owner="Input">Input.is_action_just_released(action)</code></td><td>True for the one frame it came up</td></tr>
-            <tr><td><code id="doc-Input-is_key_pressed" data-doc="is_key_pressed" data-owner="Input">Input.is_key_pressed(key)</code></td><td>Raw key state, with Godot Key values (<code>Key.W</code>, <code>Key.SPACE</code>)</td></tr>
-            <tr><td><code id="doc-Input-is_mouse_button_pressed" data-doc="is_mouse_button_pressed" data-owner="Input">Input.is_mouse_button_pressed(button)</code></td><td><code>MouseButton.LEFT</code> and friends</td></tr>
-            <tr><td><code id="doc-Input-get_mouse_position" data-doc="get_mouse_position" data-owner="Input">Input.get_mouse_position()</code></td><td>Canvas pixels</td></tr>
-            <tr><td><code id="doc-Input-parse_input_event" data-doc="parse_input_event" data-owner="Input">Input.parse_input_event(event)</code></td><td>Feed one event; state updates and the tree calls <code>_input</code></td></tr>
-            <tr><td><code id="doc-InputMap-load_from_project" data-doc="load_from_project" data-owner="InputMap">InputMap.load_from_project(input)</code></td><td>Replace every action from a settings block</td></tr>
-            <tr><td><code id="doc-InputMap-add_action" data-doc="add_action" data-owner="InputMap">InputMap.add_action(name, deadzone)</code></td><td>Start an action, then <code id="doc-InputMap-action_add_event" data-doc="action_add_event" data-owner="InputMap">action_add_event</code> binds</td></tr>
-            <tr><td><code id="doc-InputMap-action_get_deadzone" data-doc="action_get_deadzone" data-owner="InputMap">InputMap.action_get_deadzone(name)</code></td><td>The action's analog threshold; keys ignore it</td></tr>
-            <tr><td><code id="doc-InputMap-event_is_action" data-doc="event_is_action" data-owner="InputMap">InputMap.event_is_action(event, action)</code></td><td>True when the event matches a bind</td></tr>
-          </table>
-          <p>Event classes: <code id="doc-InputEventKey" data-doc="InputEventKey">InputEventKey</code> with <code id="doc-InputEventKey-key_code" data-doc="key_code" data-owner="InputEventKey">key_code</code> and <code id="doc-InputEventKey-is_echo" data-doc="is_echo" data-owner="InputEventKey">is_echo()</code>, <code id="doc-InputEventMouseButton" data-doc="InputEventMouseButton">InputEventMouseButton</code> with <code id="doc-InputEventMouseButton-button_index" data-doc="button_index" data-owner="InputEventMouseButton">button_index</code>, <code id="doc-InputEventMouseMotion" data-doc="InputEventMouseMotion">InputEventMouseMotion</code> with <code id="doc-InputEventMouseMotion-relative" data-doc="relative" data-owner="InputEventMouseMotion">relative</code>, and <code id="doc-InputEventAction" data-doc="InputEventAction">InputEventAction</code> for events sent from code.</p>
-        </div>
-      </section>
-
-      <section class="stone" id="shader">
-        <h2 id="doc-Shader" data-doc="Shader">Shader and ShaderMaterial</h2>
-        <div class="body">
-          <p><code id="doc-Shader" data-doc="Shader">Shader.lit({ uniforms, webgpu_body, webgl_body })</code> builds one program pair. The <code>uniforms</code> are <code>vec4</code> (colors, vectors, and scalars coerce). Write the body twice — once in WGSL, once in GLSL — and it sees the same names: <code>color</code>, <code>normal</code>, <code>albedo</code>, <code>light_dir</code>, <code>light_color</code>, <code>ambient</code>, each parameter by its own name, and <code>lighting(normal)</code> (WGSL) or <code>lighting()</code> (GLSL). The body returns the final color.</p>
-          <p><code id="doc-ShaderMaterial" data-doc="ShaderMaterial">ShaderMaterial(shader)</code> carries the values: <code id="doc-ShaderMaterial-set_shader_parameter" data-doc="set_shader_parameter" data-owner="ShaderMaterial">set_shader_parameter(name, value)</code>, <code id="doc-ShaderMaterial-get_shader_parameter" data-doc="get_shader_parameter" data-owner="ShaderMaterial">get_shader_parameter(name)</code>, and <code id="doc-ShaderMaterial-get_shader_parameter_list" data-doc="get_shader_parameter_list" data-owner="ShaderMaterial">get_shader_parameter_list()</code>. Set it on a <code>MeshInstance3D</code> as <code>material_override</code>.</p>
-<pre><span class="kw">const</span> <span class="vr">shader</span> <span class="op">=</span> <span class="ty">Shader</span><span class="op">.</span><span class="call">lit</span><span class="op">({</span>
-  <span class="vr">uniforms</span><span class="op">:</span> <span class="op">[</span><span class="st">"Tint"</span><span class="op">],</span>
-  <span class="vr">webgpu_body</span><span class="op">:</span> <span class="op">`</span><span class="st">  return vec4f(albedo * color * lighting(normal) * Tint.rgb, 1.0);</span><span class="op">`,</span>
-  <span class="vr">webgl_body</span><span class="op">:</span> <span class="op">`</span><span class="st">  return vec4(albedo * color * lighting() * Tint.rgb, 1.0);</span><span class="op">`,</span>
-<span class="op">});</span>
-<span class="kw">const</span> <span class="vr">material</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">ShaderMaterial</span><span class="op">(</span><span class="vr">shader</span><span class="op">);</span>
-<span class="vr">material</span><span class="op">.</span><span class="call">set_shader_parameter</span><span class="op">(</span><span class="st">"Tint"</span><span class="op">,</span> <span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#eab308"</span><span class="op">));</span></pre>
-          <p>The built-in lit material every <code>StandardMaterial3D</code> draws with is a <code>Shader</code> the same way. UV attributes ride along in <code>ArrayMesh</code> data today; texture sampling lands with the texture slice.</p>
-        </div>
-      </section>
-
-      <section class="green" id="camera">
-        <h2>Camera3D and MeshInstance3D</h2>
-        <div class="body">
-          <p><code id="doc-Camera3D" data-doc="Camera3D" data-extends="Node3D">Camera3D</code> is the view. <code id="doc-Camera3D-fov" data-doc="fov" data-owner="Camera3D">fov</code> is vertical degrees, 75 like Godot. <code id="doc-Camera3D-near" data-doc="near" data-owner="Camera3D">near</code> and <code id="doc-Camera3D-far" data-doc="far" data-owner="Camera3D">far</code> clip it. <code id="doc-Camera3D-current" data-doc="current" data-owner="Camera3D">current</code> picks the camera: the last <code>current</code> camera in tree order draws, or the first camera when none is current. <code id="doc-MeshInstance3D" data-doc="MeshInstance3D" data-extends="Node3D">MeshInstance3D</code> draws its <code id="doc-MeshInstance3D-geometry" data-doc="geometry" data-owner="MeshInstance3D">geometry</code> when it holds a mesh, and <code id="doc-MeshInstance3D-material_override" data-doc="material_override" data-owner="MeshInstance3D">material_override</code> carries the color. Both can be added, moved, hidden, and saved.</p>
-          <p><code id="doc-create_node" data-doc="create_node">create_node(type)</code> builds one of <code>Node</code>, <code>Node3D</code>, <code>Camera3D</code>, or <code>MeshInstance3D</code>. <code id="doc-node_label" data-doc="node_label">node_label(node)</code> is the type the Inspector shows.</p>
-        </div>
-      </section>
-
-      <section class="red" id="drawing">
-        <h2>Drawing</h2>
-        <div class="body">
-          <p><code id="doc-SceneTree-init" data-doc="init" data-owner="SceneTree">SceneTree.init({ canvas, preference })</code> picks a renderer and starts the frame loop: <code>_process(delta)</code> in tree order, then a draw. <code id="doc-SceneTree-renderer_name" data-doc="renderer_name" data-owner="SceneTree">renderer_name</code> reads <code>webgpu</code> or <code>webgl2</code>. <code id="doc-SceneTree-close" data-doc="close" data-owner="SceneTree">close()</code> stops the loop. The backend is WebGPU when the browser has it, and WebGL2 otherwise. <code id="doc-GeometryInstance3D" data-doc="GeometryInstance3D" data-extends="Node3D">GeometryInstance3D</code> is the base a renderer can draw.</p>
-          <p>A mesh is a <code id="doc-BoxMesh" data-doc="BoxMesh">BoxMesh(size)</code> cube or an <code id="doc-ArrayMesh" data-doc="ArrayMesh">ArrayMesh(arrays)</code> with positions, normals, colors, and indices. <code id="doc-StandardMaterial3D" data-doc="StandardMaterial3D">StandardMaterial3D</code> carries <code id="doc-StandardMaterial3D-albedo" data-doc="albedo" data-owner="StandardMaterial3D">albedo</code>, <code id="doc-StandardMaterial3D-roughness" data-doc="roughness" data-owner="StandardMaterial3D">roughness</code>, and <code id="doc-StandardMaterial3D-metallic" data-doc="metallic" data-owner="StandardMaterial3D">metallic</code>. <code id="doc-DirectionalLight3D" data-doc="DirectionalLight3D" data-extends="Node3D">DirectionalLight3D</code> shines along the node’s -Z with <code id="doc-DirectionalLight3D-light_color" data-doc="light_color" data-owner="DirectionalLight3D">light_color</code>. The first light in tree order lights the scene.</p>
-<pre><span class="kw">const</span> <span class="vr">cube</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">MeshInstance3D</span><span class="op">();</span>
-<span class="vr">cube</span><span class="op">.</span><span class="vr">geometry</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">BoxMesh</span><span class="op">(</span><span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">1.6</span><span class="op">,</span> <span class="num">1.6</span><span class="op">,</span> <span class="num">1.6</span><span class="op">));</span>
-<span class="vr">tree</span><span class="op">.</span><span class="call">get_root</span><span class="op">().</span><span class="call">add_child</span><span class="op">(</span><span class="vr">cube</span><span class="op">);</span>
-<span class="kw">await</span> <span class="vr">tree</span><span class="op">.</span><span class="call">init</span><span class="op">({</span> <span class="vr">canvas</span><span class="op">,</span> <span class="vr">preference</span><span class="op">:</span> <span class="st">"webgpu"</span> <span class="op">});</span></pre>
-        </div>
-      </section>
-
-      <section class="violet" id="surface-tool">
-        <h2 id="doc-SurfaceTool" data-doc="SurfaceTool">SurfaceTool</h2>
-        <div class="body">
-          <p>Builds a mesh one vertex at a time, the way Godot's <code>SurfaceTool</code> does, and <code id="doc-SurfaceTool-commit" data-doc="commit" data-owner="SurfaceTool">commit()</code> hands back an <code>ArrayMesh</code>. Start with <code id="doc-SurfaceTool-begin" data-doc="begin" data-owner="SurfaceTool">begin(PrimitiveType.TRIANGLES)</code>, set per-vertex attributes, and close each vertex with <code id="doc-SurfaceTool-add_vertex" data-doc="add_vertex" data-owner="SurfaceTool">add_vertex</code>. Like Godot, the attributes reset after every vertex, so a vertex without color simply sets none.</p>
-          <table>
-            <tr><th>Call</th><th>Job</th></tr>
-            <tr><td><code id="doc-SurfaceTool-set_normal" data-doc="set_normal" data-owner="SurfaceTool">set_normal(v)</code>, <code id="doc-SurfaceTool-set_uv" data-doc="set_uv" data-owner="SurfaceTool">set_uv(uv)</code>, <code id="doc-SurfaceTool-set_color" data-doc="set_color" data-owner="SurfaceTool">set_color(c)</code>, <code id="doc-SurfaceTool-set_tangent" data-doc="set_tangent" data-owner="SurfaceTool">set_tangent(plane)</code></td><td>Attributes for the next vertex</td></tr>
-            <tr><td><code id="doc-SurfaceTool-index" data-doc="index" data-owner="SurfaceTool">index()</code></td><td>Merge identical vertices and share them by index</td></tr>
-            <tr><td><code id="doc-SurfaceTool-generate_normals" data-doc="generate_normals" data-owner="SurfaceTool">generate_normals()</code></td><td>Smooth every triangle face normal onto its vertices</td></tr>
-            <tr><td><code id="doc-SurfaceTool-generate_tangents" data-doc="generate_tangents" data-owner="SurfaceTool">generate_tangents()</code></td><td>Fill the 4-float tangent from the UVs; every vertex needs a UV</td></tr>
-            <tr><td><code id="doc-SurfaceTool-commit" data-doc="commit" data-owner="SurfaceTool">commit()</code>, <code id="doc-SurfaceTool-clear" data-doc="clear" data-owner="SurfaceTool">clear()</code></td><td>Finish into an ArrayMesh, or start over</td></tr>
-          </table>
-<pre><span class="kw">const</span> <span class="vr">tool</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">SurfaceTool</span><span class="op">();</span>
-<span class="vr">tool</span><span class="op">.</span><span class="call">begin</span><span class="op">(</span><span class="ty">PrimitiveType</span><span class="op">.</span><span class="vr">TRIANGLES</span><span class="op">);</span>
-<span class="vr">tool</span><span class="op">.</span><span class="call">set_color</span><span class="op">(</span><span class="ty">Color</span><span class="op">.</span><span class="call">html</span><span class="op">(</span><span class="st">"#22c55e"</span><span class="op">));</span>
-<span class="vr">tool</span><span class="op">.</span><span class="call">add_vertex</span><span class="op">(</span><span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">1</span><span class="op">,</span> <span class="num">0</span><span class="op">));</span>
-<span class="vr">tool</span><span class="op">.</span><span class="call">commit</span><span class="op">();</span> <span class="cm">// an ArrayMesh for MeshInstance3D.geometry</span></pre>
-          <p>UVs and tangents ride along in the mesh data today; the lit material samples only vertex colors, so texture maps land with the ShaderMaterial slice.</p>
-        </div>
-      </section>
-
-      <section class="violet" id="tree">
-        <h2>SceneTree and Signal</h2>
-        <div class="body">
-          <p><code id="doc-SceneTree" data-doc="SceneTree">new SceneTree()</code> makes a hidden root named <code>root</code>. Add the scene’s top node with <code>get_root().add_child(scene)</code>. Call <code>_process(delta)</code> once per frame. That walks the tree, then removes anything that called <code>queue_free</code>.</p>
-          <table>
-            <tr><th>Method</th><th>Job</th></tr>
-            <tr><td><code id="doc-SceneTree-get_root" data-doc="get_root" data-owner="SceneTree">get_root()</code></td><td>The hidden root</td></tr>
-            <tr><td><code id="doc-SceneTree-get_nodes_in_group" data-doc="get_nodes_in_group" data-owner="SceneTree">get_nodes_in_group(group)</code></td><td>Every node that joined that group</td></tr>
-            <tr><td><code id="doc-SceneTree-_process" data-doc="_process" data-owner="SceneTree">_process(delta)</code></td><td>One frame. Parent first, then children, then queued frees</td></tr>
-            <tr><td><code id="doc-SceneTree-init" data-doc="init" data-owner="SceneTree">init({ canvas, preference })</code></td><td>Pick the renderer and start the frame loop</td></tr>
-            <tr><td><code id="doc-SceneTree-renderer_name" data-doc="renderer_name" data-owner="SceneTree">renderer_name</code></td><td><code>webgpu</code>, <code>webgl2</code>, or null before <code>init</code></td></tr>
-            <tr><td><code id="doc-SceneTree-close" data-doc="close" data-owner="SceneTree">close()</code></td><td>Stop the loop and release the renderer</td></tr>
-            <tr><td><code id="doc-SceneTree-paused" data-doc="paused" data-owner="SceneTree">paused</code></td><td>Skip <code>_process</code> while it is true; the draw still happens</td></tr>
-            <tr><td><code id="doc-SceneTree-on_node_error" data-doc="on_node_error" data-owner="SceneTree">on_node_error</code></td><td>Set a callback to receive <code>_ready</code> and <code>_process</code> errors with the node</td></tr>
-          </table>
-          <p>A <code id="doc-Signal" data-doc="Signal">Signal</code> is a list of callbacks. <code id="doc-Signal-connect" data-doc="connect" data-owner="Signal">connect</code> adds one. <code id="doc-Signal-disconnect" data-doc="disconnect" data-owner="Signal">disconnect</code> removes it. <code id="doc-Signal-is_connected" data-doc="is_connected" data-owner="Signal">is_connected</code> checks. <code id="doc-Signal-emit" data-doc="emit" data-owner="Signal">emit(...args)</code> calls them in the order they were connected.</p>
-<pre><span class="kw">const</span> <span class="vr">hit</span> <span class="op">=</span> <span class="kw">new</span> <span class="call">Signal</span><span class="op">&lt;[</span><span class="ty">number</span><span class="op">]&gt;();</span>
-<span class="vr">hit</span><span class="op">.</span><span class="call">connect</span><span class="op">((</span><span class="vr">amount</span><span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="cm">/* use amount */</span> <span class="op">});</span>
-<span class="vr">hit</span><span class="op">.</span><span class="call">emit</span><span class="op">(</span><span class="num">3</span><span class="op">);</span></pre>
-        </div>
-      </section>
-
       <section class="amber" id="vectors">
         <h2>Vectors</h2>
         <div class="body">
@@ -559,16 +341,18 @@
         </div>
       </section>
 
-      <section class="teal" id="shape">
-        <h2>Plane, box, and color</h2>
+      <section class="blue" id="class-reference">
+        <h2>Class Reference</h2>
         <div class="body">
-          <p>A <code id="doc-Plane" data-doc="Plane">Plane</code> is a normal and a distance <code id="doc-Plane-d" data-doc="d" data-owner="Plane">d</code>. <code>new Plane(Vector3.UP, 0)</code> is the ground. <code id="doc-Plane-from_point_normal" data-doc="from_point_normal" data-owner="Plane">from_point_normal(point, normal)</code> builds one. <code id="doc-Plane-distance_to" data-doc="distance_to" data-owner="Plane">distance_to(point)</code> and <code id="doc-Plane-project" data-doc="project" data-owner="Plane">project(point)</code> measure and drop a point onto the plane. <code id="doc-Plane-intersects_ray" data-doc="intersects_ray" data-owner="Plane">intersects_ray(from, dir)</code> returns the hit, or null when the ray points away.</p>
-          <p>An <code id="doc-AABB" data-doc="AABB">AABB</code> is a corner <code id="doc-AABB-position" data-doc="position" data-owner="AABB" data-type="Vector3">position</code> and a <code id="doc-AABB-size" data-doc="size" data-owner="AABB" data-type="Vector3">size</code>. <code id="doc-AABB-get_center" data-doc="get_center" data-owner="AABB">get_center</code> and <code id="doc-AABB-get_end" data-doc="get_end" data-owner="AABB">get_end</code> read it. <code id="doc-AABB-has_point" data-doc="has_point" data-owner="AABB">has_point</code> tests a point. <code id="doc-AABB-intersects" data-doc="intersects" data-owner="AABB">intersects</code> tests another box. <code id="doc-AABB-expand" data-doc="expand" data-owner="AABB">expand(point)</code> and <code id="doc-AABB-merge" data-doc="merge" data-owner="AABB">merge(other)</code> grow it.</p>
-          <p>A <code id="doc-Color" data-doc="Color">Color</code> is <code>r, g, b, a</code> from 0 to 1. <code id="doc-Color-WHITE" data-doc="WHITE" data-owner="Color">WHITE</code> and <code id="doc-Color-BLACK" data-doc="BLACK" data-owner="Color">BLACK</code> are ready. <code id="doc-Color-html" data-doc="html" data-owner="Color">Color.html("#ff8000")</code> reads <code>#rgb</code>, <code>#rrggbb</code>, or <code>#rrggbbaa</code>. <code id="doc-Color-to_html" data-doc="to_html" data-owner="Color">to_html()</code> writes <code>#rrggbb</code>, and <code>to_html(true)</code> includes the alpha.</p>
-<pre><span class="kw">const</span> <span class="vr">ground</span> <span class="op">=</span> <span class="kw">new</span> <span class="ty">Plane</span><span class="op">(</span><span class="ty">Vector3</span><span class="op">.</span><span class="mem">UP</span><span class="op">,</span> <span class="num">0</span><span class="op">);</span>
-<span class="kw">const</span> <span class="vr">hit</span> <span class="op">=</span> <span class="vr">ground</span><span class="op">.</span><span class="call">intersects_ray</span><span class="op">(</span><span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">),</span> <span class="kw">new</span> <span class="ty">Vector3</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">-1</span><span class="op">,</span> <span class="num">0</span><span class="op">));</span>
-<span class="cm">// hit is (1, 0, 3)</span></pre>
-          <p class="note">A voxel cell will be a <code>Vector3i</code>. The volume that stores cells is not written yet.</p>
+          <p>Every class, property, and method — with inheritance, description, properties, and methods per class, like Godot's ClassDB. Open the <strong>Class Reference</strong>:</p>
+          <p><a href="class_reference.html"><strong>All classes</strong></a></p>
+        </div>
+      </section>
+
+      <section class="rose" id="community">
+        <h2>Community</h2>
+        <div class="body">
+          <p>The Community section lives on <a href="https://exodev.com">ExoDev.Com</a>. It stays empty on this page until the site launches.</p>
         </div>
       </section>
 

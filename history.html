@@ -25,7 +25,9 @@
   <section class="block">
     <h2>2026-11-19</h2>
     <div class="body">
-      <ul>
+            <ul>
+                <li>Documentation restructured into Godot's shape: ABOUT, GETTING STARTED, MANUAL, ENGINE DETAILS, CLASS REFERENCE, and COMMUNITY sections (community will live on ExoDev.Com). The class reference is now its own page — <code>class_reference.html</code> with an "All classes" index grouped Globals/Nodes/Resources/Input/Variant types and a per-class page for all 44 classes in the Godot format: inheritance chain, brief, description, properties, methods — and the script editor's Look up resolves against class reference data, jumping straight to the class or member row.</li>
+<ul>
         <li>P2 slice 2: material files and the world environment. `load("res://textures/portal.cmaterial")` builds a StandardMaterial3D from JSON (`albedo`, `albedo_texture` — the texture inside loads with it). `WorldEnvironment` + `Environment` set the tree's background (canvas clear color) and ambient; the renderer picks the first WorldEnvironment in the tree. Verified live: the demo game window clears to sky blue `#87ceeb` and level2's portal renders through the material file.</li>
         <li>P2 started: textures load and render. `Texture2D` decodes project images (PNG/JPG/GIF/WebP through the binary-aware project API and the browser's decoder), `load("res://textures/…")` caches them by path, and `StandardMaterial3D.albedo_texture` multiplies the albedo on WebGPU and WebGL2 (UV plumbed through the vertex format with per-face 0–1 squares on BoxMesh; texture-less materials sample a white 1x1). Demo: the cube shows `brick.png`, level2's portal shows `portal.png` — generated with a small PNG-writer tool.</li>
         <li>Script-check flagged a phantom error: the language service rejected the project convention of importing scripts by `.ts` extension (`import Score from "./score.ts"` in level2.ts) because `allowImportingTsExtensions` was missing from the editor's checker options — added everywhere, and the checker's `lib` bumped to ES2024 to match the engine (Promise.withResolvers in core signals). The diagnostics panel is now clean for the demo.</li>

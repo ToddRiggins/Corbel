@@ -17,7 +17,7 @@ import {
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { scriptHighlighting, scriptKindTheme, scriptKinds } from "./highlight";
-import { lookupHits, parseDocs, wordAt, type DocEntry, type LookupHit } from "./lookup";
+import { lookupHits, parseClassDocs, wordAt, type DocEntry, type LookupHit } from "./lookup";
 import { scriptRoles as role } from "./roles";
 
 export interface ScriptDiagnostic {
@@ -144,10 +144,10 @@ export const ScriptEditor = forwardRef<ScriptEditorHandle, Props>(function Scrip
     const onContext = (event: MouseEvent) => onMenu.current(event);
     view.dom.addEventListener("contextmenu", onContext);
     const loadDocs = () => {
-      fetch("/documentation.html")
-        .then((response) => response.text())
-        .then((html) => {
-          docs.current = parseDocs(html);
+      fetch("/class_reference.json")
+        .then((response) => response.json())
+        .then((data) => {
+          docs.current = parseClassDocs(data);
           if (host.current) {
             host.current.dataset.docs = String(docs.current.length);
           }
@@ -242,7 +242,8 @@ function LookupPopup(props: { menu: LookupMenu; onPick: (id: string) => void }) 
 }
 
 function openDocs(id: string): void {
-  const url = `/documentation.html#${encodeURIComponent(id)}`;
+  // Member ids are "ClassName.member"; class-level ids are just the class name.
+  const url = `/class_reference.html#${encodeURIComponent(id)}`;
   const win = window.open(url, "corbel-docs", "width=1200,height=860");
   win?.focus();
   try {
