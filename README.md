@@ -4,7 +4,7 @@ Corbel is an HTML5 creation engine. Games run on it. VoxiTect will run on it.
 
 The API follows Godot 4 names. The code is TypeScript. Rendering will prefer WebGPU and fall back to WebGL2. React is for UI, not for the scene tree.
 
-Open [tutorial.html](tutorial.html) for how to use what exists today. Open [history.html](history.html) for what has been done. The build order is in [FOUNDATION.md](FOUNDATION.md).
+Open [docs/tutorial.html](docs/tutorial.html) for how to use what exists today. Open [docs/history.html](docs/history.html) for what has been done. Class pages live in [docs/class_reference.html](docs/class_reference.html). The build order is in [FOUNDATION.md](FOUNDATION.md).
 
 Open the folder in Visual Studio Code. Code files are `.ts`. The file to edit is `packages/try/src/main.ts`.
 

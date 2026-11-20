@@ -39,13 +39,32 @@ function gamePage(): Plugin {
 
 function rootPages(): Plugin {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-  const pages = new Set(["/documentation.html", "/tutorial.html", "/history.html", "/class_reference.html", "/class_reference.json", "/class_reference_app.js"]);
+  const pages = new Set(["/class_reference.json"]);
+  const moved: Record<string, string> = {
+    "/documentation.html": "/docs/documentation.html",
+    "/tutorial.html": "/docs/tutorial.html",
+    "/history.html": "/docs/history.html",
+    "/class_reference.html": "/docs/class_reference.html",
+  };
+  const types: Record<string, string> = {
+    ".html": "text/html; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+  };
   return {
     name: "corbel-pages",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const url = (req.url ?? "").split("?")[0];
-        if (!pages.has(url)) {
+        if (moved[url]) {
+          res.statusCode = 301;
+          res.setHeader("location", moved[url]);
+          res.end();
+          return;
+        }
+        const inDocs = url.startsWith("/docs/") && /^[A-Za-z0-9._-]+$/.test(url.slice("/docs/".length));
+        const rootPage = pages.has(url);
+        if (!inDocs && !rootPage) {
           next();
           return;
         }
@@ -54,7 +73,7 @@ function rootPages(): Plugin {
           next();
           return;
         }
-        res.setHeader("content-type", "text/html; charset=utf-8");
+        res.setHeader("content-type", types[path.extname(file).toLowerCase()] ?? "text/html; charset=utf-8");
         fs.createReadStream(file).pipe(res);
       });
     },

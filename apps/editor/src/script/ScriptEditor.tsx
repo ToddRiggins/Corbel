@@ -144,7 +144,7 @@ export const ScriptEditor = forwardRef<ScriptEditorHandle, Props>(function Scrip
     const onContext = (event: MouseEvent) => onMenu.current(event);
     view.dom.addEventListener("contextmenu", onContext);
     const loadDocs = () => {
-      fetch("/class_reference.json")
+      fetch("/docs/class_reference.json")
         .then((response) => response.json())
         .then((data) => {
           docs.current = parseClassDocs(data);
@@ -243,16 +243,13 @@ function LookupPopup(props: { menu: LookupMenu; onPick: (id: string) => void }) 
 
 function openDocs(id: string): void {
   // Member ids are "ClassName.member"; class-level ids are just the class name.
-  const url = `/class_reference.html#${encodeURIComponent(id)}`;
+  const slash = id.indexOf(".");
+  const className = slash === -1 ? id : id.slice(0, slash);
+  const url = slash === -1
+    ? `/docs/class_${encodeURIComponent(className)}.html`
+    : `/docs/class_${encodeURIComponent(className)}.html?m=${encodeURIComponent(id)}`;
   const win = window.open(url, "corbel-docs", "width=1200,height=860");
   win?.focus();
-  try {
-    if (win && win.location.hash === `#${encodeURIComponent(id)}` && "revealDocs" in win) {
-      (win as Window & { revealDocs?: () => void }).revealDocs?.();
-    }
-  } catch {
-    // The new window is still loading. Its hash scrolls on its own.
-  }
 }
 
 function scriptChrome(fontSize: number) {

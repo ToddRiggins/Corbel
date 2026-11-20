@@ -722,10 +722,10 @@ export function EditorApp() {
             open={menu === "help"}
             onToggle={() => setMenu(menu === "help" ? null : "help")}
             items={[
-              ["Documentation", () => { setMenu(null); openPage("/documentation.html"); }],
-              ["Class Reference", () => { setMenu(null); openPage("/class_reference.html"); }],
-              ["How to use", () => { setMenu(null); openPage("/tutorial.html"); }],
-              ["History", () => { setMenu(null); openPage("/history.html"); }],
+              ["Documentation", () => { setMenu(null); openPage("/docs/documentation.html"); }],
+              ["Class Reference", () => { setMenu(null); openPage("/docs/class_reference.html"); }],
+              ["How to use", () => { setMenu(null); openPage("/docs/tutorial.html"); }],
+              ["History", () => { setMenu(null); openPage("/docs/history.html"); }],
             ]}
           />
         </div>
@@ -1172,7 +1172,7 @@ export function EditorApp() {
 }
 
 function openPage(path: string): void {
-  const name = path.startsWith("/documentation") || path.startsWith("/class_reference") ? "corbel-docs" : "_blank";
+  const name = path.startsWith("/docs/") ? "corbel-docs" : "_blank";
   window.open(path, name, "width=1200,height=860");
 }
 

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InputEventMouseMotion — Corbel Class Reference</title>
+  <style>
+    body { font-family: Georgia, "Times New Roman", serif; margin: 0; background: #121212; color: #e7e5e4; }
+    a { color: #fdba74; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.92rem; background: #2a2a2a; color: #fde68a; padding: 0.05rem 0.3rem; }
+    .layout { display: flex; min-height: 100vh; }
+    nav { width: 16.5rem; flex: none; background: #1a1a1a; border-right: 1px solid #333; padding: 1rem 0 2rem; overflow-y: auto; position: sticky; top: 0; height: 100vh; box-sizing: border-box; }
+    nav h1 { font-weight: normal; font-size: 1.05rem; margin: 0.7rem 0.9rem 0.4rem; }
+    nav input { width: calc(100% - 1.6rem); margin: 0 0.8rem 0.5rem; padding: 0.35rem 0.5rem; background: #2a2a2a; border: 1px solid #444; color: #e7e5e4; border-radius: 4px; font: 13px system-ui; box-sizing: border-box; }
+    nav .group-label { color: #a8a29e; font-size: 0.8rem; margin: 0.9rem 0.9rem 0.2rem; letter-spacing: 0.05em; }
+    nav button { display: block; width: 100%; text-align: left; background: none; border: none; color: #d6d3d1; padding: 0.22rem 0.9rem; font: 14px/1.5 Georgia, serif; cursor: pointer; }
+    nav button:hover { background: #2a2a2a; }
+    nav button.on { background: #3f3f46; color: #fff; }
+    main { flex: 1; padding: 2rem 2.4rem 4rem; max-width: 60rem; box-sizing: border-box; }
+    .crumbs { color: #a8a29e; font-size: 0.85rem; margin-bottom: 1.1rem; }
+    .crumbs a { color: #a8a29e; }
+    h1 { font-weight: normal; font-size: 2rem; margin: 0 0 0.35rem; }
+    .inherits { color: #a8a29e; font-size: 0.9rem; margin-bottom: 1.6rem; }
+    .inherits a { color: #fdba74; }
+    .brief { font-size: 1.12rem; color: #fde68a; margin: 0 0 1.4rem; }
+    h2 { font-weight: 600; font-size: 1.2rem; margin: 1.6rem 0 0.7rem; color: #fdba74; }
+    p { line-height: 1.6; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+    th { text-align: left; color: #aaa; font-weight: normal; padding: 0.35rem 0.6rem; border-bottom: 1px solid #444; }
+    td { padding: 0.32rem 0.6rem; border-bottom: 1px solid #2c2c2c; vertical-align: top; }
+    .soon { color: #a8a29e; font-style: italic; }
+    .note { color: #a8a29e; font-size: 0.9rem; }
+    @media (max-width: 800px) { .layout { display: block; } nav { position: static; height: auto; width: 100%; } }
+</style>
+  <script>
+    window.addEventListener("load", () => {
+      const q = new URLSearchParams(window.location.search);
+      const member = q.get("m");
+      if (member) {
+        const row = document.getElementById(decodeURIComponent(member));
+        if (row) { row.style.outline = "2px solid #fdba74"; row.style.outlineOffset = "3px"; row.scrollIntoView({ block: "center" }); }
+      }
+      const input = document.getElementById("find");
+      const buttons = Array.from(document.querySelectorAll("nav button[data-name]"));
+      buttons.forEach((button) => { button.classList.toggle("on", button.dataset.name === "InputEventMouseMotion"); });
+      input.addEventListener("input", () => {
+        const query = input.value.toLowerCase();
+        buttons.forEach((button) => { button.hidden = query.length > 0 && !button.dataset.name.toLowerCase().includes(query); });
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+    <h1><span style="color:#ff7085">Corbel</span> Engine</h1>
+    <input id="find" type="search" placeholder="Filter classes" aria-label="Filter classes">
+
+      <div id="class-list"><div class="group-label">Globals</div><button data-name="SceneTree" class="" onclick="window.location='class_SceneTree.html'">SceneTree</button><button data-name="Input" class="" onclick="window.location='class_Input.html'">Input</button><button data-name="InputMap" class="" onclick="window.location='class_InputMap.html'">InputMap</button><button data-name="ProjectSettings" class="" onclick="window.location='class_ProjectSettings.html'">ProjectSettings</button><button data-name="ResourceLoader" class="" onclick="window.location='class_ResourceLoader.html'">ResourceLoader</button><div class="group-label">Nodes</div><button data-name="Node" class="" onclick="window.location='class_Node.html'">Node</button><button data-name="Node3D" class="" onclick="window.location='class_Node3D.html'">Node3D</button><button data-name="Camera3D" class="" onclick="window.location='class_Camera3D.html'">Camera3D</button><button data-name="WorldEnvironment" class="" onclick="window.location='class_WorldEnvironment.html'">WorldEnvironment</button><button data-name="Environment" class="" onclick="window.location='class_Environment.html'">Environment</button><button data-name="DirectionalLight3D" class="" onclick="window.location='class_DirectionalLight3D.html'">DirectionalLight3D</button><button data-name="MeshInstance3D" class="" onclick="window.location='class_MeshInstance3D.html'">MeshInstance3D</button><button data-name="GeometryInstance3D" class="" onclick="window.location='class_GeometryInstance3D.html'">GeometryInstance3D</button><button data-name="Timer" class="" onclick="window.location='class_Timer.html'">Timer</button><div class="group-label">Resources</div><button data-name="PackedScene" class="" onclick="window.location='class_PackedScene.html'">PackedScene</button><button data-name="Mesh" class="" onclick="window.location='class_Mesh.html'">Mesh</button><button data-name="ArrayMesh" class="" onclick="window.location='class_ArrayMesh.html'">ArrayMesh</button><button data-name="BoxMesh" class="" onclick="window.location='class_BoxMesh.html'">BoxMesh</button><button data-name="SurfaceTool" class="" onclick="window.location='class_SurfaceTool.html'">SurfaceTool</button><button data-name="PrimitiveType" class="" onclick="window.location='class_PrimitiveType.html'">PrimitiveType</button><button data-name="Material" class="" onclick="window.location='class_Material.html'">Material</button><button data-name="StandardMaterial3D" class="" onclick="window.location='class_StandardMaterial3D.html'">StandardMaterial3D</button><button data-name="ShaderMaterial" class="" onclick="window.location='class_ShaderMaterial.html'">ShaderMaterial</button><button data-name="Shader" class="" onclick="window.location='class_Shader.html'">Shader</button><button data-name="Texture2D" class="" onclick="window.location='class_Texture2D.html'">Texture2D</button><button data-name="EnvironmentResource" class="" onclick="window.location='class_EnvironmentResource.html'">EnvironmentResource</button><div class="group-label">Input</div><button data-name="InputEvent" class="" onclick="window.location='class_InputEvent.html'">InputEvent</button><button data-name="InputEventKey" class="" onclick="window.location='class_InputEventKey.html'">InputEventKey</button><button data-name="InputEventMouseButton" class="" onclick="window.location='class_InputEventMouseButton.html'">InputEventMouseButton</button><button data-name="InputEventMouseMotion" class="on" onclick="window.location='class_InputEventMouseMotion.html'">InputEventMouseMotion</button><button data-name="InputEventAction" class="" onclick="window.location='class_InputEventAction.html'">InputEventAction</button><button data-name="Key" class="" onclick="window.location='class_Key.html'">Key</button><button data-name="MouseButton" class="" onclick="window.location='class_MouseButton.html'">MouseButton</button><div class="group-label">Variant types</div><button data-name="Vector2" class="" onclick="window.location='class_Vector2.html'">Vector2</button><button data-name="Vector3" class="" onclick="window.location='class_Vector3.html'">Vector3</button><button data-name="Vector3i" class="" onclick="window.location='class_Vector3i.html'">Vector3i</button><button data-name="Quaternion" class="" onclick="window.location='class_Quaternion.html'">Quaternion</button><button data-name="Basis" class="" onclick="window.location='class_Basis.html'">Basis</button><button data-name="Transform3D" class="" onclick="window.location='class_Transform3D.html'">Transform3D</button><button data-name="Plane" class="" onclick="window.location='class_Plane.html'">Plane</button><button data-name="AABB" class="" onclick="window.location='class_AABB.html'">AABB</button><button data-name="Color" class="" onclick="window.location='class_Color.html'">Color</button><button data-name="Dictionary" class="" onclick="window.location='class_Dictionary.html'">Dictionary</button><button data-name="Signal" class="" onclick="window.location='class_Signal.html'">Signal</button></div>
+    </nav>
+    <main>
+      <p class="crumbs">Corbel › Class Reference › Input</p>
+      <h1>InputEventMouseMotion</h1>
+      <p class="inherits"><strong>Inherits:</strong> <a href="class_InputEvent.html">InputEvent</a> <strong>&lt;</strong> Object</p>
+      <p class="brief">Pointer movement over the canvas.</p>
+      <h2>Description</h2>
+      <p>Pointer movement: position is the current spot, relative is the movement since the previous motion event. is_pressed is always false.</p>
+      <h2>Tutorials</h2>
+      <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
+      <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
+<tr id="InputEventMouseMotion.position"><td><code>Vector2 position</code></td><td><code>Vector2</code> Current canvas pixels</td></tr>
+<tr id="InputEventMouseMotion.relative"><td><code>Vector2 relative</code></td><td><code>Vector2</code> Movement since the previous motion</td></tr>
+      </table>
+      
+    </main>
+  </div>
+</body>
+</html>
