@@ -278,15 +278,21 @@ button.twist:hover, button.eye:hover { background: transparent; color: #f5f5f4; 
 .font-size button { padding: 0.05rem 0.4rem; }
 .font-size span { min-width: 1.4rem; text-align: center; color: var(--text); }
 .diag {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
   color: #fecaca;
   background: #3f1d1d;
   border-radius: 6px;
   padding: 0.3rem 0.55rem;
   margin: 0.25rem 0;
-  cursor: pointer;
+  cursor: text;
   font-family: var(--mono);
   font-size: 0.82rem;
 }
+.diag .diag-text { flex: 1; user-select: text; }
+.diag .mini { visibility: hidden; flex: none; }
+.diag:hover .mini { visibility: visible; }
 .log { margin: 0; padding: 0.45rem 0.7rem 0.7rem; font-family: var(--mono); font-size: 0.82rem; white-space: pre-wrap; user-select: text; cursor: text; }
 .log-line { display: flex; align-items: baseline; gap: 0.4rem; }
 .log-line .log-text { flex: 1; user-select: text; }

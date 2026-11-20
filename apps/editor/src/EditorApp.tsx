@@ -876,15 +876,32 @@ export function EditorApp() {
               </div>
               {diags.length > 0 ? (
                 <div className="diags">
-                  {diags.map((diagnostic) => (
-                    <div
-                      key={`${diagnostic.line}:${diagnostic.column}:${diagnostic.message}`}
-                      className="diag"
-                      onClick={() => jump(diagnostic.line)}
-                    >
-                      {scriptPath}({diagnostic.line},{diagnostic.column}): {diagnostic.message}
-                    </div>
-                  ))}
+                  {diags.map((diagnostic) => {
+                    const lineCopy = `${scriptPath}(${diagnostic.line},${diagnostic.column}): ${diagnostic.message}`;
+                    return (
+                      <div
+                        key={`${diagnostic.line}:${diagnostic.column}:${diagnostic.message}`}
+                        className="diag"
+                        onClick={() => {
+                          // A drag to select the text should not also jump the view.
+                          if (window.getSelection()?.toString().length) {
+                            return;
+                          }
+                          jump(diagnostic.line);
+                        }}
+                      >
+                        <span className="diag-text">{lineCopy}</span>
+                        <button
+                          className="mini"
+                          title="Copy this diagnostic"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void copyToClipboard(lineCopy);
+                          }}
+                        >⧉</button>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
