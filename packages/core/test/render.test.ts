@@ -4,6 +4,7 @@ import { Color } from "../src/math/color.js";
 import { Transform3D } from "../src/math/transform3d.js";
 import { Vector3 } from "../src/math/vector3.js";
 import { CLEAR_COLOR } from "../src/render/frame.js";
+import { WGSL_DRAW_FLOATS, fill_draw } from "../src/render/shaders.js";
 import {
   basis_to_mat3,
   build_render_frame,
@@ -289,6 +290,39 @@ describe("build_render_frame environment", () => {
     expect(frame.draws.length).toBe(3);
     // B is third in the tree but draws last.
     expect(frame.draws.map((draw) => draw.transparency)).toEqual([0, 0, 0.6]);
+  });
+
+  it("an albedo with alpha turns the draw translucent without node transparency", () => {
+    const node = new MeshInstance3D();
+    node.mesh = new BoxMesh();
+    const material = new StandardMaterial3D();
+    material.albedo = new Color(new StandardMaterial3D().albedo.r, new StandardMaterial3D().albedo.g, new StandardMaterial3D().albedo.b, 0.4);
+    node.material_override = material;
+    const tree = new SceneTree();
+    tree.get_root().add_child(node);
+    tree.get_root().add_child(new Camera3D());
+
+    const frame = build_render_frame(tree, 800, 600);
+    expect(frame.draws[0].transparency).toBeCloseTo(0.6);
+  });
+
+  it("fill_draw packs emission color times energy in the last vec4", () => {
+    const scratch = new Float32Array(WGSL_DRAW_FLOATS);
+    const material = new StandardMaterial3D();
+    material.emission_enabled = true;
+    material.emission = Color.html("#80ffa0");
+    material.emission_energy_multiplier = 2.5;
+    fill_draw(scratch, new Float32Array(16), new Float32Array(9), material, 0, true);
+    // Emission packs rgb plus the energy multiplier in alpha, after the flags.
+    expect([...scratch.slice(48, 52)]).toEqual([0, 0, 0, 0]);
+    expect(scratch[52]).toBeCloseTo(0.502);
+    expect(scratch[53]).toBe(1);
+    expect(scratch[54]).toBeCloseTo(0.627);
+    expect(scratch[55]).toBe(2.5);
+    // Disabled emission stays zero even when a color is set.
+    material.emission_enabled = false;
+    fill_draw(scratch, new Float32Array(16), new Float32Array(9), material, 0, true);
+    expect([...scratch.slice(52, 56)]).toEqual([0, 0, 0, 0]);
   });
 });
 

@@ -17,7 +17,7 @@ export function classDocId(name: string, owner: string | null): string {
 }
 
 /** Flattens class_reference.json into the same DocEntry list parseDocs produces. */
-export function parseClassDocs(data: { classes?: Record<string, { inherits?: string; properties?: Array<{ name: string; type: string }>; methods?: Array<{ name: string }> }> }): DocEntry[] {
+export function parseClassDocs(data: { classes?: Record<string, { inherits?: string; properties?: Array<{ name: string; type: string }>; methods?: Array<{ name?: string; sig?: string }> }> }): DocEntry[] {
   const entries: DocEntry[] = [];
   for (const [className, entry] of Object.entries(data.classes ?? {})) {
     entries.push({ name: className, owner: "", id: className, type: "", extends: entry.inherits ?? "" });
@@ -25,7 +25,9 @@ export function parseClassDocs(data: { classes?: Record<string, { inherits?: str
       entries.push({ name: property.name, owner: className, id: `${className}.${property.name}`, type: property.type ?? "", extends: "" });
     }
     for (const method of entry.methods ?? []) {
-      entries.push({ name: method.name, owner: className, id: `${className}.${method.name}`, type: "", extends: "" });
+      const sig = method.sig ?? `${method.name ?? ""}()`;
+      const memberName = method.name ?? sig.split("(")[0];
+      entries.push({ name: memberName, owner: className, id: `${className}.${memberName}`, type: "", extends: "" });
     }
   }
   return entries;

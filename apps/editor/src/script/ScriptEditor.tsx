@@ -16,7 +16,7 @@ import {
 } from "@codemirror/view";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { scriptHighlighting, scriptKindTheme, scriptKinds } from "./highlight";
+import { scriptHighlighting, scriptKindTheme, scriptKinds, setEngineGlobals } from "./highlight";
 import { lookupHits, parseClassDocs, wordAt, type DocEntry, type LookupHit } from "./lookup";
 import { scriptRoles as role } from "./roles";
 
@@ -148,6 +148,7 @@ export const ScriptEditor = forwardRef<ScriptEditorHandle, Props>(function Scrip
         .then((response) => response.json())
         .then((data) => {
           docs.current = parseClassDocs(data);
+          setEngineGlobals(globalWords(data));
           if (host.current) {
             host.current.dataset.docs = String(docs.current.length);
           }
@@ -222,6 +223,31 @@ export const ScriptEditor = forwardRef<ScriptEditorHandle, Props>(function Scrip
     </div>
   );
 });
+
+/** Lowercase words Godot treats as globals: the members of the Globals classes. */
+function globalWords(data: { groups?: Array<{ label: string; classes?: string[] }>; classes?: Record<string, { properties?: Array<{ name: string }>; methods?: Array<{ name?: string; sig?: string }> }> }): string[] {
+  const words = new Set<string>();
+  for (const group of data.groups ?? []) {
+    if (group.label !== "Globals") {
+      continue;
+    }
+    for (const name of group.classes ?? []) {
+      const entry = data.classes?.[name];
+      for (const property of entry?.properties ?? []) {
+        if (/^[a-z]/.test(property.name)) {
+          words.add(property.name);
+        }
+      }
+      for (const method of entry?.methods ?? []) {
+        const member = (method.name ?? (method.sig ?? "").split("(")[0]).split("(")[0];
+        if (/^[a-z]/.test(member)) {
+          words.add(member);
+        }
+      }
+    }
+  }
+  return [...words];
+}
 
 function LookupPopup(props: { menu: LookupMenu; onPick: (id: string) => void }) {
   return createPortal(

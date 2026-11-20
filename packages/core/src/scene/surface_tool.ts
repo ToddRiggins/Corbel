@@ -1,9 +1,11 @@
 import { CMP_EPSILON } from "../math/approx.js";
+import { AABB } from "../math/aabb.js";
 import type { Color } from "../math/color.js";
 import { Plane } from "../math/plane.js";
 import { Vector2 } from "../math/vector2.js";
 import { Vector3 } from "../math/vector3.js";
 import { ArrayMesh, PrimitiveType, type SurfaceArrays } from "./mesh.js";
+import type { Material } from "./material.js";
 
 /** Godot 4 `Mesh.PrimitiveType`, re-exported from `Mesh` where Godot keeps it. */
 export { PrimitiveType };
@@ -31,6 +33,7 @@ export class SurfaceTool {
   private _pending: Omit<VertexRecord, "position"> = {};
   private readonly _vertices: VertexRecord[] = [];
   private _indices: number[] | null = null;
+  private _material: Material | null = null;
 
   begin(primitive: number): void {
     this._primitive = primitive;
@@ -69,6 +72,7 @@ export class SurfaceTool {
     this._vertices.length = 0;
     this._indices = null;
     this._pending = {};
+    this._material = null;
   }
 
   /** Godot 4 `index()`: merges identical vertices and references them by index. */
@@ -231,7 +235,44 @@ export class SurfaceTool {
     if (tangents !== null) {
       arrays.tangents = tangents;
     }
-    return new ArrayMesh(arrays);
+    const mesh = new ArrayMesh(arrays);
+    if (this._material !== null) {
+      mesh.surface_set_material(0, this._material);
+    }
+    return mesh;
+  }
+
+  /** Godot 4 `add_index`: pins one vertex slot for the next triangle corner. */
+  add_index(index: number): void {
+    if (index < 0 || index >= this._vertices.length) {
+      throw new Error(`add_index: ${index} is outside the ${this._vertices.length} added vertices.`);
+    }
+    this._indices ??= [];
+    this._indices.push(index);
+  }
+
+  /** Godot 4 `set_material`: the committed mesh's surface material. */
+  set_material(material: Material | null): void {
+    this._material = material;
+  }
+
+  /** Godot 4 `get_aabb`: the box the added vertices fit in so far. */
+  get_aabb(): AABB {
+    let min_x = Infinity, min_y = Infinity, min_z = Infinity;
+    let max_x = -Infinity, max_y = -Infinity, max_z = -Infinity;
+    for (const vertex of this._vertices) {
+      min_x = Math.min(min_x, vertex.position.x);
+      min_y = Math.min(min_y, vertex.position.y);
+      min_z = Math.min(min_z, vertex.position.z);
+      max_x = Math.max(max_x, vertex.position.x);
+      max_y = Math.max(max_y, vertex.position.y);
+      max_z = Math.max(max_z, vertex.position.z);
+    }
+    if (min_x > max_x) {
+      return new AABB();
+    }
+    const min = new Vector3(min_x, min_y, min_z);
+    return new AABB(min, new Vector3(max_x - min_x, max_y - min_y, max_z - min_z));
   }
 
   private normal_of(i: number): Vector3 {

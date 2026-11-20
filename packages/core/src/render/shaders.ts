@@ -9,9 +9,11 @@ import type { RenderFrame } from "./frame.js";
 /** Godot 4 Shader, for the foundation's two backends: one program pair, written
  * twice, sharing parameter names. Build one with `Shader.lit`; the uniform
  * parameters are `vec4` (colors, vectors, and scalars coerce), and both bodies
- * see the same names: `color`, `normal`, `albedo`, `light_dir`, `light_color`,
- * `ambient`, plus `lighting(normal)` in WGSL and `lighting()` in GLSL, and
- * each parameter by its own name.
+ * see the same names: `color`, `normal`, `albedo`, `roughness`, `metallic`,
+ * `emission`, `uv`, `light_dir`, `light_color`, `ambient`, plus
+ * `lighting(normal)` in WGSL and `lighting()` in GLSL, and each parameter by
+ * its own name. A body's final `return vec4(...)` is the lit color; the
+ * harness adds fog, texture alpha, and transparency after it.
  */
 export class Shader {
   readonly webgpu: string;
@@ -44,7 +46,7 @@ export class Shader {
 export const WGSL_CAMERA_FLOATS = 44;
 
 /** WGSL group 1, binding 0, written once per draw: model, normal matrix, material and map data. */
-export const WGSL_DRAW_FLOATS = 52;
+export const WGSL_DRAW_FLOATS = 56;
 
 const WGSL_CAMERA = `
 struct Camera {
@@ -67,6 +69,7 @@ struct Draw {
   roughness_channel : vec4f,
   metallic_channel : vec4f,
   flags : vec4f,
+  emission : vec4f,
 };
 
 @group(0) @binding(0) var<uniform> u : Camera;
@@ -79,6 +82,8 @@ struct Draw {
 @group(1) @binding(7) var s_roughness : sampler;
 @group(1) @binding(8) var t_metallic : texture_2d<f32>;
 @group(1) @binding(9) var s_metallic : sampler;
+@group(1) @binding(10) var t_emission : texture_2d<f32>;
+@group(1) @binding(11) var s_emission : sampler;
 
 struct VertexOut {
   @builtin(position) clip : vec4f,
@@ -154,9 +159,12 @@ fn fs(in : VertexOut) -> @location(0) vec4f {
     let tbn_normal = t * tangent_normal.x * d.maps.z + b * tangent_normal.y * d.maps.z + normal * tangent_normal.z;
     normal = normalize(tbn_normal);
   }
-  let albedo = d.albedo.rgb * textureSampleLevel(t_albedo, s_albedo, uv, 0.0).rgb;
+  let tex_albedo = textureSampleLevel(t_albedo, s_albedo, uv, 0.0);
+  let albedo = d.albedo.rgb * tex_albedo.rgb;
   let roughness = d.maps.x * sample_channel(t_roughness, s_roughness, uv, d.roughness_channel);
   let metallic = d.maps.y * sample_channel(t_metallic, s_metallic, uv, d.metallic_channel);
+  let emission_mask = mix(vec3f(1.0, 1.0, 1.0), textureSampleLevel(t_emission, s_emission, uv, 0.0).rgb, d.flags.w);
+  let emission = clamp(d.emission.rgb, vec3f(0.0, 0.0, 0.0), vec3f(4.0, 4.0, 4.0)) * d.emission.a * emission_mask;
   let light_dir = u.light_dir.xyz;
   let light_color = u.light_color.rgb;
   let ambient = u.ambient.rgb;
@@ -164,18 +172,21 @@ ${params_let}
 ${captured_body}
   let fog = min(fog_amount(in.world) * height_fog(in.world), 1.0);
   let fogged = mix(lit.rgb, u.fog_color.rgb, fog * u.fog_color.a);
-  return vec4f(fogged, lit.a * (1.0 - d.maps.w));
+  // Texture alpha joins the albedo's own alpha; transparency thins what is left.
+  let lit_alpha = d.albedo.a * tex_albedo.a * (1.0 - d.maps.w) * lit.a;
+  return vec4f(fogged, lit_alpha);
 }
 `;
 }
 
-/** Captures a shader body's final `return` as the `lit` value the WGSL postlude edits. */
-export function capture_lit(body: string): string {
-  return body.replace(/return\s+([\s\S]*);?\s*$/, (_all, expr: string) => `  let lit = ${expr.trimEnd().replace(/;$/, "")};`);
+/** Captures a shader body's final `return` as the `lit` value the harness postlude edits. */
+export function capture_lit(body: string, declaration = "let lit"): string {
+  return body.replace(/return\s+([\s\S]*);?\s*$/, (_all, expr: string) => `  ${declaration} = ${expr.trimEnd().replace(/;$/, "")};`);
 }
 
 /** Builds the WebGL2 program pair from a parameter list and the fragment body. */
 export function build_glsl(params: readonly string[], body: string): { vertex: string; fragment: string } {
+  const glsl_capture = (source: string): string => capture_lit(source, "vec4 lit");
   const vertex = `#version 300 es
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;
@@ -222,6 +233,7 @@ uniform vec4 u_uv_transform;
 uniform vec4 u_roughness_channel;
 uniform vec4 u_metallic_channel;
 uniform vec4 u_flags;
+uniform vec4 u_emission;
 uniform vec4 u_fog_color;
 uniform vec4 u_fog_data;
 uniform vec4 u_fog_data2;
@@ -230,6 +242,7 @@ uniform sampler2D u_albedo_texture;
 uniform sampler2D u_normal_texture;
 uniform sampler2D u_roughness_texture;
 uniform sampler2D u_metallic_texture;
+uniform sampler2D u_emission_texture;
 ${params_block}
 
 out vec4 out_color;
@@ -265,20 +278,24 @@ vec4 fs_fragment() {
     vec3 b = normalize(cross(normal, t)) * v_tangent.w;
     normal = normalize(t * tangent_normal.x * u_maps.z + b * tangent_normal.y * u_maps.z + normal * tangent_normal.z);
   }
-  vec3 albedo = u_albedo.rgb * texture(u_albedo_texture, uv).rgb;
+  vec4 tex_albedo = texture(u_albedo_texture, uv);
+  vec3 albedo = u_albedo.rgb * tex_albedo.rgb;
   float roughness = u_maps.x * channel(u_roughness_texture, uv, u_roughness_channel);
   float metallic = u_maps.y * channel(u_metallic_texture, uv, u_metallic_channel);
+  vec3 emission_mask = mix(vec3(1.0), texture(u_emission_texture, uv).rgb, u_flags.w);
+  vec3 emission = clamp(u_emission.rgb, 0.0, 4.0) * u_emission.a * emission_mask;
   vec3 light_dir = u_light_dir.xyz;
   vec3 light_color = u_light_color.rgb;
   vec3 ambient = u_ambient.rgb;
-${body}
+${glsl_capture(body)}
+  return vec4(lit.rgb, u_albedo.a * tex_albedo.a * (1.0 - u_maps.w) * lit.a);
 }
 
 void main() {
   vec4 lit = fs_fragment();
   float fog = min(fog_amount() * height_fog_factor(), 1.0);
   vec3 fogged = mix(lit.rgb, u_fog_color.rgb, fog * u_fog_color.a);
-  out_color = vec4(fogged, lit.a * (1.0 - u_maps.w));
+  out_color = vec4(fogged, lit.a);
 }
 `;
   return { vertex, fragment };
@@ -343,16 +360,17 @@ function channel_mask(channel: number): [number, number, number, number] {
  * the body; this body supplies the lit RGB.
  */
 export const LIT_SHADER = Shader.lit({
-  webgpu_body: `  return vec4f(albedo * color * lighting(normal), 1.0);`,
-  webgl_body: `  return vec4(albedo * color * lighting(), 1.0);`,
+  webgpu_body: `  return vec4f(albedo * color * lighting(normal) + emission, 1.0);`,
+  webgl_body: `  return vec4(albedo * color * lighting() + emission, 1.0);`,
 });
 
 /**
  * Draw uniform content in float order: model 0-15, normal matrix 16-27,
  * albedo 28-31, maps 32-35, uv_transform 36-39, roughness_channel 40-43,
- * metallic_channel 44-47, flags 48-51. `maps` holds roughness, metallic,
- * normal scale, and the transparency. `flags` holds has-tangents and
- * use-vertex-color.
+ * metallic_channel 44-47, flags 48-51, emission 52-55. `maps` holds
+ * roughness, metallic, normal scale, and the transparency. `flags` holds
+ * has-tangents, use-vertex-color, and has-emission-texture. `emission`
+ * holds the color with the energy multiplier in alpha.
  */
 export function fill_draw(
   scratch: Float32Array,
@@ -390,6 +408,13 @@ export function fill_draw(
     scratch[47] = metal_mask[3];
     scratch[48] = has_tangents && material.normal_texture ? 1 : 0;
     scratch[49] = material.vertex_color_use_as_albedo ? 1 : 0;
+    scratch[51] = material.emission_texture ? 1 : 0;
+    if (material.emission_enabled) {
+      scratch[52] = material.emission.r;
+      scratch[53] = material.emission.g;
+      scratch[54] = material.emission.b;
+      scratch[55] = material.emission_energy_multiplier;
+    }
   } else {
     scratch[31] = 1;
     scratch[48] = has_tangents ? 1 : 0;

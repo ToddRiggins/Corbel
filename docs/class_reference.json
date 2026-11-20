@@ -749,12 +749,23 @@
       "brief": "Loads project resources by path: scenes, textures, scripts, materials.",
       "inherits": "Object",
       "description": "The shared ResourceLoader resolves res:// paths by extension and caches by path. Built-in: .cscene loads as a PackedScene. Runtime-registered: .ts loads as the script class, .png/.jpg/.jpeg/.webp/.gif as a Texture2D, .cmaterial as a StandardMaterial3D with its texture loaded. New extensions register with set_loader(ext, handler).",
-      "properties": [],
+      "properties": [
+        {
+          "name": "cache_limit",
+          "type": "number",
+          "desc": "How many decoded resources stay alive; the least recently used decode again"
+        }
+      ],
       "methods": [
         {
           "name": "load",
           "sig": "load(path)",
-          "desc": "The cached resource, resolved by extension. Godot's load()"
+          "desc": "Resolves res:// and decodes off the main thread, so the answer arrives as a Promise \u2014 scripts use `void load(\"res://texture.png\").then(...)` or await it in _ready. Same call as Godot's global load(); Godot's is synchronous"
+        },
+        {
+          "name": "resource_cached",
+          "sig": "resource_cached(path)",
+          "desc": "True when the path already sits in the cache. The free `resource_cached` imported from @corbel/core calls this; scripts can test before awaiting"
         },
         {
           "name": "set_loader",
@@ -769,7 +780,7 @@
         {
           "name": "has_cached",
           "sig": "has_cached(path)",
-          "desc": "True when the path already sits in the cache"
+          "desc": "The member form of resource_cached"
         }
       ]
     },
@@ -1314,10 +1325,6 @@
         {
           "name": "append_from / create_from / create_from_arrays / commit_to_arrays",
           "why": "With mesh imports"
-        },
-        {
-          "name": "add_index / set_material / get_aabb",
-          "why": "Cheap \u2014 arriving with the next mesh slice"
         }
       ]
     },

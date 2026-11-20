@@ -4,6 +4,7 @@ import { Plane } from "../src/math/plane.js";
 import { Vector2 } from "../src/math/vector2.js";
 import { Vector3 } from "../src/math/vector3.js";
 import { BoxMesh } from "../src/scene/mesh.js";
+import { StandardMaterial3D } from "../src/scene/standard_material3d.js";
 import { PrimitiveType, SurfaceTool } from "../src/scene/surface_tool.js";
 
 describe("SurfaceTool", () => {
@@ -144,5 +145,23 @@ describe("SurfaceTool", () => {
     tool.add_vertex(new Vector3(1, 0, 0));
     tool.add_vertex(new Vector3(0, 1, 0));
     expect(() => tool.generate_tangents()).toThrow(/UV/);
+  });
+
+  it("add_index, set_material, and get_aabb answer like Godot", () => {
+    const tool = new SurfaceTool();
+    tool.begin(PrimitiveType.TRIANGLES);
+    tool.add_vertex(new Vector3(0, 0, 1));
+    tool.add_vertex(new Vector3(2, 0, 1));
+    tool.add_vertex(new Vector3(2, 2, 1));
+    tool.add_index(0);
+    tool.add_index(1);
+    tool.add_index(2);
+    // Out of range explains itself.
+    expect(() => tool.add_index(9)).toThrow(/outside/);
+    tool.set_material(new StandardMaterial3D());
+    const mesh = tool.commit();
+    expect([...mesh.surface_get_arrays(0).indices]).toEqual([0, 1, 2]);
+    expect(mesh.surface_get_material(0) instanceof StandardMaterial3D).toBe(true);
+    expect(tool.get_aabb().get_end()).toEqual(new Vector3(2, 2, 1));
   });
 });

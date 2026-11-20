@@ -44,6 +44,14 @@ export class StandardMaterial3D extends Material {
   metallic_texture: Texture2D | null = null;
   /** Godot 4 `metallic_texture_channel`. */
   metallic_texture_channel: TextureChannel = TextureChannel.BLUE;
+  /** Godot 4 `emission_enabled`: adds the emission term to the lit color. */
+  emission_enabled = false;
+  /** Godot 4 `emission`: the emitted light color, added after lighting. */
+  emission: Color = new Color(0, 0, 0, 1);
+  /** Godot 4 `emission_energy_multiplier`: scales the emission color. */
+  emission_energy_multiplier = 1.0;
+  /** Godot 4 `emission_texture`: a mask whose RGB multiplies the emission color. */
+  emission_texture: Texture2D | null = null;
   /** Godot 4 `uv1_scale`: UVs multiply this before textures sample. */
   uv1_scale: Vector2 = new Vector2(1, 1);
   /** Godot 4 `uv1_offset`: UVs add this after the scale. */

@@ -98,12 +98,15 @@
       <p>The shared ResourceLoader resolves res:// paths by extension and caches by path. Built-in: .cscene loads as a PackedScene. Runtime-registered: .ts loads as the script class, .png/.jpg/.jpeg/.webp/.gif as a Texture2D, .cmaterial as a StandardMaterial3D with its texture loaded. New extensions register with set_loader(ext, handler).</p>
       <h2>Tutorials</h2>
       <p class="soon">Tutorials: none yet. They will live on ExoDev.Com.</p>
-      
+      <h2>Properties</h2><table><tr><th>Type</th><th>Property</th><th>Description</th></tr>
+<tr id="ResourceLoader.cache_limit"><td><code>number cache_limit</code></td><td><code>number</code> How many decoded resources stay alive; the least recently used decode again</td></tr>
+      </table>
       <h2>Methods</h2><table><tr><th>Signature</th><th>Description</th></tr>
-<tr id="ResourceLoader.load"><td><code>load(path)</code></td><td>The cached resource, resolved by extension. Godot's load()</td></tr>
+<tr id="ResourceLoader.load"><td><code>load(path)</code></td><td>Resolves res:// and decodes off the main thread, so the answer arrives as a Promise — scripts use `void load(&quot;res://texture.png&quot;).then(...)` or await it in _ready. Same call as Godot's global load(); Godot's is synchronous</td></tr>
+<tr id="ResourceLoader.resource_cached"><td><code>resource_cached(path)</code></td><td>True when the path already sits in the cache. The free `resource_cached` imported from @corbel/core calls this; scripts can test before awaiting</td></tr>
 <tr id="ResourceLoader.set_loader"><td><code>set_loader(ext, handler)</code></td><td>Register or replace the loader for one extension</td></tr>
 <tr id="ResourceLoader.set_file_loader"><td><code>set_file_loader(loader)</code></td><td>The read the loader uses for text files. The runtime wires this</td></tr>
-<tr id="ResourceLoader.has_cached"><td><code>has_cached(path)</code></td><td>True when the path already sits in the cache</td></tr>
+<tr id="ResourceLoader.has_cached"><td><code>has_cached(path)</code></td><td>The member form of resource_cached</td></tr>
       </table>
       
     </main>

@@ -105,12 +105,16 @@ export function build_render_frame(
     }
     if (node instanceof MeshInstance3D && node.visible && node.mesh !== null) {
       const global = node.get_global_transform();
+      const material = node.get_active_material() ?? DEFAULT_MATERIAL;
+      // A StandardMaterial3D whose albedo carries alpha draws translucent even
+      // when the node transparency is 0; the texture alpha joins at draw time.
+      const from_alpha = material instanceof StandardMaterial3D ? Math.max(0, 1 - material.albedo.a) : 0;
       draws.push({
         mesh: node.mesh,
         transform: transform_to_mat4(global),
         normal_matrix: basis_to_mat3(global.basis.inverse().transposed()),
-        material: node.get_active_material() ?? DEFAULT_MATERIAL,
-        transparency: node.transparency,
+        material,
+        transparency: Math.max(node.transparency, from_alpha),
       });
     }
     for (const child of node.get_children()) {

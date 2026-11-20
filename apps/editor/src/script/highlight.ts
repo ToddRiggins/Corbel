@@ -62,7 +62,10 @@ export const scriptKindTheme = EditorView.baseTheme({
 /**
  * The TypeScript parser tags a method name as a member and an imported
  * class as a variable. This pass puts those tokens in the function and
- * type roles. PascalCase is a type. ALL_CAPS is a constant.
+ * type roles. PascalCase is a type. ALL_CAPS is a constant. A lowercase
+ * word the class reference documents (the engine's global functions,
+ * like load) colors green like a class. The editor feeds documented
+ * names through `setEngineGlobals`.
  * A class's own name stays in the class role.
  */
 export const scriptKinds = ViewPlugin.fromClass(class {
@@ -82,6 +85,16 @@ export const scriptKinds = ViewPlugin.fromClass(class {
     }
   }
 }, { decorations: (value) => value.decorations });
+
+/** Lowercase engine words the class reference documents; colored green like a class. */
+const engineGlobalWords = new Set<string>(["load", "resource_cached"]);
+
+/** The editor feeds the class reference's Globals members here after it loads. */
+export function setEngineGlobals(words: Iterable<string>): void {
+  for (const word of words) {
+    engineGlobalWords.add(word);
+  }
+}
 
 function kindMarks(view: EditorView): DecorationSet {
   const docEnd = view.state.doc.length;
@@ -103,6 +116,11 @@ function kindMarks(view: EditorView): DecorationSet {
         }
         const text = view.state.sliceDoc(node.from, node.to);
         if (!/^[A-Z]/.test(text)) {
+          // A lowercase identifier the docs own (load, resource_cached) reads as engine API.
+          if (engineGlobalWords.has(text)) {
+            marks.push(typeMark.range(node.from, node.to));
+            return false;
+          }
           return;
         }
         if (node.name === "VariableDefinition" && parent === "ClassDeclaration") {

@@ -58,16 +58,17 @@ interface UploadedMesh {
 }
 
 /** The four texture maps a material carries, all null when it is not standard. */
-function map_pair_of(material: Material): { albedo: Texture2D | null; normal: Texture2D | null; roughness: Texture2D | null; metallic: Texture2D | null } {
+function map_pair_of(material: Material): { albedo: Texture2D | null; normal: Texture2D | null; roughness: Texture2D | null; metallic: Texture2D | null; emission: Texture2D | null } {
   if (material instanceof StandardMaterial3D) {
     return {
       albedo: material.albedo_texture,
       normal: material.normal_texture,
       roughness: material.roughness_texture,
       metallic: material.metallic_texture,
+      emission: material.emission_texture,
     };
   }
-  return { albedo: null, normal: null, roughness: null, metallic: null };
+  return { albedo: null, normal: null, roughness: null, metallic: null, emission: null };
 }
 
 export function material_id(): (material: Material) => number {
@@ -130,6 +131,8 @@ export class WebGPURenderBackend implements RenderBackend {
         { binding: 7, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
         { binding: 8, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
         { binding: 9, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: "float" } },
+        { binding: 11, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
       ],
     });
     this.pipeline_layout = device.createPipelineLayout({ bindGroupLayouts: [camera_layout, draw_layout] });
@@ -270,7 +273,8 @@ export class WebGPURenderBackend implements RenderBackend {
     const normal = this.texture_pair(pair.normal);
     const roughness = this.texture_pair(pair.roughness);
     const metallic = this.texture_pair(pair.metallic);
-    const key = `${slot}:${id_of(material)}:${albedo.id}:${normal.id}:${roughness.id}:${metallic.id}`;
+    const emission = this.texture_pair(pair.emission);
+    const key = `${slot}:${id_of(material)}:${albedo.id}:${normal.id}:${roughness.id}:${metallic.id}:${emission.id}`;
     let group = this.bind_groups.get(key);
     if (group === undefined) {
       group = this.device.createBindGroup({
@@ -286,6 +290,8 @@ export class WebGPURenderBackend implements RenderBackend {
           { binding: 7, resource: roughness.sampler },
           { binding: 8, resource: metallic.view },
           { binding: 9, resource: metallic.sampler },
+          { binding: 10, resource: emission.view },
+          { binding: 11, resource: emission.sampler },
         ],
       });
       this.bind_groups.set(key, group);

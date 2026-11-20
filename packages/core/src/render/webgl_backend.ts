@@ -11,17 +11,18 @@ import { LIT_SHADER, WGSL_DRAW_FLOATS, fill_draw } from "./shaders.js";
 
 const CAM_POS = { x: 0, y: 0, z: 0 };
 
-/** The four texture maps a material carries, all null when it is not standard. */
-function map_pair_of(material: Material): { albedo: Texture2D | null; normal: Texture2D | null; roughness: Texture2D | null; metallic: Texture2D | null } {
+/** The five texture maps a material carries, all null when it is not standard. */
+function map_pair_of(material: Material): { albedo: Texture2D | null; normal: Texture2D | null; roughness: Texture2D | null; metallic: Texture2D | null; emission: Texture2D | null } {
   if (material instanceof StandardMaterial3D) {
     return {
       albedo: material.albedo_texture,
       normal: material.normal_texture,
       roughness: material.roughness_texture,
       metallic: material.metallic_texture,
+      emission: material.emission_texture,
     };
   }
-  return { albedo: null, normal: null, roughness: null, metallic: null };
+  return { albedo: null, normal: null, roughness: null, metallic: null, emission: null };
 }
 
 interface UploadedMesh {
@@ -141,10 +142,12 @@ export class WebGL2RenderBackend implements RenderBackend {
       gl.uniform4fv(this.location(compiled, "u_metallic_channel"), scratch.slice(44, 48));
       gl.uniform4fv(this.location(compiled, "u_flags"), scratch.slice(48, 52));
       const pair = map_pair_of(material);
-      this.bind_map(compiled, gl.TEXTURE0, pair.albedo, false);
-      this.bind_map(compiled, gl.TEXTURE1, pair.normal, true);
-      this.bind_map(compiled, gl.TEXTURE2, pair.roughness, false);
-      this.bind_map(compiled, gl.TEXTURE3, pair.metallic, false);
+      this.bind_map(compiled, gl.TEXTURE0, "u_albedo_texture", pair.albedo);
+      this.bind_map(compiled, gl.TEXTURE1, "u_normal_texture", pair.normal);
+      this.bind_map(compiled, gl.TEXTURE2, "u_roughness_texture", pair.roughness);
+      this.bind_map(compiled, gl.TEXTURE3, "u_metallic_texture", pair.metallic);
+      this.bind_map(compiled, gl.TEXTURE4, "u_emission_texture", pair.emission);
+      gl.uniform4fv(this.location(compiled, "u_emission"), scratch.slice(52, 56));
       if (material instanceof ShaderMaterial) {
         const values = material.get_shader_parameter_list();
         for (const name of shader.params) {
@@ -174,11 +177,8 @@ export class WebGL2RenderBackend implements RenderBackend {
   }
 
   /** Binds one texture unit; the white dummy when the map is absent. */
-  private bind_map(compiled: CompiledShader, unit: number, texture: Texture2D | null, normal: boolean): void {
+  private bind_map(compiled: CompiledShader, unit: number, name: string, texture: Texture2D | null): void {
     const gl = this.gl;
-    const name = normal ? "u_normal_texture" : unit === gl.TEXTURE0
-      ? "u_albedo_texture"
-      : unit === gl.TEXTURE2 ? "u_roughness_texture" : "u_metallic_texture";
     gl.activeTexture(unit);
     gl.bindTexture(gl.TEXTURE_2D, this.gpu_texture(texture));
     gl.uniform1i(this.location(compiled, name), unit - gl.TEXTURE0);
